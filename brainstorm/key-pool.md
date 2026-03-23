@@ -58,6 +58,8 @@ Push to the config repo → all gateways pick it up → done.
 
 For high-volume deployments, pay-per-token gets expensive. Deployers can use subscription-based providers with coding plans (e.g., Kimi, MiniMax) for much cheaper per-token costs at scale.
 
+**Strategy:** Use cheap coding-plan providers as primary, premium providers (Claude, GPT) as fallbacks. Most tasks hit the cheap provider. Premium kicks in only when primary is rate-limited or fails. This can cut LLM costs 5-10x at high volume while maintaining quality as a safety net.
+
 **Sizing the key pool:**
 
 ```

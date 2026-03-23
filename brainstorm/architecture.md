@@ -146,6 +146,17 @@ Three approaches were evaluated:
 
 **Verdict:** Multi-agent per gateway wins. Far fewer processes, fully stateless via TigerFS, dramatically cheaper. The 10-20 user blast radius is acceptable given the security gate, RLS, and agent isolation.
 
+### Key Insight: Why Multi-Agent Became Possible
+
+Multi-agent was always an option in OpenClaw, but the original concern was data affinity — each agent's workspace, sessions, and memory lived on local disk. If a gateway crashed, data could be lost. If we needed to move an agent to another host, we'd have to migrate files.
+
+[TigerFS](tigerfs.md) eliminated this entirely. With all data in TimescaleDB:
+- **Gateway crash → zero data loss** (data is in the database, not on local disk)
+- **Any gateway on any host can serve any agent** (no file migration, no affinity)
+- **The downside of multi-agent (shared failure) became a non-issue** — failure means retrying a task, not losing data
+
+This is why multi-agent went from "possible but risky" to "the obvious choice."
+
 ## Cost Projection
 
 Most agents will be idle most of the time (fire-and-forget = bursts, not constant load). Each gateway (10-20 users) uses ~200-500MB RAM.

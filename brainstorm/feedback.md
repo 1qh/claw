@@ -106,7 +106,9 @@ stateDiagram-v2
 ```
 
 This is handled via `AGENTS.md` instructions, not a system feature:
-> "After 2 failed redo attempts, stop retrying and ask the user to describe specifically what they want."
+> "After 2 failed redo attempts, stop retrying and ask the user to describe specifically what they want. Use the `request_clarification` tool to pause and wait for the user's response."
+
+The agent tracks redo count within the session context. Each redo is a message in the same session, so the agent sees the full history: original request → result → redo 1 → result → redo 2 → result → switches to clarification. No external counter needed — the conversation IS the counter.
 
 ## Long-Term Learning from Feedback
 

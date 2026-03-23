@@ -37,7 +37,23 @@ Shell commands bypass OpenClaw's file boundary checks. A command like `cat /othe
 - Security gate blocks prompt injection before OpenClaw
 
 ### memory-timescaledb Plugin — ⚠️ Our responsibility
-Shared pgvector table in TimescaleDB. Every query MUST include `WHERE agent_id = $1`.
+Shared pgvector table in TimescaleDB. Every query MUST include `WHERE agent_id = $1`. The table schema enforces this:
+
+```sql
+CREATE TABLE memory_chunks (
+    agent_id    TEXT NOT NULL,  -- scoping key
+    chunk       TEXT,
+    embedding   vector(1536),
+    source_file TEXT,
+    created_at  TIMESTAMPTZ DEFAULT now()
+);
+
+-- RLS policy: each agent connection can only see its own rows
+-- Every search query: WHERE agent_id = $1 AND embedding <=> $query_vector
+-- Every insert: agent_id set from runtime context, never from user input
+```
+
+This is enforced in code AND at the database level via RLS. Both must be implemented.
 
 ## Framework Security Defaults
 
