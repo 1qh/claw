@@ -7,6 +7,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | Choice | Role |
 |---|---|
 | [Bun](https://bun.sh/) | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js |
+| [Elysia](https://elysiajs.com/) | HTTP/WebSocket framework — Bun-native, end-to-end type safety, better-auth adapter |
 | TypeScript + ESM | Language — same everywhere (framework, control plane, deployer CLIs) |
 | [OpenClaw](https://openclaw.ai) | Agent runtime — [multi-gateway per host](https://docs.openclaw.ai/gateway/multiple-gateways) via `--profile` |
 | `bunx cli@latest` | Tool execution — deployer's backend as npm CLIs, always latest |
@@ -52,7 +53,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | S3 | TigerFS + TimescaleDB |
 | Elasticsearch / Algolia | TimescaleDB FTS + pgvector |
 | Message queues | OpenClaw gateway |
-| REST API frameworks | WebSocket proxy in control plane |
+| Express / Nest / Hono | Elysia (Bun-native, type-safe) |
 | MongoDB | TimescaleDB JSONB |
 | Separate embedding pipeline | pgai (auto-vectorize inside database) |
 | External cron / job scheduler | TimescaleDB background jobs |

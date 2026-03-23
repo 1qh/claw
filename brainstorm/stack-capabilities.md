@@ -273,7 +273,6 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 ### Runtime APIs
 | API | What |
 |---|---|
-| `Bun.serve()` | HTTP/WebSocket server for control plane |
 | `Bun.shell()` / `Bun.spawn()` | Gateway process management |
 
 ### Data Format Support (Built-in imports)
@@ -405,7 +404,7 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Data compression | TimescaleDB compression |
 | Version history | TigerFS `.history/` |
 | Backup | `pg_dump` |
-| HTTP/WebSocket server | `Bun.serve()` |
+| HTTP/WebSocket server | Elysia (on Bun) |
 | Process management | `Bun.spawn()` + `Bun.shell()` |
 | Deterministic workflows | OpenClaw Lobster |
 | Scheduled tasks | OpenClaw cron |
