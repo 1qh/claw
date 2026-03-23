@@ -246,7 +246,8 @@ graph TB
 8. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
 9. **Critical: every query MUST scope by agent_id. RLS policy allows own rows + `__shared__` rows.** Policy: `USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')` — enforce in code AND via RLS
     > **Note:** The `memory-timescaledb` plugin generates embeddings in application code (not via pgai). If pgai is available locally, it can be used for auto-vectorizing the shared intelligence layer (crawled_pages) in a future phase, but the memory plugin does not depend on it.
-10. Write comprehensive tests: store/search/delete, agent isolation, concurrent access
+10. **Implement a shared knowledge indexer:** On startup and on file change (via chokidar), read all files from the shared knowledge directory (`/mnt/tigerfs/knowledge/`), chunk them, generate embeddings, and insert/update rows in `memory_chunks` with `agent_id = '__shared__'`. The control plane runs this indexer (not individual gateways) to avoid duplicate indexing.
+11. Write comprehensive tests: store/search/delete, agent isolation, concurrent access
 
 ### External References
 - [OpenClaw plugin docs](https://docs.openclaw.ai/tools/plugin)
@@ -266,6 +267,7 @@ graph TB
 - [ ] CLI commands work: `ltm list`, `ltm search`, `ltm stats`
 - [ ] Performance: search latency < 100ms for 10K chunks
 - [ ] Gateway with memory-timescaledb has no SQLite files on disk
+- [ ] Files dropped in knowledge/ directory are searchable by any agent via memory_recall
 - [ ] All tests pass
 
 ---

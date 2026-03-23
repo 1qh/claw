@@ -144,13 +144,13 @@ graph TB
     product-docs/
     procedures/
   users/
-    alice@co.com/           ← per-user workspace
+    alice_at_co.com/        ← per-user workspace
       USER.md
       MEMORY.md
       memory/
       sessions/
       uploads/
-    bob@gmail.com/
+    bob_at_gmail.com/
       ...
   cache/                    ← TTL-based shared cache
     .by/key/exchange-rate-usd-eur/.export/json

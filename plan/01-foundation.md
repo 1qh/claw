@@ -160,8 +160,9 @@ erDiagram
    - Each gateway connection can only access its own agents' data
    - Control plane has full access
 4. Create per-gateway PostgreSQL roles: when creating a gateway, the control plane also creates a PostgreSQL role for that gateway with RLS policies scoped to its agents. TigerFS mounts for that gateway use this scoped role.
-5. Run `drizzle-kit push` to apply schema to local TimescaleDB
-5. Write tests: schema creation, RLS enforcement, basic CRUD
+5. **Set database-level default for RLS:** `ALTER DATABASE uniclaw SET app.agent_id = '__none__'`. This ensures any connection that forgets to `SET LOCAL app.agent_id` gets no data (no rows match `__none__`).
+6. Run `drizzle-kit push` to apply schema to local TimescaleDB
+7. Write tests: schema creation, RLS enforcement, basic CRUD
 
 ### External References
 - [Drizzle + PostgreSQL setup](https://orm.drizzle.team/docs/get-started/postgresql-new)
@@ -176,6 +177,7 @@ erDiagram
 - [ ] RLS policy blocks cross-gateway data access (test with different roles)
 - [ ] Cache table: insert with TTL, read before expiry succeeds, read after expiry returns null
 - [ ] Schema types are inferred correctly in TypeScript
+- [ ] Unset session returns zero rows from memory_chunks (RLS default blocks access)
 - [ ] Migration is reproducible (drop + push from scratch)
 
 ---

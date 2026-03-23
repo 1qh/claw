@@ -307,6 +307,8 @@ TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS onl
 - **`safeBins: ["bunx"]`** restricts exec to only `bunx`. The `bunx`-executed CLI runs as a child process inheriting the gateway's filesystem access. CLIs should NOT accept arbitrary file paths from the agent — deployers must design CLIs to read from their own data sources, not from workspace paths.
 - **Security gate Layer 4** can be configured to block requests mentioning other users' paths or identifiers. Deployers should include path-related restrictions in their domain scope classifier prompt.
 
+**Accepted architectural limitation:** A deployer-written CLI that accepts arbitrary `--file` flags could be used by the agent to read other users' files on the shared FUSE mount. This is analogous to any multi-tenant backend where application code has database access — a poorly-written backend endpoint can leak data. The framework mitigates this through documentation, CLI design guidelines, and the security gate, but cannot enforce it at the OS level without per-user containers (which was rejected for cost/complexity). Deployers building CLIs that handle files MUST validate that paths are within the requesting user's workspace. The framework provides the user's workspace path as an environment variable for CLIs to check against.
+
 ### Output Validation
 
 The 7-layer gate only validates INPUT. Agent responses should be scanned for PII/secrets before delivery to the user. This can use the same hai-guardrails library on the output path — run the PII Guard and Secret Guard on agent output before forwarding to the frontend.
