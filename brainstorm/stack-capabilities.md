@@ -403,7 +403,7 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Database admin browser | Drizzle Studio |
 | Schema validation | Drizzle + Zod |
 | Read replicas | Drizzle built-in |
-| Structured gate responses | AI SDK `generateObject()` + Zod (block reason + category) |
+| Structured gate responses | AI SDK `generateText()` + `Output.object()` + Zod (block reason + category) |
 | Embedding generation | pgai (auto-generates inside database) |
 | Input validation (prompt injection, PII, etc.) | hai-guardrails |
 | Usage analytics (cross-user) | TimescaleDB continuous aggregates |
