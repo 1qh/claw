@@ -70,6 +70,7 @@ sequenceDiagram
 - [ ] Admin endpoint writes config file to TigerFS
 - [ ] Multiple gateways all pick up the same change
 - [ ] All `/admin/*` endpoints return 403 for non-admin users
+- [ ] Regular user cannot access /admin/* endpoints (verified with non-admin session)
 
 ---
 

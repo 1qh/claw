@@ -234,7 +234,8 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 3. Return structured `429 Too Many Requests` responses with `Retry-After` header
 4. Make all limits configurable per deployer (via shared config)
 5. Admin override: deployers can set per-user limit overrides for premium users
-6. Write tests: exceed each limit, verify rejection; stay under limits, verify pass-through
+6. **Redo rate limiting:** Redos count toward the per-user task rate limit (max tasks/minute). Additionally, cap redos per task at 5 (hard limit enforced by the control plane, not just AGENTS.md instructions). After 5 redos, the task is closed and the user must submit a new request.
+7. Write tests: exceed each limit, verify rejection; stay under limits, verify pass-through
 
 ### External References
 - [Elysia rate limiting patterns](https://elysiajs.com/plugins/overview)
@@ -248,6 +249,7 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 - [ ] Within limits: no interference with normal operation
 - [ ] Rate limit counters are per-user (User A's limits don't affect User B)
 - [ ] Admin can override limits for specific users
+- [ ] Sixth redo on the same task is rejected by the control plane (hard cap of 5)
 - [ ] All tests pass
 
 ---
