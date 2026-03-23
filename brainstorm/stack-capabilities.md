@@ -268,6 +268,16 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 
 ---
 
+## [Elysia](https://elysiajs.com/)
+
+| Feature | What We Use It For |
+|---|---|
+| Core (HTTP + WebSocket) | Control plane server — routing, validation, WebSocket proxy to gateways |
+| [Eden Treaty](https://elysiajs.com/eden/overview) | Type-safe frontend client — types inferred from server, no API contracts, no codegen, 2KB |
+| CORS plugin | Frontend-to-control-plane communication |
+
+---
+
 ## [Bun](https://bun.sh/)
 
 ### Runtime APIs
