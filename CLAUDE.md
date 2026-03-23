@@ -4,6 +4,8 @@
 - `bun clean` — removes node_modules, lockfile, dist, .cache, .next — like a fresh clone
 - `bun install` after clean always resolves latest upstream
 - `q` wrapper for all scripts — silent on success, verbose on failure
+- `bun fix` is a pre-commit gate — MUST pass before every commit. If it fails, fix the code, don't skip the check.
+- Git pre-commit hook runs `bun fix` automatically — commit is rejected if it fails. Never use `--no-verify`.
 
 ---
 
