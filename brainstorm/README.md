@@ -34,3 +34,4 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Boundaries**](boundaries.md) — what uniclaw is and is NOT good for
 - [**Deployer Experience**](deployer-experience.md) — template repo, frontend hooks, what deployers configure vs what's pre-built
 - [**Isolation Audit**](isolation-audit.md) — code-level verification of multi-tenant data isolation
+- [**Open Questions**](open-questions.md) — signup flow, CLI env access, local dev, gateway capacity management
