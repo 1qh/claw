@@ -303,9 +303,7 @@ The two stay in sync naturally:
 
 Filesystem paths use email as the folder name: `/mnt/tigerfs/users/alice@company.com/`. Email is the universal key — consistent across auth, routing, and storage.
 
-Email normalization: the framework lowercases email addresses and strips `+` aliases (e.g., `User+Tag@Gmail.com` normalizes to `user@gmail.com`). This prevents duplicate accounts from email aliases and case variations.
-
-Email addresses are URL-encoded when used in filesystem paths (e.g., `user+tag@domain.com` becomes `user%2Btag%40domain.com`). This avoids shell and filesystem issues with special characters.
+Email normalization: the framework lowercases email addresses and strips `+` aliases (e.g., `User+Tag@Gmail.com` normalizes to `user@gmail.com`). This prevents duplicate accounts from email aliases and case variations. After normalization, the `@` is the only special character remaining — it is replaced with `_at_` in filesystem paths (e.g., `alice@company.com` becomes `alice_at_company.com`).
 
 ## Simplicity Constraints
 

@@ -199,6 +199,7 @@ graph TD
    - **👍 / 👎** — buttons + collapsible textarea for optional note
 2. Redo sends a message to the agent in the same session: "User rejected the output. {note if provided}. Try a different approach."
 3. Rating sends a message to the agent: "User rated {positive/negative}. {note if provided}."
+4. **Security: user-typed notes in redo/rating must pass through Layers 1-2 (sanitization + heuristic guards) of the security gate before forwarding to the agent.** The control plane constructs a trusted message template and only the user's note text is validated. Layers 3-4 (LLM classification) are skipped for these short, low-risk notes.
 4. After redo, show new result with the same action buttons
 5. UI state: buttons disabled while agent is processing
 
@@ -211,3 +212,4 @@ graph TD
 - [ ] Buttons disabled during agent processing
 - [ ] Multiple redos work (2nd, 3rd attempt)
 - [ ] 3rd redo triggers clarification from agent (if AGENTS.md instructs this)
+- [ ] User-typed notes in redo/rating pass through security gate Layers 1-2
