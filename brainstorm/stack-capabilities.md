@@ -403,11 +403,8 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Database admin browser | Drizzle Studio |
 | Schema validation | Drizzle + Zod |
 | Read replicas | Drizzle built-in |
-| LLM call debugging | AI SDK DevTools |
-| Reranking search results | AI SDK `rerank()` |
+| Structured gate responses | AI SDK `generateObject()` + Zod (block reason + category) |
 | Embedding generation | pgai (auto-generates inside database) |
-| Structured LLM output | AI SDK `generateObject()` + Zod |
-| Observability upgrade path | AI SDK OpenTelemetry |
 | Input validation (prompt injection, PII, etc.) | hai-guardrails |
 | Usage analytics (cross-user) | TimescaleDB continuous aggregates |
 | Auto-embedding sync | pgai Vectorizer |
