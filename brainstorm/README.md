@@ -24,6 +24,7 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Feedback**](feedback.md) — ratings, redo mechanism, and agent learning
 - [**Reliability**](reliability.md) — auto-recovery, health checks, no formal SLA at launch
 - [**Agent-Native Paradigm**](agent-native.md) — CLIs as backend, knowledge as files, instructions as markdown, bun as runtime
-- [**Data Layer**](data-layer.md) — PostgreSQL + workspace, no overlap, no stale data, real-time streaming
+- [**Data Layer**](data-layer.md) — TimescaleDB + workspace, no overlap, no stale data, real-time streaming
 - [**Key Pool**](key-pool.md) — LLM API key rotation, coding plans, multi-provider failover
-- [**Tech Stack**](tech-stack.md) — opinionated choices: Bun, TypeScript, Drizzle, PostgreSQL, and what's excluded
+- [**Tech Stack**](tech-stack.md) — opinionated choices: Bun, TypeScript, Drizzle, TimescaleDB, and what's excluded
+- [**Maintenance**](maintenance.md) — OpenClaw updates, workspace cleanup, host ops
