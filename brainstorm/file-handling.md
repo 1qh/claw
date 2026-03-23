@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-No S3. No database. Files go directly into the user's workspace volume — the agent reads them as local files. The control plane validates files BEFORE they reach OpenClaw.
+No S3. No database. Files go directly into the user's workspace directory — the agent reads them as local files. The control plane validates files BEFORE they reach OpenClaw.
 
 ## Storage Model
 
@@ -10,25 +10,25 @@ No S3. No database. Files go directly into the user's workspace volume — the a
 graph LR
     USER[User uploads file] --> CP[Control Plane]
     CP --> VALIDATE[File Validation Gate]
-    VALIDATE -->|pass| CONTAINER[User's Container]
+    VALIDATE -->|pass| GW[User's Gateway Process]
     VALIDATE -->|fail| REJECT[Reject with explanation]
-    CONTAINER --> VOL[Persistent Volume<br/>workspace/uploads/]
+    GW --> WS[Workspace Directory<br/>workspace/uploads/]
     VOL --> AGENT[Agent reads local file]
 ```
 
-### Why Workspace Volume, Not S3 + Database
+### Why Workspace Directory, Not S3 + Database
 
-| | Traditional (S3 + DB) | Workspace Volume |
+| | Traditional (S3 + DB) | Workspace Directory |
 |---|---|---|
-| Storage | S3 bucket (shared) + metadata in DB | User's volume (isolated) |
-| Access control | IAM policies, signed URLs, DB lookups | Container boundary — only this user's agent |
+| Storage | S3 bucket (shared) + metadata in DB | User's workspace directory (isolated) |
+| Access control | IAM policies, signed URLs, DB lookups | OS user boundary — only this user's agent |
 | Agent access | Needs S3 SDK, credentials, download step | Just reads a local file |
-| Cleanup | Orphaned S3 files, DB records to maintain | Delete volume = delete everything |
-| Backup | S3 versioning + DB backup separately | Back up volume = everything backed up |
+| Cleanup | Orphaned S3 files, DB records to maintain | Delete workspace = delete everything |
+| Backup | S3 versioning + DB backup separately | Back up workspace = everything backed up |
 
 ### What Users Can Upload
 
-- **Files** — CSV, PDF, images, documents → saved to workspace volume
+- **Files** — CSV, PDF, images, documents → saved to workspace directory
 - **Links to spreadsheets** — Google Sheets, etc. → agent fetches via browser/web fetch, saves working copy
 - **Website URLs** — agent fetches content, extracts what it needs
 
@@ -48,7 +48,7 @@ flowchart TD
     L1 -->|fail| REJECT[Reject]
     L2 -->|pass| L3
     L2 -->|fail| REJECT
-    L3 -->|pass| FORWARD[Forward to container]
+    L3 -->|pass| FORWARD[Forward to gateway]
     L3 -->|fail| REJECT
 ```
 
@@ -63,14 +63,14 @@ flowchart TD
 
 ### Layer 2 — Antivirus Scan (ClamAV)
 
-**Choice: [ClamAV](https://www.clamav.net/) via REST API in Docker container**
+**Choice: [ClamAV](https://www.clamav.net/) via REST API as a system service**
 
 Why ClamAV:
 - Self-hosted — files never leave your infrastructure (privacy)
-- Simple REST API via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) Docker image — just `POST /scan`
+- Simple REST API via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) — just `POST /scan`
 - Good detection for known threats
 - Free and open source
-- Runs as a sidecar container — standard infrastructure pattern
+- Runs as a shared system service on the host
 
 Why not [VirusTotal](https://www.virustotal.com/):
 - Sends user files to a third party — privacy concern for business data
@@ -89,7 +89,7 @@ Why not both:
 
 ## OpenClaw's Built-in File Handling
 
-What OpenClaw already does (inside the container):
+What OpenClaw already does (inside the gateway process):
 - Size limits per media type (6MB images, 16MB audio/video, 100MB documents)
 - MIME allowlist for images: JPEG, PNG, GIF, WebP, HEIC, HEIF
 - File formats for docs: plain text, Markdown, HTML, CSV, JSON, PDF
@@ -114,13 +114,13 @@ Important context from community and security researchers:
 
 **This reinforces the architecture: validate in the control plane, not in OpenClaw.**
 
-## Volume Management
+## Workspace Management
 
 | Concern | Solution |
 |---|---|
-| Volume size | Limits per tier (free: 1GB, paid: 10GB, enterprise: 100GB) |
+| Workspace size | Limits per tier (free: 1GB, paid: 10GB, enterprise: 100GB) |
 | Cleanup | Agent manages workspace, archives/deletes old uploads |
 | Large data | Agent processes in streaming fashion without storing full file |
-| Backup | Regular volume snapshots |
-| Deletion (GDPR) | Delete volume = delete everything |
+| Backup | Regular workspace backups (git-based) |
+| Deletion (GDPR) | Delete workspace directory = delete everything |
 

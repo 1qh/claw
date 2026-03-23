@@ -51,7 +51,7 @@ Typical SaaS components you do NOT need to build:
 
 ### File Storage
 - **Traditional:** S3, presigned URLs, metadata database, upload service
-- **With OpenClaw:** Workspace volume. Agent reads/writes local files.
+- **With OpenClaw:** Workspace directory. Agent reads/writes local files.
 
 ### Audit Trail / Activity Log
 - **Traditional:** Event sourcing, audit log table, log viewer UI
@@ -75,7 +75,7 @@ Typical SaaS components you do NOT need to build:
 
 ### GDPR Data Deletion
 - **Traditional:** Hunt through 15 database tables, S3 buckets, logs, caches
-- **With OpenClaw:** Delete the volume. Everything gone. One operation.
+- **With OpenClaw:** Delete the workspace directory. Everything gone. One operation.
 
 ### Help / Support
 - **Traditional:** Help desk system, knowledge base, ticket system
@@ -88,7 +88,7 @@ graph TB
     subgraph "You Build"
         AUTH["Auth\n(signup, login, OAuth)"]
         BILLING["Billing\n(Stripe, usage-based)"]
-        CP["Control Plane\n(container orchestration, routing)"]
+        CP["Control Plane\n(process management, routing)"]
         GATE["Security Gate\n(7-layer validation)"]
         FE["Frontend\n(chat, live feed, notifications, usage)"]
         LANDING["Landing Page / Marketing"]
@@ -113,9 +113,9 @@ graph TB
 | Component | Traditional SaaS | This Architecture |
 |---|---|---|
 | **Backend framework** | Express/Nest/Django + dozens of routes | Thin control plane, ~5 endpoints |
-| **Database** | PostgreSQL + Redis + migrations + ORM | None (workspace volumes) |
+| **Database** | PostgreSQL + Redis + migrations + ORM | None (workspace directories) |
 | **Task queue** | Redis + Bull + workers | OpenClaw gateway |
-| **File storage** | S3 + metadata DB | Workspace volume |
+| **File storage** | S3 + metadata DB | Workspace directory |
 | **Search** | Elasticsearch/Algolia | OpenClaw memory search |
 | **Notifications** | FCM/APNS/SendGrid | WebSocket events |
 | **Scheduler** | Custom cron service | OpenClaw cron |
@@ -124,5 +124,5 @@ graph TB
 | **Settings UI** | Complex forms + DB columns | Conversation + USER.md |
 | **Onboarding** | Wizard UI + state machine | Agent conversation |
 | **Data export** | Export jobs + formatters | Agent packages files |
-| **GDPR deletion** | Multi-table purge scripts | Delete volume |
+| **GDPR deletion** | Multi-table purge scripts | Delete workspace directory |
 

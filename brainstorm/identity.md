@@ -5,7 +5,7 @@
 ```
 email (primary key)
     → auth identity (OAuth provider)
-    → container routing (which container to hit)
+    → gateway routing (which host:port to hit)
     → gateway workspace (USER.md has the email)
     → channel linking (WhatsApp/Telegram/Slack all map back to same email)
 ```
@@ -17,7 +17,7 @@ email (primary key)
 | **Auth identity** | Google/Microsoft/GitHub OAuth all return email |
 | **Channel linking** | User signs up with email, connects messaging accounts, all map to same gateway |
 | **Fallback notifications** | Email itself is a delivery channel |
-| **Deterministic container naming** | Hash email → container ID, no lookup needed |
+| **Deterministic gateway naming** | Hash email → OS user + port, no lookup needed |
 | **Human readable** | Admin sees `alice@company.com` in logs, not a UUID |
 
 ## Control Plane Data Model
@@ -26,8 +26,10 @@ Essentially one table:
 
 ```
 email (PK) → {
-    container_id    // deterministic from email hash
-    volume_id       // persistent workspace storage
+    host            // which host this user's gateway runs on
+    port            // gateway process port
+    os_user         // dedicated OS user (e.g., oc-<hash>)
+    workspace_dir   // workspace directory path
     status          // active | suspended | provisioning
     channels        // linked messaging accounts
     created_at
@@ -42,7 +44,7 @@ Could be a database table, a key-value store, or even a flat file.
 ```mermaid
 graph LR
     subgraph "Control Plane"
-        A["email = auth/routing key<br/>Owns: container mapping, billing, channel links"]
+        A["email = auth/routing key<br/>Owns: gateway mapping, billing, channel links"]
     end
 
     subgraph "Gateway Workspace"

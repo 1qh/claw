@@ -132,7 +132,7 @@ No analytics system needed. The agent learns through its own memory, informed by
 | Profile changes | User tells agent | Conversation → updates USER.md |
 | Returns after absence | User opens app | Agent has memory/session history |
 | Scheduled task done | OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) | Results in [session transcripts](https://docs.openclaw.ai/concepts/session) |
-| Config updates | Shared volume | Hot-reload, automatic |
+| Config updates | Shared config directory | Hot-reload, automatic |
 | Tier/plan change | Control plane | Config patch via gateway API |
-| Account deletion | Control plane | Container killed, agent not notified |
+| Account deletion | Control plane | Gateway process killed, agent not notified |
 

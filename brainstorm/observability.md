@@ -58,7 +58,7 @@ OpenClaw already provides comprehensive per-message and per-session usage data:
 
 ```mermaid
 graph TB
-    subgraph "User Containers"
+    subgraph "User Gateways"
         GW1["Gateway 1 (alice@co.com)\nTracks own usage natively"]
         GW2["Gateway 2 (bob@gmail.com)\nTracks own usage natively"]
         GW3["Gateway 3 (carol@io.com)\nTracks own usage natively"]
@@ -86,7 +86,7 @@ graph TB
 
 ### Collection
 1. Control plane runs a scheduled poller (e.g., every 5 minutes)
-2. For each **active** container, call `usage.cost` via [WebSocket API](https://docs.openclaw.ai/gateway/protocol)
+2. For each **active** gateway, call `usage.cost` via [WebSocket API](https://docs.openclaw.ai/gateway/protocol)
 3. Store results keyed by user email + timestamp
 4. For deeper detail on demand, call `sessions.usage` or `sessions.usage.logs`
 
@@ -131,8 +131,8 @@ The "most verbose" view a user or operator can get:
 | Daily totals | Per day | `usage.cost` |
 | Monthly totals | Per month | Aggregated from `usage.cost` |
 | Provider quota | Real-time | `usage.status` |
-| Storage used | Per user | Container volume metrics |
+| Storage used | Per user | Workspace directory metrics |
 | File uploads | Per upload | Control plane logs |
 | Gate rejections | Per attempt | Control plane logs |
-| Compute time | Per container | Container runtime metrics (from orchestrator) |
+| Compute time | Per gateway | Process runtime metrics (from process manager) |
 

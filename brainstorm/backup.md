@@ -8,8 +8,8 @@ Each user's workspace is a git repo. Auto-commit and push to GitHub daily. Free,
 
 ```mermaid
 graph LR
-    subgraph "User's Container"
-        WS[Workspace Volume<br/>USER.md, MEMORY.md,<br/>sessions/, memory/, uploads/]
+    subgraph "User's Gateway Process"
+        WS[Workspace Directory<br/>USER.md, MEMORY.md,<br/>sessions/, memory/, uploads/]
         GIT[Local Git Repo]
     end
 
@@ -31,15 +31,15 @@ graph LR
 | `memory/` | Yes | Daily logs |
 | `sessions/` | Yes | Full task history (JSONL) |
 | `uploads/` | Yes | User-uploaded files (within size limits) |
-| [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) | No | Shared config, lives in shared volume |
-| `AGENTS.md` | No | Shared config, lives in shared volume |
+| [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) | No | Shared config, lives in shared config directory |
+| `AGENTS.md` | No | Shared config, lives in shared config directory |
 
 ## Why GitHub
 
 - **Free** — unlimited private repos on free plan
 - **Version history** — full git log of every change, diffable
 - **Rollback** — restore to any point in time with `git checkout`
-- **Disaster recovery** — volume dies? `git clone` and the workspace is back
+- **Disaster recovery** — workspace lost? `git clone` and the workspace is back
 - **No extra infrastructure** — no snapshot service, no S3, no backup jobs to manage
 
 ## Rate Limits (Not a Problem)
@@ -68,20 +68,20 @@ sequenceDiagram
     participant OP as Operator
     participant CP as Control Plane
     participant GH as GitHub
-    participant C as New Container
+    participant GW as New Gateway Process
 
-    Note over OP: Volume lost or corrupted
+    Note over OP: Workspace lost or corrupted
 
     OP->>CP: Restore user alice@company.com
     CP->>GH: git clone your-org/ws-alice-hash
-    GH->>C: Full workspace restored
-    CP->>C: Mount restored volume, boot gateway
-    Note over C: User loses at most ~24h of work
+    GH->>GW: Full workspace restored
+    CP->>GW: Start gateway process with restored workspace
+    Note over GW: User loses at most ~24h of work
 ```
 
 ## Worst Case Data Loss
 
-- Daily push at midnight → volume dies at 11pm → lose ~23 hours of work
+- Daily push at midnight → workspace lost at 11pm → lose ~23 hours of work
 - Acceptable tradeoff for a startup — free backup with no infrastructure
 - If needed later, increase push frequency (every 6h, every hour) while staying within rate limits
 
@@ -92,5 +92,5 @@ If GitHub becomes a bottleneck (unlikely with daily pushes):
 | Scale | Strategy |
 |---|---|
 | 0-10,000 users | GitHub — free, simple |
-| 10,000+ users | Self-hosted [Gitea](https://gitea.io/) (no rate limits) or volume snapshots ($0.05/GB/month) |
+| 10,000+ users | Self-hosted [Gitea](https://gitea.io/) (no rate limits) or filesystem snapshots ($0.05/GB/month) |
 

@@ -22,7 +22,7 @@ flowchart TD
     end
 
     subgraph "Infrastructure"
-        L6["Layer 6: Container Isolation\n(1 user = 1 container)"]
+        L6["Layer 6: Process Isolation\n(1 user = 1 gateway process)"]
     end
 
     L1 -->|pass| L2
@@ -133,12 +133,12 @@ Catches: Even if a manipulated prompt reaches the agent, it can only use tools y
 
 ---
 
-### Layer 6 — Container Isolation (infrastructure)
+### Layer 6 — Process Isolation via OS User Separation (infrastructure)
 
 **Cost:** Infrastructure cost (already part of architecture)
-**Dependencies:** Docker / Kubernetes
+**Dependencies:** OS user separation (Unix filesystem permissions)
 
-Each user runs in their own container with their own persistent volume. There is no shared state, no shared database, no cross-user access path.
+Each user runs in their own gateway process under a dedicated OS user with their own workspace directory. There is no shared state, no shared database, no cross-user access path.
 
 Catches: Everything else. Even a fully compromised agent can only access that one user's own data.
 
@@ -150,8 +150,8 @@ This isn't a "layer" you implement — it's a property of the 1:1 architecture:
 
 | Attack Scenario | Traditional SaaS | This Architecture |
 |---|---|---|
-| Prompt injection succeeds | Access shared DB → all users' data | Access one container → one user's data |
-| Agent goes rogue | Shared infra at risk | One container at risk |
+| Prompt injection succeeds | Access shared DB → all users' data | Access one gateway process → one user's data |
+| Agent goes rogue | Shared infra at risk | One gateway process at risk |
 | Credentials leaked | Shared secrets exposed | One user's auth profiles only |
 | Data exfiltration | Entire database | One user's workspace files |
 
@@ -165,7 +165,7 @@ This isn't a "layer" you implement — it's a property of the 1:1 architecture:
 | Model provider for guards | `ai` (Vercel AI SDK) | Model-agnostic — swap providers without code changes |
 | Domain scope classifier | `ai` (Vercel AI SDK) middleware | Custom per-product, clean middleware pattern |
 | Tool restrictions | OpenClaw native (`openclaw.json`) | Already built-in, zero code |
-| Process isolation | Docker / Kubernetes | Standard container orchestration |
+| Process isolation | OS user separation | Unix filesystem permissions per gateway process |
 
 ## Flow Timing Estimate
 

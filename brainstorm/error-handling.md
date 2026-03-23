@@ -12,18 +12,18 @@ These are reliability problems, not error handling. They must be solved at the i
 | **Provider outage** | Fallback models configured in OpenClaw |
 | **Context window exceeded** | OpenClaw [compaction](https://docs.openclaw.ai/concepts/compaction) handles this natively |
 | **Content filter triggered** | 7-layer security gate catches this before OpenClaw |
-| **Container crash (OOM)** | Kubernetes auto-restart + proper resource limits |
-| **Container eviction** | QoS guarantees + proper request/limit sizing |
-| **Volume mount failure** | Persistent volume claims with reliable storage class |
+| **Process crash (OOM)** | Process manager auto-restart + proper resource limits |
+| **Process eviction** | OS-level resource limits + proper sizing |
+| **Workspace directory failure** | Reliable filesystem + regular backups |
 | **Network partition** | Redundant networking + health probes |
 | **Tool execution errors** | OpenClaw retries tools internally |
 | **Agent loops** | OpenClaw has built-in [loop detection](https://docs.openclaw.ai/tools/loop-detection) |
 | **Task timeout** | Configure max task duration |
 | **Control plane down** | Multiple replicas, load balanced |
-| **Node failure** | Kubernetes reschedules containers |
-| **Storage failure** | Replicated volumes + regular backups |
+| **Host failure** | Reassign users to another host, start gateway processes |
+| **Storage failure** | Filesystem backups + git-based workspace recovery |
 
-**Principle:** If infrastructure is properly set up, these are non-events. Standard Kubernetes/cloud reliability practices.
+**Principle:** If infrastructure is properly set up, these are non-events. Standard process management and cloud reliability practices.
 
 ### Agent-Level Failures (Handle at Runtime)
 

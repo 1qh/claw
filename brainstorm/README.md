@@ -19,6 +19,6 @@ This project explores building a SaaS where the product IS the agent. Users fire
 - [**Observability**](observability.md) — leveraging OpenClaw's native usage tracking, billing integration
 - [**SaaS Simplification**](saas-simplification.md) — what OpenClaw eliminates vs what we still build
 - [**Error Handling**](error-handling.md) — infrastructure reliability, agent-level failures, clarification mechanism
-- [**Versioning**](versioning.md) — rolling out config changes across all gateways via shared volume
+- [**Versioning**](versioning.md) — rolling out config changes across all gateways via shared config directory
 - [**Backup**](backup.md) — git-based daily workspace backup to GitHub
 - [**Feedback**](feedback.md) — ratings, redo mechanism, and agent learning
