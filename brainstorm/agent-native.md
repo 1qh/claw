@@ -136,21 +136,6 @@ program
 program.parse()
 ```
 
-### Leveraging Bun
-
-[Bun](https://bun.sh/) is the runtime foundation:
-
-| Feature | How the Framework Uses It |
-|---|---|
-| **bunx** | Execute any npm CLI at latest version, 100x faster than npx |
-| **bun compile** | Deployers can compile TypeScript CLIs into standalone binaries |
-| **bun install** | 20-40x faster than npm for any setup steps |
-| **bun test** | Deployers test their CLIs with bun's built-in test runner |
-| **TypeScript native** | No build step — write TypeScript, run directly |
-| **Lower memory** | 30-40% less memory than Node.js — matters when running many gateways |
-
-OpenClaw already prefers bun for TypeScript execution in its dev workflow.
-
 ### Public vs Private CLIs
 
 ```
