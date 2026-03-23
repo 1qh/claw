@@ -7,7 +7,7 @@ email (primary key)
     → auth identity (OAuth provider)
     → gateway routing (which host:port to hit)
     → gateway workspace (USER.md has the email)
-    → channel linking (WhatsApp/Telegram/Slack all map back to same email)
+    → web app frontend (single channel, user interacts through your SaaS)
 ```
 
 ## What Email Gives Us for Free
@@ -15,7 +15,7 @@ email (primary key)
 | Benefit | Why |
 |---|---|
 | **Auth identity** | Google/Microsoft/GitHub OAuth all return email |
-| **Channel linking** | User signs up with email, connects messaging accounts, all map to same gateway |
+| **Gateway routing** | Email maps deterministically to host, port, OS user |
 | **Fallback notifications** | Email itself is a delivery channel |
 | **Deterministic gateway naming** | Hash email → OS user + port, no lookup needed |
 | **Human readable** | Admin sees `alice@company.com` in logs, not a UUID |
@@ -30,8 +30,7 @@ email (PK) → {
     port            // gateway process port
     os_user         // dedicated OS user (e.g., oc-<hash>)
     workspace_dir   // workspace directory path
-    status          // active | suspended | provisioning
-    channels        // linked messaging accounts
+    status          // active | stopped | provisioning
     created_at
     last_active_at
 }
@@ -44,7 +43,7 @@ Could be a database table, a key-value store, or even a flat file.
 ```mermaid
 graph LR
     subgraph "Control Plane"
-        A["email = auth/routing key<br/>Owns: gateway mapping, billing, channel links"]
+        A["email = auth/routing key<br/>Owns: gateway mapping, billing"]
     end
 
     subgraph "Gateway Workspace"

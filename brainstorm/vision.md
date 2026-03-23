@@ -43,13 +43,14 @@ graph LR
 
 ## The Entire UX Surface
 
-Only three touchpoints:
+Four surfaces, all through the web app:
 
 | Surface | Purpose | Nature |
 |---------|---------|--------|
-| **Conversation** | Submit tasks, receive results | WhatsApp, Telegram, Slack, etc. |
+| **Chat** | Submit tasks, receive results | Conversational interface |
 | **Live Feed** | Readonly logs/progress from agents | Security camera model — glanceable, not interactive |
-| **Notification** | "Your task is done" | Push notification, message, email |
+| **Notifications** | "Your task is done" | Alerts when tasks complete |
+| **Usage / History** | Token usage, cost, past tasks | Queryable via agent or UI |
 
 No settings page. No onboarding wizard. No navigation. No learning curve.
 

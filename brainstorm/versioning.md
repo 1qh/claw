@@ -16,20 +16,20 @@ These are product-level files shared across ALL users. They must update instantl
 
 ```mermaid
 graph LR
-    GH[GitHub Repo<br/>source of truth] -->|git push triggers sync| VOL[(Shared Config Directory<br/>NFS / local filesystem)]
+    GH[GitHub Repo<br/>source of truth] -->|system cron: git pull| DIR["/shared-config/<br/>(local directory)"]
 
-    VOL -->|read-only mount| C1[Gateway 1]
-    VOL -->|read-only mount| C2[Gateway 2]
-    VOL -->|read-only mount| C3[Gateway 3]
-    VOL -->|read-only mount| CN[Gateway N]
+    DIR -->|read by| G1[Gateway 1]
+    DIR -->|read by| G2[Gateway 2]
+    DIR -->|read by| G3[Gateway 3]
+    DIR -->|read by| GN[Gateway N]
 ```
 
 ### How It Works
 
 1. Shared config files live in a GitHub repo (version controlled, auditable, rollbackable)
-2. A single sync process keeps the shared config directory in sync with the repo
-3. All gateway processes access that directory as a read-only path (e.g., `/shared-config/`)
-4. OpenClaw reads `SOUL.md`, `AGENTS.md` from the mounted path
+2. A system-level cron job runs `git pull` in `/shared-config/` every minute
+3. All gateway processes on the host read from `/shared-config/`
+4. OpenClaw reads `SOUL.md`, `AGENTS.md` from this shared path
 5. When the file changes on disk, OpenClaw detects it and hot-reloads
 
 ### Update Flow
@@ -38,14 +38,15 @@ graph LR
 sequenceDiagram
     participant Dev as Developer
     participant GH as GitHub
-    participant Sync as Sync Process
-    participant Vol as Shared Config Dir
+    participant Cron as System Cron (git pull)
+    participant Dir as /shared-config/
     participant GW as All Gateways
 
     Dev->>GH: git push (update SOUL.md)
-    GH->>Sync: Webhook or poll trigger
-    Sync->>Vol: Write updated file
-    Vol->>GW: All mounts see new file instantly
+    Note over Cron: Runs every minute
+    Cron->>GH: git pull
+    GH->>Dir: Updated file on disk
+    Dir->>GW: All gateways read new file
     Note over GW: OpenClaw detects file change → hot-reload
 ```
 
