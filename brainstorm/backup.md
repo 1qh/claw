@@ -1,96 +1,54 @@
-# Backup & Disaster Recovery: Git-Based Workspace Backup
+# Backup & Disaster Recovery
 
-## Core Principle
+## With TigerFS
 
-Each user's workspace is a git repo. Auto-commit and push to GitHub daily. Free, version-controlled, rollbackable.
+All data lives in TimescaleDB via [TigerFS](tigerfs.md). Backup is now a database problem, not a filesystem problem.
 
-## How It Works
+### Version History (Built-in)
 
-```mermaid
-graph LR
-    subgraph "User's Gateway Process"
-        WS[Workspace Directory<br/>USER.md, MEMORY.md,<br/>sessions/, memory/, uploads/]
-        GIT[Local Git Repo]
-    end
+TigerFS `.history/` gives timestamped snapshots of every file change, with stable UUIDs that track renames:
 
-    WS --> GIT
-    GIT -->|daily push| GH[(GitHub Private Repo<br/>one per user)]
+```bash
+ls /mnt/tigerfs/users/alice@co.com/.history/USER.md/          # all versions
+cat /mnt/tigerfs/users/alice@co.com/.history/USER.md/2026-03-23T150000Z  # specific version
 ```
 
-1. Each user's workspace is initialized as a git repo
-2. A daily cron job (system-level, not LLM) runs `git add . && git commit && git push`
-3. Each user has their own private repo under a GitHub org (e.g., `<deployer-org>/ws-<user-hash>`)
-4. Full version history of every workspace change
-
-## What Gets Backed Up
-
-| Content | Backed Up | Notes |
-|---|---|---|
-| `USER.md` | Yes | User profile and preferences |
-| [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory) | Yes | Long-term agent memory |
-| `memory/` | Yes | Daily logs |
-| `sessions/` | Yes | Full task history (JSONL) |
-| `uploads/` | Yes | User-uploaded files (within size limits) |
-| [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) | No | Shared config, lives in shared config directory |
-| `AGENTS.md` | No | Shared config, lives in shared config directory |
-
-## Why GitHub
-
-- **Free** — unlimited private repos on free plan
-- **Version history** — full git log of every change, diffable
-- **Rollback** — restore to any point in time with `git checkout`
-- **Disaster recovery** — workspace lost? `git clone` and the workspace is back
-- **No extra infrastructure** — no snapshot service, no S3, no backup jobs to manage
-
-## Rate Limits (Not a Problem)
-
-GitHub allows 500 content-generating requests per hour. Daily pushes:
-
-| Users | Pushes/Day | Pushes/Hour | Within Limit? |
-|---|---|---|---|
-| 100 | 100 | ~4 | Yes |
-| 1,000 | 1,000 | ~42 | Yes |
-| 5,000 | 5,000 | ~208 | Yes |
-| 10,000 | 10,000 | ~417 | Yes |
-
-Even at 10,000 users with daily pushes, well within limits. Stagger push times across the day for safety.
-
-## Storage Limits
-
-GitHub recommends repos under 1GB, hard limit at 5GB. File uploads capped at 100MB per file.
-
-For workspace files (markdown, JSONL, small uploads), 1GB per user is plenty. The file validation gate enforces upload size limits, so this is controlled.
-
-## Recovery Flow
-
-```mermaid
-sequenceDiagram
-    participant OP as Operator
-    participant CP as Control Plane
-    participant GH as GitHub
-    participant GW as New Gateway Process
-
-    Note over OP: Workspace lost or corrupted
-
-    OP->>CP: Restore user alice@company.com
-    CP->>GH: git clone your-org/ws-alice-hash
-    GH->>GW: Full workspace restored
-    CP->>GW: Start gateway process with restored workspace
-    Note over GW: User loses at most ~24h of work
+Restore any file to any point in time:
+```bash
+cat /mnt/tigerfs/users/alice@co.com/.history/USER.md/[timestamp] > /mnt/tigerfs/users/alice@co.com/USER.md
 ```
 
-## Worst Case Data Loss
+No git repos. No daily cron. No GitHub rate limits. Built-in.
 
-- Daily push at midnight → workspace lost at 11pm → lose ~23 hours of work
-- Acceptable tradeoff for early-stage deployments — free backup with no infrastructure
-- If needed later, increase push frequency (every 6h, every hour) while staying within rate limits
+### Disaster Recovery
 
-## Scaling Beyond GitHub
+`pg_dump` — one command backs up everything for all users:
 
-If GitHub becomes a bottleneck (unlikely with daily pushes):
+```bash
+pg_dump $DATABASE_URL > backup.sql
+```
 
-| Scale | Strategy |
+Recovery:
+```bash
+psql $DATABASE_URL < backup.sql
+# remount TigerFS — all workspaces restored
+```
+
+### Backup Schedule
+
+| Strategy | How |
 |---|---|
-| 0-10,000 users | GitHub — free, simple |
-| 10,000+ users | Self-hosted [Gitea](https://gitea.io/) (no rate limits) or filesystem snapshots ($0.05/GB/month) |
+| Continuous versioning | TigerFS `.history/` — automatic, per-file |
+| Full database backup | `pg_dump` on schedule (daily or hourly) |
+| Point-in-time recovery | TimescaleDB continuous archiving (WAL) if needed |
 
+### What Changed
+
+| Before (git-based) | After (TigerFS) |
+|---|---|
+| 1 GitHub repo per user | One database |
+| Daily git push cron | Built-in `.history/` |
+| GitHub rate limits at scale | No limits |
+| Restore = `git clone` | Restore = `pg_dump` / `.history/` |
+| Max 24h data loss | Continuous versioning, zero data loss |
+| Separate backup infra | Same system that serves the data |

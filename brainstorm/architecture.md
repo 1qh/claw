@@ -221,11 +221,10 @@ The gateway IS the database. No Postgres, no Redis, no migrations, no ORM.
 One Linux VM:
   ├── Control plane          (1 Bun process)
   ├── TimescaleDB            (1 system service)
+  ├── TigerFS mount          (/mnt/tigerfs/ — all data)
   ├── ClamAV daemon          (1 system service)
-  ├── Shared config dir      (/shared-config/, git-synced)
-  ├── User gateway processes  (N OpenClaw processes)
-  └── User workspace dirs    (/data/oc-<user>/, git-backed)
+  └── User gateway processes  (N OpenClaw processes, all read/write via TigerFS)
 ```
 
-No Docker. No Kubernetes. No container registry. No orchestrator. No network volumes. Just processes on a Linux box.
+No per-user directories. No git sync. No separate backup infra. Just processes on a Linux box with [TigerFS](tigerfs.md) unifying all storage.
 

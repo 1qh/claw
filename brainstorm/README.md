@@ -19,8 +19,8 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Observability**](observability.md) — leveraging OpenClaw's native usage tracking, billing integration
 - [**SaaS Simplification**](saas-simplification.md) — what OpenClaw eliminates vs what the deployer still builds
 - [**Error Handling**](error-handling.md) — infrastructure reliability, agent-level failures, clarification mechanism
-- [**Versioning**](versioning.md) — rolling out config changes across all gateways via shared config directory
-- [**Backup**](backup.md) — git-based daily workspace backup to GitHub
+- [**Versioning**](versioning.md) — rolling out config changes across all gateways instantly via TigerFS
+- [**Backup**](backup.md) — TigerFS `.history/` for versioning, `pg_dump` for disaster recovery
 - [**Feedback**](feedback.md) — ratings, redo mechanism, and agent learning
 - [**Reliability**](reliability.md) — auto-recovery, health checks, no formal SLA at launch
 - [**Agent-Native Paradigm**](agent-native.md) — CLIs as backend, knowledge as files, instructions as markdown, bun as runtime

@@ -12,41 +12,19 @@ These are product-level files shared across ALL users. They must update instantl
 
 **Per-user files (`USER.md`, [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory), `memory/`, `sessions/`) are never touched by updates.**
 
-## Solution: Shared Config Directory
+## With TigerFS
 
-```mermaid
-graph LR
-    GH[GitHub Repo<br/>source of truth] -->|system cron: git pull| DIR["/shared-config/<br/>(local directory)"]
-
-    DIR -->|read by| G1[Gateway 1]
-    DIR -->|read by| G2[Gateway 2]
-    DIR -->|read by| G3[Gateway 3]
-    DIR -->|read by| GN[Gateway N]
-```
-
-### How It Works
-
-1. Shared config files live in a GitHub repo (version controlled, auditable, rollbackable)
-2. A system-level cron job runs `git pull` in `/shared-config/` every minute
-3. All gateway processes on the host read from `/shared-config/`
-4. OpenClaw reads `SOUL.md`, `AGENTS.md` from this shared path
-5. When the file changes on disk, OpenClaw detects it and hot-reloads
-
-### Update Flow
+All shared config lives in [TigerFS](tigerfs.md) at `/mnt/tigerfs/config/`. Since TigerFS is backed by TimescaleDB, a write to any file is instantly visible to all gateways reading from the same mount. ACID-guaranteed.
 
 ```mermaid
 sequenceDiagram
-    participant Dev as Developer
-    participant GH as GitHub
-    participant Cron as System Cron (git pull)
-    participant Dir as /shared-config/
+    participant Dev as Deployer
+    participant TFS as TigerFS (/mnt/tigerfs/config/)
     participant GW as All Gateways
 
-    Dev->>GH: git push (update SOUL.md)
-    Note over Cron: Runs every minute
-    Cron->>GH: git pull
-    GH->>Dir: Updated file on disk
-    Dir->>GW: All gateways read new file
+    Dev->>TFS: Write updated SOUL.md
+    Note over TFS: ACID transaction committed
+    TFS->>GW: All gateways see new file immediately
     Note over GW: OpenClaw detects file change → hot-reload
 ```
 
@@ -54,44 +32,35 @@ sequenceDiagram
 
 | Property | |
 |---|---|
-| **Write operations** | One (to the shared config directory) |
-| **Fan-out** | Zero (filesystem handles distribution) |
-| **Per-gateway work** | Zero (no sync, no pull, no webhook handler) |
-| **Latency** | Near-instant (filesystem write) |
+| **Write operations** | One (to TigerFS) |
+| **Fan-out** | Zero (all gateways read same mount) |
+| **Propagation** | Instant (ACID commit) |
 | **Polling** | None |
+| **Cron jobs** | None |
 | **Restart required** | No (OpenClaw hot-reloads on file change) |
-| **Version control** | Git history |
-| **Rollback** | Git revert → sync → all gateways rolled back |
-| **Scales with gateways** | Adding gateways just means another process reading the directory |
+| **Version history** | TigerFS `.history/` — timestamped snapshots of every change |
+| **Rollback** | Restore from `.history/` |
 
-### Workspace Layout Per Gateway
+### Rollback
 
-```
-/shared-config/          ← shared directory (read-only)
-  SOUL.md                ← product agent personality
-  AGENTS.md              ← product operating instructions
-  tool-policies.json     ← product tool restrictions
+```bash
+# See all versions of SOUL.md
+ls /mnt/tigerfs/config/.history/SOUL.md/
 
-/workspace/              ← per-user workspace directory (read-write)
-  USER.md                ← user profile, preferences
-  MEMORY.md              ← user long-term memory
-  memory/                ← user daily logs
-  sessions/              ← user task history
-  uploads/               ← user uploaded files
+# Restore a previous version
+cat /mnt/tigerfs/config/.history/SOUL.md/2026-03-22T100000Z > /mnt/tigerfs/config/SOUL.md
 ```
 
 ### Stopped Gateways
 
-Stopped gateway processes don't need updating — they're not running. When they start and read the shared config directory, they automatically get the latest version. No special handling.
+Stopped gateway processes don't need updating — they're not running. When they start and read from TigerFS, they get the latest version immediately. No special handling.
 
 ### Alternatives Considered and Rejected
 
 | Approach | Why Rejected |
 |---|---|
-| Bake into process startup script | Too slow for frequent iteration — restart all processes every time |
+| Git-synced shared directory with cron | Polling, propagation delay, extra infrastructure |
+| Bake into process startup script | Restart all processes every time |
 | GitHub webhook → fan-out to gateways | Per-gateway work, control plane complexity |
 | Agent fetches from URL per task | Burns tokens, adds latency, fragile |
 | OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) job to git pull | LLM cost per gateway per interval |
-| Git clone in workspace + periodic pull | Polling, per-gateway work |
-| Entrypoint fetch + webhook restart | Restart required, slower |
-
