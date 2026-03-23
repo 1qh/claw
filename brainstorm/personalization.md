@@ -53,10 +53,10 @@ No custom personalization engine needed. OpenClaw's workspace IS the personaliza
 | Personalization Need | OpenClaw Mechanism |
 |---|---|
 | User profile & preferences | `USER.md` (editable by user or agent) |
-| Agent personality & instructions | `SOUL.md` + `AGENTS.md` |
-| Long-term memory | `MEMORY.md` + vector search |
+| Agent personality & instructions | [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) + `AGENTS.md` |
+| Long-term memory | [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory) + vector search |
 | Daily activity & context | `memory/YYYY-MM-DD.md` |
-| Task history | Session transcripts (JSONL) |
+| Task history | [Session transcripts](https://docs.openclaw.ai/concepts/session) (JSONL) |
 | Accumulated knowledge | Workspace files the agent creates/maintains |
 
 ## How Users "Configure" Their Profile
@@ -70,10 +70,3 @@ Users just talk to their agent:
 
 The agent updates `USER.md` and `MEMORY.md` itself. Configuration through conversation.
 
-## References
-
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout and bootstrap files (SOUL.md, AGENTS.md, USER.md, etc.)
-- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — how memory works with workspace files and automatic memory flush
-- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session keys, persistence, and DM scoping
-- [OpenClaw — Context](https://docs.openclaw.ai/concepts/context) — what the model sees and how to inspect it
-- [OpenClaw — Compaction](https://docs.openclaw.ai/concepts/compaction) — context window management and auto-compaction

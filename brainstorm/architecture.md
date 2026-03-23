@@ -58,7 +58,7 @@ graph TB
 
 ## How OpenClaw Supports This Natively
 
-OpenClaw's `--profile` flag provides built-in multi-gateway support on a single host:
+[OpenClaw's `--profile` flag](https://docs.openclaw.ai/gateway/multiple-gateways) provides built-in multi-gateway support on a single host:
 
 ```bash
 openclaw --profile alice gateway --port 18789
@@ -146,7 +146,7 @@ We evaluated three approaches:
 | **Cost (100 users)** | ~$100-150/mo (one VM) | ~$300-500/mo (K8s + containers) | ~$100-150/mo (one VM) |
 | **Complexity** | Low | High (K8s, images, networking) | Medium (custom routing) |
 | **Scaling** | Add more VMs | Orchestrator handles it | Rebalance agents |
-| **Native OpenClaw support** | Yes — built-in profiles | You configure it | Yes — multi-agent |
+| **Native OpenClaw support** | Yes — built-in profiles | You configure it | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) |
 
 **Verdict:** Multi-gateway per host wins for startup stage. Same isolation guarantees as containers (via OS users), dramatically simpler and cheaper. Migrate to containers later only if needed.
 
@@ -228,18 +228,3 @@ One Linux VM:
 
 No Docker. No Kubernetes. No container registry. No orchestrator. No network volumes. Just processes on a Linux box.
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Multiple Gateways](https://docs.openclaw.ai/gateway/multiple-gateways) — running multiple gateways on one host with profiles and port isolation
-- [OpenClaw — Multi-Agent Routing](https://docs.openclaw.ai/concepts/multi-agent) — multi-agent isolation, bindings, and per-agent workspaces
-- [OpenClaw — Delegate Architecture](https://docs.openclaw.ai/concepts/delegate-architecture) — organizational deployments with isolated agents
-- [OpenClaw — Configuration Reference](https://docs.openclaw.ai/gateway/configuration-reference) — complete reference for all config keys
-- [OpenClaw — Gateway Configuration](https://docs.openclaw.ai/gateway/configuration) — common setup patterns
-- [OpenClaw — Security](https://docs.openclaw.ai/gateway/security) — security considerations and threat model
-- [OpenClaw — Sandboxing](https://docs.openclaw.ai/gateway/sandboxing) — sandbox modes, scopes, and workspace access
-- [OpenClaw — Sandbox vs Tool Policy vs Elevated](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated) — understanding why a tool is blocked
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout and bootstrap files
-- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — frame format, handshake, and events
-- [OpenClaw — Network Model](https://docs.openclaw.ai/gateway/network-model) — how gateway, nodes, and canvas connect
-- [OpenClaw — Discovery & Transports](https://docs.openclaw.ai/gateway/discovery) — Bonjour, Tailscale, SSH discovery

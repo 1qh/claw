@@ -57,22 +57,22 @@ flowchart TD
 | Check | How | Library |
 |---|---|---|
 | File size limits | Enforce per-type limits (e.g., 100MB max for documents) | Custom |
-| MIME type sniffing | Detect real format from binary headers, not just extension | `file-type` (npm) |
+| MIME type sniffing | Detect real format from binary headers, not just extension | [`file-type`](https://www.npmjs.com/package/file-type) (npm) |
 | Extension blocklist | Block .exe, .dll, .bat, .sh, .ps1, .com, .scr, etc. | Custom |
 | Filename validation | Reject path separators, null bytes, traversal attempts | Custom |
 
 ### Layer 2 — Antivirus Scan (ClamAV)
 
-**Choice: ClamAV via REST API in Docker container**
+**Choice: [ClamAV](https://www.clamav.net/) via REST API in Docker container**
 
 Why ClamAV:
 - Self-hosted — files never leave your infrastructure (privacy)
-- Simple REST API via `clamav-rest-api` Docker image — just `POST /scan`
+- Simple REST API via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) Docker image — just `POST /scan`
 - Good detection for known threats
 - Free and open source
 - Runs as a sidecar container — standard infrastructure pattern
 
-Why not VirusTotal:
+Why not [VirusTotal](https://www.virustotal.com/):
 - Sends user files to a third party — privacy concern for business data
 - Better detection but unacceptable privacy tradeoff for a SaaS handling sensitive user data
 
@@ -83,8 +83,8 @@ Why not both:
 
 | Check | What | Library |
 |---|---|---|
-| Archive contents | Scan inside ZIP/TAR/RAR before accepting | `adm-zip`, `tar-stream` |
-| PDF structure | Detect malicious PDFs (embedded JS, suspicious objects) | `pdf-parse` |
+| Archive contents | Scan inside ZIP/TAR/RAR before accepting | [`adm-zip`](https://www.npmjs.com/package/adm-zip), [`tar-stream`](https://www.npmjs.com/package/tar-stream) |
+| PDF structure | Detect malicious PDFs (embedded JS, suspicious objects) | [`pdf-parse`](https://www.npmjs.com/package/pdf-parse) |
 | Macro detection | Flag Office files with macros | Custom or dedicated lib |
 
 ## OpenClaw's Built-in File Handling
@@ -110,7 +110,7 @@ Important context from community and security researchers:
 - ClawHub poisoning: 341 malicious skills found out of 2,857 (12%)
 - RedLine and Lumma infostealers already target OpenClaw file paths
 - Microsoft, Kaspersky, Malwarebytes, Bitdefender have all published security advisories
-- OpenClaw added VirusTotal scanning for ClawHub skills, but NOT for user-uploaded files
+- OpenClaw added VirusTotal scanning for [ClawHub](https://github.com/openclaw/clawhub) skills, but NOT for user-uploaded files
 
 **This reinforces the architecture: validate in the control plane, not in OpenClaw.**
 
@@ -124,22 +124,3 @@ Important context from community and security researchers:
 | Backup | Regular volume snapshots |
 | Deletion (GDPR) | Delete volume = delete everything |
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Media Understanding](https://docs.openclaw.ai/nodes/media-understanding) — inbound image/audio/video handling and provider fallbacks
-- [OpenClaw — Security](https://docs.openclaw.ai/gateway/security) — security model and threat considerations
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace file layout and access
-
-### Open Source Libraries
-- [file-type](https://www.npmjs.com/package/file-type) — detect file type from binary headers (MIME sniffing)
-- [ClamAV](https://www.clamav.net/) — open-source antivirus engine
-- [clamav-rest-api](https://github.com/benzino77/clamav-rest-api) — REST API wrapper for ClamAV in Docker
-- [adm-zip](https://www.npmjs.com/package/adm-zip) — ZIP archive reading/creation
-- [tar-stream](https://www.npmjs.com/package/tar-stream) — streaming TAR archive parsing
-- [pdf-parse](https://www.npmjs.com/package/pdf-parse) — PDF text extraction and inspection
-
-### Security Research
-- [OpenClaw Integrates VirusTotal Scanning — The Hacker News](https://thehackernews.com/2026/02/openclaw-integrates-virustotal-scanning.html)
-- [OpenClaw Security Crisis — Conscia](https://conscia.com/blog/the-openclaw-security-crisis/)
-- [OpenClaw Security Risks — Kaspersky](https://www.kaspersky.com/blog/moltbot-enterprise-risk-management/55317/)

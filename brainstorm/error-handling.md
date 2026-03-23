@@ -8,16 +8,16 @@ These are reliability problems, not error handling. They must be solved at the i
 
 | Failure | Prevention |
 |---|---|
-| **LLM rate limits** | Sufficient API quota + OpenClaw model failover + auth profile rotation |
+| **LLM rate limits** | Sufficient API quota + OpenClaw [model failover](https://docs.openclaw.ai/concepts/model-failover) + auth profile rotation |
 | **Provider outage** | Fallback models configured in OpenClaw |
-| **Context window exceeded** | OpenClaw compaction handles this natively |
+| **Context window exceeded** | OpenClaw [compaction](https://docs.openclaw.ai/concepts/compaction) handles this natively |
 | **Content filter triggered** | 7-layer security gate catches this before OpenClaw |
 | **Container crash (OOM)** | Kubernetes auto-restart + proper resource limits |
 | **Container eviction** | QoS guarantees + proper request/limit sizing |
 | **Volume mount failure** | Persistent volume claims with reliable storage class |
 | **Network partition** | Redundant networking + health probes |
 | **Tool execution errors** | OpenClaw retries tools internally |
-| **Agent loops** | OpenClaw has built-in loop detection |
+| **Agent loops** | OpenClaw has built-in [loop detection](https://docs.openclaw.ai/tools/loop-detection) |
 | **Task timeout** | Configure max task duration |
 | **Control plane down** | Multiple replicas, load balanced |
 | **Node failure** | Kubernetes reschedules containers |
@@ -49,7 +49,7 @@ User doesn't talk directly to OpenClaw. The control plane proxies everything. So
 
 ### The Solution: Custom Tool Following Exec Approval Pattern
 
-OpenClaw has a built-in two-phase pattern for "agent asks, pauses, waits for response, resumes" — used for execution approvals. We register a custom `request_clarification` tool that follows the same pattern.
+OpenClaw has a built-in two-phase pattern for "agent asks, pauses, waits for response, resumes" — used for [exec approvals](https://docs.openclaw.ai/tools/exec-approvals). We register a custom `request_clarification` tool that follows the same pattern.
 
 ### Flow
 
@@ -141,14 +141,3 @@ If the user doesn't respond to a clarification request:
 - Agent should either abort with explanation or proceed with best guess + disclaimer
 - Frontend shows: "Your agent's question expired. You can resubmit the task."
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Model Failover](https://docs.openclaw.ai/concepts/model-failover) — auth profile rotation and fallback models
-- [OpenClaw — Compaction](https://docs.openclaw.ai/concepts/compaction) — context window management when exceeded
-- [OpenClaw — Exec Approvals](https://docs.openclaw.ai/tools/exec-approvals) — the two-phase approval pattern (reference for clarification mechanism)
-- [OpenClaw — Agent Loop](https://docs.openclaw.ai/concepts/agent-loop) — agent lifecycle, streams, and wait semantics
-- [OpenClaw — Queue](https://docs.openclaw.ai/concepts/queue) — command queue and message serialization
-- [OpenClaw — Plugins](https://docs.openclaw.ai/tools/plugin) — plugin API for registering custom tools
-- [OpenClaw — Creating Skills](https://docs.openclaw.ai/tools/creating-skills) — building custom skills with SKILL.md
-- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — event broadcasting to connected clients

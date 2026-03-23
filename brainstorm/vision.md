@@ -69,9 +69,3 @@ With minimal UI, differentiation is entirely in:
 - How does it handle edge cases and failures?
 - How well does it **personalize** over time?
 
-## References
-
-- [OpenClaw — Official Website](https://openclaw.ai)
-- [OpenClaw — Getting Started](https://docs.openclaw.ai/start/getting-started)
-- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — how frontends connect and receive real-time events
-- [OpenClaw — Streaming & Chunking](https://docs.openclaw.ai/concepts/streaming) — block streaming and channel preview behavior

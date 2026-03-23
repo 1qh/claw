@@ -4,13 +4,13 @@
 
 At a startup, agent behavior is iterated constantly — daily or multiple times a day:
 
-- `SOUL.md` — agent personality, tone, boundaries
+- [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) — agent personality, tone, boundaries
 - `AGENTS.md` — operating instructions, workflows
-- Tool policies — what tools are enabled/disabled
+- [Tool policies](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated) — what tools are enabled/disabled
 
 These are product-level files shared across ALL users. They must update instantly across all gateways.
 
-**Per-user files (`USER.md`, `MEMORY.md`, `memory/`, `sessions/`) are never touched by updates.**
+**Per-user files (`USER.md`, [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory), `memory/`, `sessions/`) are never touched by updates.**
 
 ## Solution: Shared Network Volume
 
@@ -91,13 +91,7 @@ Suspended containers don't need updating — they have no mount. When they boot 
 | Kubernetes ConfigMap | Propagation delay (up to 60s), K8s-specific |
 | GitHub webhook → fan-out to containers | Per-container work, control plane complexity |
 | Agent fetches from URL per task | Burns tokens, adds latency, fragile |
-| OpenClaw cron job to git pull | LLM cost per container per interval |
+| OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) job to git pull | LLM cost per container per interval |
 | Git clone in container + periodic pull | Polling, per-container work |
 | Entrypoint fetch + webhook restart | Restart required, slower |
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout, bootstrap files, and hot-reload behavior
-- [OpenClaw — Gateway Configuration](https://docs.openclaw.ai/gateway/configuration) — config hot-reload on file change
-- [OpenClaw — Multiple Gateways](https://docs.openclaw.ai/gateway/multiple-gateways) — profile-based gateway isolation

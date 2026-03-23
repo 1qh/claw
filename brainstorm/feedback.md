@@ -87,7 +87,7 @@ sequenceDiagram
 
 **Why not batch or defer?** The token cost of processing a rating (~500 tokens) is negligible compared to the task that produced the result (50,000+ tokens). It's a rounding error. Keep it simple — just send it.
 
-**Why positive ratings matter:** If the agent knows "user loved the chart format," it reinforces that behavior. Without the signal, the agent might change approach for no reason. OpenClaw's memory system is designed for this — writing durable facts like "user prefers chart-heavy reports (rated positively 3 times)."
+**Why positive ratings matter:** If the agent knows "user loved the chart format," it reinforces that behavior. Without the signal, the agent might change approach for no reason. OpenClaw's [memory](https://docs.openclaw.ai/concepts/memory) system is designed for this — writing durable facts like "user prefers chart-heavy reports (rated positively 3 times)."
 
 ## Multiple Redos
 
@@ -131,16 +131,8 @@ No analytics system needed. The agent learns through its own memory, informed by
 | File upload | User via frontend | File appears in workspace |
 | Profile changes | User tells agent | Conversation → updates USER.md |
 | Returns after absence | User opens app | Agent has memory/session history |
-| Scheduled task done | OpenClaw cron | Results in session transcripts |
+| Scheduled task done | OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) | Results in [session transcripts](https://docs.openclaw.ai/concepts/session) |
 | Config updates | Shared volume | Hot-reload, automatic |
 | Tier/plan change | Control plane | Config patch via gateway API |
 | Account deletion | Control plane | Container killed, agent not notified |
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — how agents write durable facts to MEMORY.md and daily logs
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — USER.md, MEMORY.md, and bootstrap file structure
-- [OpenClaw — Cron Jobs](https://docs.openclaw.ai/automation/cron-jobs) — scheduled task execution
-- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session transcripts where ratings are stored
-- [OpenClaw — Configuration Reference](https://docs.openclaw.ai/gateway/configuration-reference) — config.patch API for tier/plan changes

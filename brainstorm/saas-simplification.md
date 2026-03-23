@@ -12,7 +12,7 @@ graph LR
     WEB -->|WebSocket via Control Plane| GW[User's Gateway]
 ```
 
-No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just your frontend talking to the gateway's WebSocket API.
+No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just your frontend talking to the gateway's [WebSocket API](https://docs.openclaw.ai/gateway/protocol).
 
 ## The Frontend
 
@@ -35,7 +35,7 @@ Typical SaaS components you do NOT need to build:
 
 ### User Settings & Preferences
 - **Traditional:** Settings page, dropdowns, toggles, database columns
-- **With OpenClaw:** User says "I prefer PDF reports." Agent updates `USER.md` and `MEMORY.md`. No settings UI needed.
+- **With OpenClaw:** User says "I prefer PDF reports." Agent updates `USER.md` and [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory). No settings UI needed.
 
 ### Task Queue / Job System
 - **Traditional:** Redis, Bull, worker processes, retry logic, dead letter queues
@@ -43,7 +43,7 @@ Typical SaaS components you do NOT need to build:
 
 ### Scheduling / Cron
 - **Traditional:** Separate scheduler service, cron library, job persistence
-- **With OpenClaw:** Built-in cron. User says "run this every Monday at 9am." Done.
+- **With OpenClaw:** Built-in [cron](https://docs.openclaw.ai/automation/cron-jobs). User says "run this every Monday at 9am." Done.
 
 ### Search
 - **Traditional:** Elasticsearch, Algolia, search indexing, query API
@@ -55,7 +55,7 @@ Typical SaaS components you do NOT need to build:
 
 ### Audit Trail / Activity Log
 - **Traditional:** Event sourcing, audit log table, log viewer UI
-- **With OpenClaw:** Session transcripts are append-only JSONL. Complete record of every interaction.
+- **With OpenClaw:** [Session transcripts](https://docs.openclaw.ai/concepts/session) are append-only JSONL. Complete record of every interaction.
 
 ### Notifications
 - **Traditional:** Push notification service, email templates, notification preferences
@@ -126,15 +126,3 @@ graph TB
 | **Data export** | Export jobs + formatters | Agent packages files |
 | **GDPR deletion** | Multi-table purge scripts | Delete volume |
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — bootstrap files (USER.md, SOUL.md, AGENTS.md, etc.)
-- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — workspace memory system and vector search
-- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session persistence and transcripts
-- [OpenClaw — Cron Jobs](https://docs.openclaw.ai/automation/cron-jobs) — built-in scheduling
-- [OpenClaw — Streaming](https://docs.openclaw.ai/concepts/streaming) — WebSocket event streaming to frontends
-- [OpenClaw — Slash Commands](https://docs.openclaw.ai/tools/slash-commands) — in-chat commands including `/usage`
-- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — how frontends connect and receive events
-- [OpenClaw — Skills](https://docs.openclaw.ai/tools/skills) — skill management and ClawHub registry
-- [OpenClaw — Plugins](https://docs.openclaw.ai/tools/plugin) — plugin installation and management

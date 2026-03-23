@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Leverage OpenClaw's native usage tracking. No extra observability infrastructure needed at launch. The control plane simply polls each gateway and aggregates.
+Leverage OpenClaw's native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). No extra observability infrastructure needed at launch. The control plane simply polls each gateway and aggregates.
 
 ## What OpenClaw Tracks Out of the Box (Per Gateway)
 
@@ -86,7 +86,7 @@ graph TB
 
 ### Collection
 1. Control plane runs a scheduled poller (e.g., every 5 minutes)
-2. For each **active** container, call `usage.cost` via WebSocket API
+2. For each **active** container, call `usage.cost` via [WebSocket API](https://docs.openclaw.ai/gateway/protocol)
 3. Store results keyed by user email + timestamp
 4. For deeper detail on demand, call `sessions.usage` or `sessions.usage.logs`
 
@@ -109,9 +109,9 @@ graph TB
 
 | Tool | Why Not Now |
 |---|---|
-| Langfuse | Rich tracing/eval — overkill for launch |
-| OpenTelemetry | Standard protocol — useful later if we need cross-system tracing |
-| Helicone | Proxy-based logging — unnecessary, OpenClaw already tracks everything |
+| [Langfuse](https://langfuse.com/) | Rich tracing/eval — overkill for launch |
+| [OpenTelemetry](https://opentelemetry.io/) | Standard protocol — useful later if we need cross-system tracing |
+| [Helicone](https://www.helicone.ai/) | Proxy-based logging — unnecessary, OpenClaw already tracks everything |
 | Custom metrics pipeline | Over-engineering — polling gateway API is sufficient |
 
 These can be added later if needed (e.g., for prompt debugging, A/B testing models, quality evaluation). The gateway API gives us everything we need for usage, billing, and basic observability at launch.
@@ -136,16 +136,3 @@ The "most verbose" view a user or operator can get:
 | Gate rejections | Per attempt | Control plane logs |
 | Compute time | Per container | Container runtime metrics (from orchestrator) |
 
-## References
-
-### OpenClaw Documentation
-- [OpenClaw — Usage Tracking](https://docs.openclaw.ai/concepts/usage-tracking) — usage tracking surfaces and credential requirements
-- [OpenClaw — Models](https://docs.openclaw.ai/concepts/models) — model CLI, aliases, fallbacks, and pricing config
-- [OpenClaw — Model Failover](https://docs.openclaw.ai/concepts/model-failover) — auth profile rotation and fallback across models
-- [OpenClaw — Slash Commands](https://docs.openclaw.ai/tools/slash-commands) — `/usage` command and other in-chat commands
-- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — gateway API methods including usage endpoints
-
-### Observability Platforms (Deferred, Not Needed at Launch)
-- [Langfuse](https://langfuse.com/) — open-source LLM observability with OpenTelemetry support
-- [Helicone](https://www.helicone.ai/) — proxy-based LLM logging and analytics
-- [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — standard for LLM tracing
