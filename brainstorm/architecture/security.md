@@ -99,7 +99,7 @@ Catches: Content policy violations, harmful intent, inappropriate requests.
 
 ### Layer 4 — Domain Scope Classifier (AI SDK middleware)
 
-**Cost:** LLM call (can batch with Layer 3)
+**Cost:** Separate LLM call (Layer 3 uses hai-guardrails, Layer 4 uses AI SDK — different libraries, cannot share one call)
 **Dependencies:** `ai` (Vercel AI SDK)
 
 Custom middleware that validates whether the request falls within the deployed product's domain. This is product-specific — each deployer defines their own scope.
@@ -112,7 +112,7 @@ BLOCK: "Write me a poem about cats"
 BLOCK: "Help me debug this Python script"
 ```
 
-Implementation: AI SDK middleware with a tight classification prompt. Can be combined with the Layer 3 LLM call to minimize latency (one call, multiple checks).
+Implementation: AI SDK `generateText()` with `Output.object()` + Zod schema. Runs as a separate LLM call from Layer 3 (hai-guardrails uses its own LLM invocation). Total gate latency: ~200-400ms for two sequential LLM calls.
 
 Catches: Out-of-scope requests, misuse of the service.
 
@@ -191,7 +191,7 @@ gantt
 
 Layers 1-2: <5ms (free, local)
 Layers 3-4: ~100-200ms (one LLM call, cheap model)
-Total gate overhead: <200ms — imperceptible to a fire-and-forget user.
+Total gate overhead: ~200-400ms (two sequential LLM calls for Layers 3+4) — imperceptible to a fire-and-forget user where tasks take seconds to minutes.
 
 ---
 
