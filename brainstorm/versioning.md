@@ -2,7 +2,7 @@
 
 ## What Changes and How Often
 
-At a startup, agent behavior is iterated constantly — daily or multiple times a day:
+In a deployed instance, agent behavior is iterated constantly — daily or multiple times a day:
 
 - [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) — agent personality, tone, boundaries
 - `AGENTS.md` — operating instructions, workflows

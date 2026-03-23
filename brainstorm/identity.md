@@ -7,7 +7,7 @@ email (primary key)
     → auth identity (OAuth provider)
     → gateway routing (which host:port to hit)
     → gateway workspace (USER.md has the email)
-    → web app frontend (single channel, user interacts through your SaaS)
+    → web app frontend (single channel, user interacts through the deployed instance)
 ```
 
 ## What Email Gives Us for Free

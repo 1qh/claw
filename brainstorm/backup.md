@@ -19,7 +19,7 @@ graph LR
 
 1. Each user's workspace is initialized as a git repo
 2. A daily cron job (system-level, not LLM) runs `git add . && git commit && git push`
-3. Each user has their own private repo under a GitHub org (e.g., `your-org/ws-<user-hash>`)
+3. Each user has their own private repo under a GitHub org (e.g., `<deployer-org>/ws-<user-hash>`)
 4. Full version history of every workspace change
 
 ## What Gets Backed Up
@@ -82,7 +82,7 @@ sequenceDiagram
 ## Worst Case Data Loss
 
 - Daily push at midnight → workspace lost at 11pm → lose ~23 hours of work
-- Acceptable tradeoff for a startup — free backup with no infrastructure
+- Acceptable tradeoff for early-stage deployments — free backup with no infrastructure
 - If needed later, increase push frequency (every 6h, every hour) while staying within rate limits
 
 ## Scaling Beyond GitHub

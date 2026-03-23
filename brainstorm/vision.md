@@ -6,7 +6,7 @@ Traditional SaaS forces users to **operate machines** — click buttons, fill fo
 
 ## The Vision
 
-A SaaS where **the product IS the agent**. No dashboards. No complex UIs. No learning curve.
+A deployed product where **the product IS the agent**. No dashboards. No complex UIs. No learning curve.
 
 Users don't care about the process. They care about the output/outcome. They want to:
 

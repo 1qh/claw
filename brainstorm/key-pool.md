@@ -56,7 +56,7 @@ Push to the config repo → all gateways pick it up → done.
 
 ## Cost Optimization: Coding Plans
 
-For high-volume SaaS, pay-per-token gets expensive. Deployers can use subscription-based providers with coding plans (e.g., Kimi, MiniMax) for much cheaper per-token costs at scale.
+For high-volume deployments, pay-per-token gets expensive. Deployers can use subscription-based providers with coding plans (e.g., Kimi, MiniMax) for much cheaper per-token costs at scale.
 
 **Sizing the key pool:**
 

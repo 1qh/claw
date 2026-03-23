@@ -16,7 +16,7 @@ User → Frontend → API Server → Database → Backend Services → External 
 User → Frontend → Control Plane → OpenClaw Gateway → Agent uses tools autonomously
 ```
 
-The agent IS the backend. It doesn't call your API — it IS the logic layer. It doesn't query your database — its workspace IS the data. It doesn't orchestrate services — it runs CLIs.
+The agent IS the backend. It doesn't call an API server — it IS the logic layer. It doesn't query a database — its workspace IS the data. It doesn't orchestrate services — it runs CLIs.
 
 ## Four Primitives
 
@@ -140,7 +140,7 @@ program.parse()
 
 [Bun](https://bun.sh/) is the runtime foundation:
 
-| Feature | How We Use It |
+| Feature | How the Framework Uses It |
 |---|---|
 | **bunx** | Execute any npm CLI at latest version, 100x faster than npx |
 | **bun compile** | Deployers can compile TypeScript CLIs into standalone binaries |

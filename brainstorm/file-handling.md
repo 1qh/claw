@@ -66,7 +66,7 @@ flowchart TD
 **Choice: [ClamAV](https://www.clamav.net/) via REST API as a system service**
 
 Why ClamAV:
-- Self-hosted — files never leave your infrastructure (privacy)
+- Self-hosted — files never leave the deployer's infrastructure (privacy)
 - Simple REST API via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) — just `POST /scan`
 - Good detection for known threats
 - Free and open source
@@ -74,7 +74,7 @@ Why ClamAV:
 
 Why not [VirusTotal](https://www.virustotal.com/):
 - Sends user files to a third party — privacy concern for business data
-- Better detection but unacceptable privacy tradeoff for a SaaS handling sensitive user data
+- Better detection but unacceptable privacy tradeoff for a deployed instance handling sensitive user data
 
 Why not both:
 - Unnecessary complexity. ClamAV catches 95%+ of known threats. If detection needs increase later, swap ClamAV for OPSWAT MetaDefender (same pattern, multiple engines, self-hosted, paid).

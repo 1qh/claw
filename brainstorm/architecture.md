@@ -133,7 +133,7 @@ sequenceDiagram
 
 ## Why Multiple Gateways Per Host (Not Containers)
 
-We evaluated three approaches:
+Three approaches were evaluated:
 
 | | Multi-Gateway Per Host | Containers (1:1) | Multi-Agent Packed |
 |---|---|---|---|
@@ -146,9 +146,9 @@ We evaluated three approaches:
 | **Cost (100 users)** | ~$100-150/mo (one VM) | ~$300-500/mo (K8s + containers) | ~$100-150/mo (one VM) |
 | **Complexity** | Low | High (K8s, images, networking) | Medium (custom routing) |
 | **Scaling** | Add more VMs | Orchestrator handles it | Rebalance agents |
-| **Native OpenClaw support** | Yes — built-in profiles | You configure it | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) |
+| **Native OpenClaw support** | Yes — built-in profiles | Deployer configures it | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) |
 
-**Verdict:** Multi-gateway per host wins for startup stage. Same isolation guarantees as containers (via OS users), dramatically simpler and cheaper. Migrate to containers later only if needed.
+**Verdict:** Multi-gateway per host wins for early-stage deployments. Same isolation guarantees as containers (via OS users), dramatically simpler and cheaper. Migrate to containers later only if needed.
 
 ## Cost Projection
 
@@ -201,7 +201,7 @@ graph TB
 
 The gateway IS the database. No Postgres, no Redis, no migrations, no ORM.
 
-**What we avoid:**
+**What the framework avoids:**
 - No data model design — agent organizes its own data through markdown
 - No migration hell — workspace files evolve naturally
 - No sync problems — one source of truth (the workspace)

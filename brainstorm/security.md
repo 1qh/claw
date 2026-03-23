@@ -102,9 +102,9 @@ Catches: Content policy violations, harmful intent, inappropriate requests.
 **Cost:** LLM call (can batch with Layer 3)
 **Dependencies:** `ai` (Vercel AI SDK)
 
-Custom middleware that validates whether the request falls within the SaaS product's domain. This is product-specific — each SaaS defines its own scope.
+Custom middleware that validates whether the request falls within the deployed product's domain. This is product-specific — each deployer defines their own scope.
 
-Example for a financial reporting SaaS:
+Example for a financial reporting product:
 ```
 ALLOW: "Generate my Q3 revenue report"
 ALLOW: "Compare this quarter to last quarter"
@@ -129,7 +129,7 @@ Configured in `openclaw.json` per gateway:
 - `tools.exec.safeBins` — restrict to safe binaries only
 - Remove unnecessary capabilities entirely (no bash, no browser, no file system escape)
 
-Catches: Even if a manipulated prompt reaches the agent, it can only use tools you've explicitly allowed.
+Catches: Even if a manipulated prompt reaches the agent, it can only use tools the deployer has explicitly allowed.
 
 ---
 
@@ -163,7 +163,7 @@ This isn't a "layer" you implement — it's a property of the 1:1 architecture:
 | Heuristic guards | `@presidio-dev/hai-guardrails` | TypeScript-native, battle-tested, no LLM needed for heuristic mode |
 | LLM content guards | `@presidio-dev/hai-guardrails` | Covers toxic, hate, bias, adult, copyright, profanity |
 | Model provider for guards | `ai` (Vercel AI SDK) | Model-agnostic — swap providers without code changes |
-| Domain scope classifier | `ai` (Vercel AI SDK) middleware | Custom per-product, clean middleware pattern |
+| Domain scope classifier | `ai` (Vercel AI SDK) middleware | Custom per deployed product, clean middleware pattern |
 | Tool restrictions | OpenClaw native (`openclaw.json`) | Already built-in, zero code |
 | Process isolation | OS user separation | Unix filesystem permissions per gateway process |
 

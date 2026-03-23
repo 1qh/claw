@@ -2,17 +2,17 @@
 
 ## Core Principle
 
-Use the SaaS web app as the **single channel**. No WhatsApp, Telegram, Slack, or any other messaging platform. One frontend, one consistent UX, fully controlled.
+The framework uses the web app as the **single channel**. No WhatsApp, Telegram, Slack, or any other messaging platform. One frontend, one consistent UX, fully controlled.
 
 ## Single Channel Architecture
 
 ```mermaid
 graph LR
-    USER[User] --> WEB[Your Web App]
+    USER[User] --> WEB[Web App]
     WEB -->|WebSocket via Control Plane| GW[User's Gateway]
 ```
 
-No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just your frontend talking to the gateway's [WebSocket API](https://docs.openclaw.ai/gateway/protocol).
+No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just the deployer's frontend talking to the gateway's [WebSocket API](https://docs.openclaw.ai/gateway/protocol).
 
 ## The Frontend
 
@@ -27,7 +27,7 @@ Four surfaces, all powered by the gateway's WebSocket event stream:
 
 ## What OpenClaw Eliminates
 
-Typical SaaS components you do NOT need to build:
+Typical SaaS components the deployer does NOT need to build:
 
 ### User Onboarding
 - **Traditional:** Build onboarding wizard, tutorial screens, tooltips
@@ -81,11 +81,11 @@ Typical SaaS components you do NOT need to build:
 - **Traditional:** Help desk system, knowledge base, ticket system
 - **With OpenClaw:** The agent IS the support. It knows the product and the user's context.
 
-## What You Still Build
+## What the Deployer Still Builds
 
 ```mermaid
 graph TB
-    subgraph "You Build"
+    subgraph "Deployer Builds"
         AUTH["Auth\n(signup, login, OAuth)"]
         BILLING["Billing\n(Stripe, usage-based)"]
         CP["Control Plane\n(process management, routing)"]

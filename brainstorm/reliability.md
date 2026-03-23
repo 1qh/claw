@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-No formal SLA at startup. No on-call rotation. No status page. Things auto-heal, and you get notified when they don't.
+No formal SLA required at launch. No on-call rotation. No status page. Things auto-heal, and the deployer gets notified when they don't.
 
 ## What Auto-Recovery Covers
 
@@ -30,7 +30,7 @@ Each gateway exposes a health endpoint. The process manager pings it periodicall
 - No response within timeout → restart the process
 - Fails 3+ times in a row → alert the operator
 
-## What We Don't Build (Yet)
+## What the Framework Doesn't Include (Yet)
 
 | Capability | Why Not Now |
 |---|---|
@@ -40,4 +40,4 @@ Each gateway exposes a health endpoint. The process manager pings it periodicall
 | Multi-region redundancy | One host (or a few) is sufficient |
 | Automated failover across hosts | Add when multi-host becomes necessary |
 
-These are all "good problems to have" — they mean the product is growing.
+These are all "good problems to have" — they mean the deployed product is growing.

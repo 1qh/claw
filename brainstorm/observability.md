@@ -105,16 +105,16 @@ graph TB
 - Billing service reads from usage store
 - Simple: sum cost per user per billing period → charge
 
-## What We Don't Need (Yet)
+## What the Framework Doesn't Need (Yet)
 
 | Tool | Why Not Now |
 |---|---|
 | [Langfuse](https://langfuse.com/) | Rich tracing/eval — overkill for launch |
-| [OpenTelemetry](https://opentelemetry.io/) | Standard protocol — useful later if we need cross-system tracing |
+| [OpenTelemetry](https://opentelemetry.io/) | Standard protocol — useful later for cross-system tracing |
 | [Helicone](https://www.helicone.ai/) | Proxy-based logging — unnecessary, OpenClaw already tracks everything |
 | Custom metrics pipeline | Over-engineering — polling gateway API is sufficient |
 
-These can be added later if needed (e.g., for prompt debugging, A/B testing models, quality evaluation). The gateway API gives us everything we need for usage, billing, and basic observability at launch.
+These can be added later if needed (e.g., for prompt debugging, A/B testing models, quality evaluation). The gateway API provides everything needed for usage, billing, and basic observability at launch.
 
 ## Data Available Per User (Verbose)
 

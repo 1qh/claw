@@ -49,7 +49,7 @@ User doesn't talk directly to OpenClaw. The control plane proxies everything. So
 
 ### The Solution: Custom Tool Following Exec Approval Pattern
 
-OpenClaw has a built-in two-phase pattern for "agent asks, pauses, waits for response, resumes" — used for [exec approvals](https://docs.openclaw.ai/tools/exec-approvals). We register a custom `request_clarification` tool that follows the same pattern.
+OpenClaw has a built-in two-phase pattern for "agent asks, pauses, waits for response, resumes" — used for [exec approvals](https://docs.openclaw.ai/tools/exec-approvals). The framework registers a custom `request_clarification` tool that follows the same pattern.
 
 ### Flow
 
