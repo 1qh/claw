@@ -69,3 +69,11 @@ Users just talk to their agent:
 > "My fiscal year starts in April"
 
 The agent updates `USER.md` and `MEMORY.md` itself. Configuration through conversation.
+
+## References
+
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout and bootstrap files (SOUL.md, AGENTS.md, USER.md, etc.)
+- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — how memory works with workspace files and automatic memory flush
+- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session keys, persistence, and DM scoping
+- [OpenClaw — Context](https://docs.openclaw.ai/concepts/context) — what the model sees and how to inspect it
+- [OpenClaw — Compaction](https://docs.openclaw.ai/concepts/compaction) — context window management and auto-compaction

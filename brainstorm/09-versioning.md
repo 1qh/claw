@@ -94,3 +94,10 @@ Suspended containers don't need updating — they have no mount. When they boot 
 | OpenClaw cron job to git pull | LLM cost per container per interval |
 | Git clone in container + periodic pull | Polling, per-container work |
 | Entrypoint fetch + webhook restart | Restart required, slower |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout, bootstrap files, and hot-reload behavior
+- [OpenClaw — Gateway Configuration](https://docs.openclaw.ai/gateway/configuration) — config hot-reload on file change
+- [OpenClaw — Multiple Gateways](https://docs.openclaw.ai/gateway/multiple-gateways) — profile-based gateway isolation

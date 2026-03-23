@@ -135,3 +135,17 @@ The "most verbose" view a user or operator can get:
 | File uploads | Per upload | Control plane logs |
 | Gate rejections | Per attempt | Control plane logs |
 | Compute time | Per container | Container runtime metrics (from orchestrator) |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Usage Tracking](https://docs.openclaw.ai/concepts/usage-tracking) — usage tracking surfaces and credential requirements
+- [OpenClaw — Models](https://docs.openclaw.ai/concepts/models) — model CLI, aliases, fallbacks, and pricing config
+- [OpenClaw — Model Failover](https://docs.openclaw.ai/concepts/model-failover) — auth profile rotation and fallback across models
+- [OpenClaw — Slash Commands](https://docs.openclaw.ai/tools/slash-commands) — `/usage` command and other in-chat commands
+- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — gateway API methods including usage endpoints
+
+### Observability Platforms (Deferred, Not Needed at Launch)
+- [Langfuse](https://langfuse.com/) — open-source LLM observability with OpenTelemetry support
+- [Helicone](https://www.helicone.ai/) — proxy-based LLM logging and analytics
+- [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) — standard for LLM tracing

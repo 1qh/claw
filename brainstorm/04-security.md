@@ -187,3 +187,24 @@ gantt
 Layers 1-2: <5ms (free, local)
 Layers 3-4: ~100-200ms (one LLM call, cheap model)
 Total gate overhead: <200ms — imperceptible to a fire-and-forget user.
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Security](https://docs.openclaw.ai/gateway/security) — security considerations and threat model
+- [OpenClaw — Sandboxing](https://docs.openclaw.ai/gateway/sandboxing) — sandbox modes, scopes, and workspace access
+- [OpenClaw — Sandbox vs Tool Policy vs Elevated](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated) — understanding tool blocking layers
+- [OpenClaw — Exec Approvals](https://docs.openclaw.ai/tools/exec-approvals) — exec allowlists and sandbox escape prompts
+- [OpenClaw — Configuration Reference](https://docs.openclaw.ai/gateway/configuration-reference) — tool policy config keys
+
+### Open Source Libraries
+- [hai-guardrails](https://github.com/presidio-oss/hai-guardrails) — TypeScript guardrails library for LLM applications (injection, PII, toxicity, etc.)
+- [@presidio-dev/hai-guardrails on npm](https://www.npmjs.com/package/@presidio-dev/hai-guardrails)
+- [Vercel AI SDK](https://ai-sdk.dev/docs/introduction) — TypeScript toolkit for model-agnostic LLM integration
+- [AI SDK — Language Model Middleware](https://ai-sdk.dev/docs/ai-sdk-core/middleware) — middleware pattern for guardrails, caching, logging
+
+### Security Research
+- [Prompt Injection in 2026 — OWASP LLM Top 10](https://www.kunalganglani.com/blog/prompt-injection-2026-owasp-llm-vulnerability)
+- [Running OpenClaw Safely — Microsoft Security Blog](https://www.microsoft.com/en-us/security/blog/2026/02/19/running-openclaw-safely-identity-isolation-runtime-risk/)
+- [OpenClaw Security Challenges — DigitalOcean](https://www.digitalocean.com/resources/articles/openclaw-security-challenges)
+- [ClawSec Security Suite](https://github.com/prompt-security/clawsec) — security skill suite for OpenClaw agents

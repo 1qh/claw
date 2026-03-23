@@ -123,3 +123,23 @@ Important context from community and security researchers:
 | Large data | Agent processes in streaming fashion without storing full file |
 | Backup | Regular volume snapshots |
 | Deletion (GDPR) | Delete volume = delete everything |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Media Understanding](https://docs.openclaw.ai/nodes/media-understanding) — inbound image/audio/video handling and provider fallbacks
+- [OpenClaw — Security](https://docs.openclaw.ai/gateway/security) — security model and threat considerations
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace file layout and access
+
+### Open Source Libraries
+- [file-type](https://www.npmjs.com/package/file-type) — detect file type from binary headers (MIME sniffing)
+- [ClamAV](https://www.clamav.net/) — open-source antivirus engine
+- [clamav-rest-api](https://github.com/benzino77/clamav-rest-api) — REST API wrapper for ClamAV in Docker
+- [adm-zip](https://www.npmjs.com/package/adm-zip) — ZIP archive reading/creation
+- [tar-stream](https://www.npmjs.com/package/tar-stream) — streaming TAR archive parsing
+- [pdf-parse](https://www.npmjs.com/package/pdf-parse) — PDF text extraction and inspection
+
+### Security Research
+- [OpenClaw Integrates VirusTotal Scanning — The Hacker News](https://thehackernews.com/2026/02/openclaw-integrates-virustotal-scanning.html)
+- [OpenClaw Security Crisis — Conscia](https://conscia.com/blog/the-openclaw-security-crisis/)
+- [OpenClaw Security Risks — Kaspersky](https://www.kaspersky.com/blog/moltbot-enterprise-risk-management/55317/)

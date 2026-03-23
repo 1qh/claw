@@ -140,3 +140,15 @@ If the user doesn't respond to a clarification request:
 - On timeout: agent receives an error, handles gracefully
 - Agent should either abort with explanation or proceed with best guess + disclaimer
 - Frontend shows: "Your agent's question expired. You can resubmit the task."
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Model Failover](https://docs.openclaw.ai/concepts/model-failover) — auth profile rotation and fallback models
+- [OpenClaw — Compaction](https://docs.openclaw.ai/concepts/compaction) — context window management when exceeded
+- [OpenClaw — Exec Approvals](https://docs.openclaw.ai/tools/exec-approvals) — the two-phase approval pattern (reference for clarification mechanism)
+- [OpenClaw — Agent Loop](https://docs.openclaw.ai/concepts/agent-loop) — agent lifecycle, streams, and wait semantics
+- [OpenClaw — Queue](https://docs.openclaw.ai/concepts/queue) — command queue and message serialization
+- [OpenClaw — Plugins](https://docs.openclaw.ai/tools/plugin) — plugin API for registering custom tools
+- [OpenClaw — Creating Skills](https://docs.openclaw.ai/tools/creating-skills) — building custom skills with SKILL.md
+- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — event broadcasting to connected clients

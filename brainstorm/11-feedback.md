@@ -135,3 +135,12 @@ No analytics system needed. The agent learns through its own memory, informed by
 | Config updates | Shared volume | Hot-reload, automatic |
 | Tier/plan change | Control plane | Config patch via gateway API |
 | Account deletion | Control plane | Container killed, agent not notified |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — how agents write durable facts to MEMORY.md and daily logs
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — USER.md, MEMORY.md, and bootstrap file structure
+- [OpenClaw — Cron Jobs](https://docs.openclaw.ai/automation/cron-jobs) — scheduled task execution
+- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session transcripts where ratings are stored
+- [OpenClaw — Configuration Reference](https://docs.openclaw.ai/gateway/configuration-reference) — config.patch API for tier/plan changes

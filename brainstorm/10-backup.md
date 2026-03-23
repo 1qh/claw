@@ -93,3 +93,17 @@ If GitHub becomes a bottleneck (unlikely with daily pushes):
 |---|---|
 | 0-10,000 users | GitHub — free, simple |
 | 10,000+ users | Self-hosted Gitea (no rate limits) or volume snapshots ($0.05/GB/month) |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — workspace layout and file structure
+- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session transcript storage (JSONL)
+- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — memory files and daily logs
+
+### Infrastructure
+- [GitHub — Repository Limits](https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits) — size and rate limits
+- [GitHub — Rate Limits for REST API](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) — content-generation request limits
+- [Gitea](https://gitea.io/) — self-hosted Git service (for scaling beyond GitHub limits)
+- [AWS EBS Snapshot Pricing](https://aws.amazon.com/ebs/pricing/) — volume snapshot costs
+- [GCP Disk Pricing](https://cloud.google.com/compute/disks-image-pricing) — snapshot and disk costs

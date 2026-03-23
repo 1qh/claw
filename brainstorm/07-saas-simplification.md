@@ -125,3 +125,16 @@ graph TB
 | **Onboarding** | Wizard UI + state machine | Agent conversation |
 | **Data export** | Export jobs + formatters | Agent packages files |
 | **GDPR deletion** | Multi-table purge scripts | Delete volume |
+
+## References
+
+### OpenClaw Documentation
+- [OpenClaw — Agent Workspace](https://docs.openclaw.ai/concepts/agent-workspace) — bootstrap files (USER.md, SOUL.md, AGENTS.md, etc.)
+- [OpenClaw — Memory](https://docs.openclaw.ai/concepts/memory) — workspace memory system and vector search
+- [OpenClaw — Session Management](https://docs.openclaw.ai/concepts/session) — session persistence and transcripts
+- [OpenClaw — Cron Jobs](https://docs.openclaw.ai/automation/cron-jobs) — built-in scheduling
+- [OpenClaw — Streaming](https://docs.openclaw.ai/concepts/streaming) — WebSocket event streaming to frontends
+- [OpenClaw — Slash Commands](https://docs.openclaw.ai/tools/slash-commands) — in-chat commands including `/usage`
+- [OpenClaw — WebSocket Protocol](https://docs.openclaw.ai/gateway/protocol) — how frontends connect and receive events
+- [OpenClaw — Skills](https://docs.openclaw.ai/tools/skills) — skill management and ClawHub registry
+- [OpenClaw — Plugins](https://docs.openclaw.ai/tools/plugin) — plugin installation and management

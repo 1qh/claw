@@ -63,3 +63,10 @@ The two stay in sync naturally:
 - 1 email per user (no multi-email)
 - No shared/team accounts (for now)
 - No org hierarchy (for now)
+
+## References
+
+- [OpenClaw — Multi-Agent Routing](https://docs.openclaw.ai/concepts/multi-agent) — agent isolation, bindings, and per-agent workspaces
+- [OpenClaw — Delegate Architecture](https://docs.openclaw.ai/concepts/delegate-architecture) — running agents on behalf of organizations
+- [OpenClaw — Gateway Authentication](https://docs.openclaw.ai/gateway/authentication) — OAuth, API keys, and setup tokens
+- [OpenClaw — Pairing](https://docs.openclaw.ai/channels/pairing) — DM access control and device pairing
