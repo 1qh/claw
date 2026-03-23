@@ -60,11 +60,13 @@ stateDiagram-v2
    - Unique port assignment
    - Gateway auth token for control plane connection
    - **Explicitly set `tools.exec.security: "deny"` in the shared config** — the default is `allowlist`, NOT `deny`. This prevents agents from executing arbitrary shell commands on the gateway host
+   - **TigerFS mount permissions:** TigerFS mount should use restricted permissions (only accessible to the gateway process user group). Combined with exec deny default, this prevents FUSE-level bypass of RLS
 2. Control plane waits for gateway to be ready (poll `/health` or wait for WebSocket handshake)
 3. Control plane connects to gateway via WebSocket (device identity + token auth)
 4. Implement health check loop — periodic ping, restart on failure
 5. Implement graceful shutdown — wait for active tasks, then kill
-6. Write tests: start gateway, verify health, send message via gateway API, stop gateway, verify restart on crash
+6. **Secrets management:** For production, deployers should use environment variables or a secrets manager for API keys, not plaintext files on TigerFS. The framework supports both `auth-profiles.json` (for development) and environment variable injection (for production).
+7. Write tests: start gateway, verify health, send message via gateway API, stop gateway, verify restart on crash
 
 ### External References
 - [OpenClaw gateway CLI](https://docs.openclaw.ai/cli/gateway)
@@ -128,12 +130,13 @@ sequenceDiagram
 2. Forward all messages from frontend to gateway
 3. Forward all events from gateway to frontend
 4. Handle disconnections: if frontend disconnects, keep gateway connection alive (task continues). If gateway disconnects, notify frontend.
-5. Classify gateway events for the frontend:
+5. **Concurrent sessions per user:** When a user sends a second task while the first is running, the control plane configures OpenClaw's queue mode. Default: `collect` — new messages are batched and delivered after the current task completes. Deployer can configure to `followup` or `steer` via shared config.
+6. Classify gateway events for the frontend:
    - `agent` events → live feed
    - `chat` events with `state: "delta"` → live feed
    - `chat` events with `state: "final"` → task complete notification
    - Clarification requests → interactive prompt (see Stage 2.5)
-6. Write tests: full message round-trip, event forwarding, disconnect handling
+7. Write tests: full message round-trip, event forwarding, disconnect handling
 
 ### External References
 - [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol)
@@ -148,6 +151,7 @@ sequenceDiagram
 - [ ] Frontend disconnect doesn't kill the gateway task
 - [ ] Gateway disconnect notifies frontend
 - [ ] Multiple users can connect simultaneously to different gateways
+- [ ] Concurrent task queueing works (second task queued while first runs, default `collect` mode)
 - [ ] All tests pass
 
 ---
@@ -229,12 +233,13 @@ graph TB
    - `search(agentId, query, limit)` — pgvector similarity search with `WHERE agent_id = $1`
    - `delete(agentId, filter)` — delete by agent_id + filter
    - `count(agentId)` — count chunks for agent
-4. Implement embedding generation (reuse OpenAI embeddings provider or make configurable)
+4. Implement embedding generation (reuse OpenAI embeddings provider or make configurable). The embedding provider is configurable via env var `EMBEDDING_MODEL` (default: `text-embedding-3-small` at 1536 dimensions). The `vector(1536)` column dimension must match the model. If switching models, re-index is required. Add `EMBEDDING_MODEL` and `EMBEDDING_API_KEY` to the env var inventory.
 5. Register tools: `memory_recall`, `memory_store`, `memory_forget` (matching `memory-lancedb`'s tool names — NOT `memory_search`/`memory_get` from `memory-core`)
 6. Register hooks: `before_agent_start` (auto-recall), `agent_end` (auto-capture)
 7. Register CLI commands: `ltm list`, `ltm search`, `ltm stats`
 8. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
 9. **Critical: every query MUST include `WHERE agent_id = $1`** — enforce in code AND via RLS
+    > **Note:** The `memory-timescaledb` plugin generates embeddings in application code (not via pgai). If pgai is available locally, it can be used for auto-vectorizing the shared intelligence layer (crawled_pages) in a future phase, but the memory plugin does not depend on it.
 10. Write comprehensive tests: store/search/delete, agent isolation, concurrent access
 
 ### External References
@@ -269,18 +274,14 @@ Configure multiple LLM API keys with fallback strategy to avoid rate limits and 
 
 ### Steps
 
-1. Configure `auth-profiles.json` with multiple auth profiles:
+OpenClaw handles key rotation natively. This stage is about CONFIGURING the key pool, not building custom rotation code.
+
+1. Configure multiple auth profiles in `auth-profiles.json`:
    - Multiple Anthropic API keys (for load distribution)
    - Multi-provider fallback: Anthropic → OpenAI → other providers
-2. Implement key rotation strategy:
-   - Round-robin across keys within a provider
-   - On rate limit (429): automatically fall back to next key or next provider
-   - Track per-key usage to distribute load evenly
-3. Test under rate limit conditions:
-   - Simulate rate limit on primary key, verify fallback to secondary
-   - Simulate all keys for a provider exhausted, verify fallback to next provider
+2. Test that OpenClaw rotates between them on rate limits
+3. Verify fallback to secondary provider works
 4. Store key pool configuration on TigerFS so all gateways share the same pool
-5. Monitor key health: track error rates per key, auto-disable keys that consistently fail
 
 ### External References
 - [OpenClaw auth profiles](https://docs.openclaw.ai/gateway/configuration#auth-profiles)
@@ -288,11 +289,9 @@ Configure multiple LLM API keys with fallback strategy to avoid rate limits and 
 
 ### Verification Checklist
 - [ ] Multiple auth profiles configured in `auth-profiles.json`
-- [ ] Round-robin distributes requests across keys
-- [ ] Rate limit on one key triggers automatic fallback to next key
-- [ ] All keys for a provider exhausted: falls back to next provider
+- [ ] OpenClaw rotates between keys on rate limits
+- [ ] Fallback to secondary provider works when primary is exhausted
 - [ ] Key pool config shared across gateways via TigerFS
-- [ ] Unhealthy key auto-disabled after N consecutive failures
 - [ ] All tests pass
 
 ---

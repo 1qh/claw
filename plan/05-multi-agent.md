@@ -75,7 +75,7 @@ sequenceDiagram
    - All paths point to TigerFS
    - New agent is available immediately (no restart, no hot-reload needed)
 2. Configure workspace defaults:
-   - Directory structure on TigerFS: `users/{email}/workspace/`, `users/{email}/agent/`
+   - Directory structure on TigerFS: `users/{user_id}/workspace/`, `users/{user_id}/agent/` where `user_id` is a UUID. Use opaque UUID for filesystem paths, not email. Email is mapped to UUID at the auth layer. This avoids PII in paths and special character issues.
    - Initial `USER.md` with user's email (written by `agents.create`)
    - Shared config (SOUL.md, AGENTS.md) read from shared TigerFS path
 3. Implement agent deletion via `agents.delete`:
@@ -234,3 +234,22 @@ graph LR
 - [ ] Error rate < 1% at recommended agent count
 - [ ] Performance report documented with exact numbers
 - [ ] max_agents default set based on results
+
+---
+
+## Stage 5.5: Workspace Size Enforcement
+
+### Goal
+Prevent individual users from consuming unbounded disk storage.
+
+### Steps
+1. Enforce per-user workspace size limits via periodic check
+2. Control plane queries TigerFS-backed workspace size per user
+3. If exceeding limit, agent is restricted from creating new files
+4. Default limits configurable by deployer
+
+### Verification Checklist
+- [ ] Per-user workspace size limit enforced (default configurable)
+- [ ] User exceeding limit cannot create new files via agent
+- [ ] User exceeding limit receives a notification explaining the restriction
+- [ ] Admin can override limits for specific users

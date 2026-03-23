@@ -11,6 +11,8 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | TypeScript + ESM | Language — same everywhere (framework, control plane, deployer CLIs) |
 | [OpenClaw](https://openclaw.ai) | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
 | `bunx cli@latest` | Tool execution — deployer's backend as npm CLIs, always latest |
+| [Vitest](https://vitest.dev/) | Testing — fast Vite-native test runner, compatible with Bun |
+| [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Oxfmt](https://oxc.rs/) | Linting and formatting — Rust-based, fast, matches OpenClaw's tooling |
 
 ## Data
 
@@ -45,12 +47,13 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | PostgreSQL roles + RLS | Per-user data isolation (via TigerFS) |
 | [Nomad](https://www.nomadproject.io/) | Gateway scheduling, failover, rolling updates across hosts |
 | systemd / PM2 | Local process management, auto-restart |
+| [Caddy](https://caddyserver.com/) | Reverse proxy — automatic HTTPS via Let's Encrypt, zero-config TLS |
 
 ## Excluded
 
 | What | Replaced By |
 |---|---|
-| Docker / Kubernetes | Process-level isolation |
+| Docker / Kubernetes for production orchestration | Nomad + process-level isolation. Docker used for local dev dependencies only (docker-compose) |
 | Redis | TimescaleDB |
 | S3 | TigerFS + TimescaleDB |
 | Elasticsearch / Algolia | TimescaleDB FTS + pgvector |

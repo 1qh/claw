@@ -60,6 +60,7 @@ sequenceDiagram
 3. Test: update SOUL.md in TigerFS, verify all gateways hot-reload
 4. Test: rollback via `.history/` — restore previous version, verify gateways pick it up
 5. Build a simple admin endpoint in control plane: `PUT /admin/config/{filename}` that writes to TigerFS
+6. **Admin endpoint authorization:** All `/admin/*` endpoints require better-auth admin role (via admin plugin). Implement role check middleware for admin routes. No admin endpoint is accessible without explicit admin role.
 
 ### Verification Checklist
 - [ ] SOUL.md update in TigerFS detected by gateway within 1s
@@ -68,6 +69,7 @@ sequenceDiagram
 - [ ] Rollback via `.history/` works — gateways pick up restored version
 - [ ] Admin endpoint writes config file to TigerFS
 - [ ] Multiple gateways all pick up the same change
+- [ ] All `/admin/*` endpoints return 403 for non-admin users
 
 ---
 
@@ -130,17 +132,18 @@ graph TB
     CA --> ADMIN
 ```
 
-1. **Real-time path:** Already built in Phase 2 (WebSocket proxy). Verify live feed shows progress.
-2. **Continuous aggregates:** Create TimescaleDB materialized views:
+1. **Create `usage_events` hypertable** — the control plane extracts token counts, cost, model, and latency from gateway WebSocket events and writes them as rows. Continuous aggregates query this hypertable, NOT the raw JSONL session files on TigerFS.
+2. **Real-time path:** Already built in Phase 2 (WebSocket proxy). Verify live feed shows progress.
+3. **Continuous aggregates:** Create TimescaleDB materialized views over `usage_events`:
    - Per-user daily usage: tokens, cost, task count
    - Per-model usage: which models used, cost breakdown
    - Global usage: total tokens, active users, tasks/day
-3. **Usage API:** Control plane endpoints to query aggregates:
+4. **Usage API:** Control plane endpoints to query aggregates:
    - `GET /usage/me` — current user's usage (filtered by auth)
    - `GET /admin/usage` — all users (admin only)
    - `GET /admin/usage/:email` — specific user (admin only)
-4. **Frontend integration:** Usage surface (Phase 4) connects to these endpoints
-5. **Billing readiness:** Per-user cost available for Stripe integration
+5. **Frontend integration:** Usage surface (Phase 4) connects to these endpoints
+6. **Billing readiness:** Per-user cost available for Stripe integration
 
 ### External References
 - [TimescaleDB continuous aggregates](https://www.tigerdata.com/docs/use-timescale/latest/continuous-aggregates)
@@ -185,7 +188,7 @@ graph TB
    - `session.maintenance.pruneAfter: "30d"`
    - `session.maintenance.maxEntries: 500`
 2. **Cache cleanup:** Create TimescaleDB background job that deletes expired cache rows
-3. **Data compression:** Create TimescaleDB compression policy on session hypertable (compress data > 7 days)
+3. **Data compression:** Configure TimescaleDB compression on the `usage_events` hypertable (older usage data). Session transcripts are JSONL files managed by TigerFS — their storage is handled by TimescaleDB's table storage, not a custom hypertable.
 4. **Health checks:** Process manager (systemd or PM2) pings gateway health endpoints
 5. **OpenClaw updates:** Script for graceful rolling restart:
    - Check for new version
@@ -195,7 +198,47 @@ graph TB
 ### Verification Checklist
 - [ ] Sessions older than 30 days are pruned automatically
 - [ ] Expired cache rows deleted by background job
-- [ ] Compression policy reduces storage for old session data
+- [ ] Compression policy reduces storage for old usage event data
 - [ ] Health check detects crashed gateway and restarts it
 - [ ] Rolling restart updates all gateways without dropping active tasks
 - [ ] All maintenance tasks are automated (no manual intervention)
+
+---
+
+## Stage 6.5: Audit Logging
+
+### Goal
+Structured audit trail for security-sensitive operations.
+
+### Steps
+1. Implement structured audit logging for: agent creation/deletion, config overwrites (admin), account deletion, admin data access
+2. Store audit logs in a TimescaleDB hypertable with retention policies
+3. Each audit log entry includes: timestamp, actor (user ID or system), action, target resource, and metadata (IP, user agent)
+4. Configure retention policy (default: 90 days, configurable by deployer)
+
+### Verification Checklist
+- [ ] Agent creation/deletion logged with actor and target
+- [ ] Admin config writes logged with before/after hash
+- [ ] Account deletion logged
+- [ ] Admin data access (viewing other users' data) logged
+- [ ] Audit log hypertable has compression and retention policies
+- [ ] Audit logs queryable via admin API
+
+---
+
+## Stage 6.6: OpenClaw Version Pinning
+
+### Goal
+Ensure production stability by pinning OpenClaw versions.
+
+### Steps
+1. Pin OpenClaw to a specific version in production. Test compatibility before upgrading
+2. Add `OPENCLAW_VERSION` to env vars (add to Phase 0 env var inventory)
+3. The maintenance rolling restart (Stage 6.4) should verify the new version passes health checks before proceeding
+4. Pin OpenClaw to a post-patch version (after CVE-2026-25253 fix). Disable ClawHub skill installation in production gateways unless explicitly needed. Subscribe to OpenClaw security advisories.
+
+### Verification Checklist
+- [ ] `OPENCLAW_VERSION` env var controls which version is installed/used
+- [ ] Rolling restart verifies health checks pass with new version before proceeding to next gateway
+- [ ] ClawHub skill installation disabled in production gateway config
+- [ ] OpenClaw security advisory subscription documented

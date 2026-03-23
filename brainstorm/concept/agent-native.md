@@ -4,6 +4,8 @@
 
 This is not an adapter for existing backends. This is an **opinionated, agent-native architecture** that deployers adopt fully. No REST APIs, no databases, no microservices. Everything is rebuilt around the assumption that an intelligent agent is the executor.
 
+> **Clarification:** The "no REST APIs" principle applies to the deployer's backend — business logic is expressed as CLIs, not REST endpoints. The framework's control plane uses REST/WebSocket internally for auth, routing, and admin.
+
 ## The Mental Model Shift
 
 **Traditional SaaS:**

@@ -98,6 +98,9 @@ Mount TimescaleDB via TigerFS and verify basic file operations.
 - [TigerFS docs](https://tigerfs.io/docs)
 - [TigerFS GitHub](https://github.com/timescale/tigerfs)
 
+### Platform Note
+TigerFS uses FUSE on Linux and NFS on macOS. Benchmark results may differ between platforms. Run Phase 0 benchmarks on Linux (matching production target). macOS developers can use Docker for TimescaleDB + TigerFS in a Linux container, or accept NFS-mode differences for local dev.
+
 ### Verification Checklist
 - [ ] TigerFS mount succeeds on local machine
 - [ ] File write creates a row in TimescaleDB (verify via SQL)

@@ -147,7 +147,7 @@ graph TB
 
 #### Surface 3: Notifications
 1. Toast/banner when a task completes
-2. Shows when agent needs clarification (future: `clarification.requested` event)
+2. Shows when agent needs clarification (agent clarification requests arrive via exec approval events — see Stage 2.5)
 3. Badge counter for unread results
 
 #### Surface 4: Usage / History

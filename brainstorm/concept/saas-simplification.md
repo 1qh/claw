@@ -112,7 +112,7 @@ graph TB
 
 | Component | Traditional SaaS | This Architecture |
 |---|---|---|
-| **Backend framework** | Express/Nest/Django + dozens of routes | Thin control plane, ~5 endpoints |
+| **Backend framework** | Express/Nest/Django + dozens of routes | Thin control plane (auth + WebSocket proxy + admin) |
 | **Database** | PostgreSQL + Redis + migrations + ORM | TimescaleDB via TigerFS (workspace files) |
 | **Task queue** | Redis + Bull + workers | OpenClaw gateway |
 | **File storage** | S3 + metadata DB | Workspace directory |

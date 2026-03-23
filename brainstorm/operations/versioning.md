@@ -41,6 +41,8 @@ sequenceDiagram
 | **Version history** | TigerFS `.history/` — timestamped snapshots of every change |
 | **Rollback** | Restore from `.history/` |
 
+> **Note:** OpenClaw hot-reloads workspace files (SOUL.md, AGENTS.md, etc.) via chokidar file watching. However, config keys like `agents`, `tools`, `session`, `routing` have reload kind `none` — changes are absorbed lazily on next `loadConfig()` call, not hot-reloaded. The versioning strategy works because SOUL.md/AGENTS.md are workspace files (watched), not config keys.
+
 ### Rollback
 
 ```bash

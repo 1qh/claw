@@ -40,6 +40,9 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Backup**](operations/backup.md) — TigerFS `.history/` for versioning, `pg_dump` for disaster recovery
 - [**Maintenance**](operations/maintenance.md) — OpenClaw updates, workspace cleanup, host ops
 
+### Deferred
+- [**Deferred Features**](deferred.md) — OpenClaw features available but not configured in MVP
+
 ### Deployer
 - [**Experience**](deployer/experience.md) — template repo, frontend hooks, what deployers configure vs what's pre-built
 - [**Open Questions**](deployer/open-questions.md) — signup flow, CLI env access, local dev, gateway capacity management

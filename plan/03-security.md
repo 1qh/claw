@@ -187,6 +187,9 @@ sequenceDiagram
 2. For PDF files: check for embedded JavaScript, suspicious objects
 3. For Office files: flag macros
 
+#### File Upload Transport
+File uploads use multipart form upload (`multipart/form-data`) via a standard HTTP POST endpoint. Max request body size enforced at the Elysia level (default: 100MB). For files larger than 10MB, consider chunked upload (deferred post-MVP).
+
 #### Integration
 1. Wire as Elysia route: `POST /upload` with auth middleware
 2. After all layers pass, write file to user's workspace on TigerFS: `/mnt/tigerfs/users/{email}/uploads/{filename}`
@@ -207,6 +210,8 @@ sequenceDiagram
 - [ ] ZIP with malicious contents detected (if implementing deep inspection)
 - [ ] Filename validation blocks path traversal (`../../etc/passwd`)
 - [ ] Upload endpoint requires authentication
+- [ ] Multipart form upload works for files up to 100MB
+- [ ] Request body size limit enforced (files > 100MB rejected)
 - [ ] All tests pass
 
 ---
@@ -244,6 +249,42 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 - [ ] Rate limit counters are per-user (User A's limits don't affect User B)
 - [ ] Admin can override limits for specific users
 - [ ] All tests pass
+
+---
+
+## Stage 3.3b: CSRF Protection
+
+### Goal
+Prevent cross-site request forgery on state-changing endpoints.
+
+### Steps
+1. Ensure better-auth session cookies use `SameSite=Strict`
+2. Add CSRF token verification on state-changing endpoints (file upload, admin config writes)
+3. WebSocket upgrade requests should verify the `Origin` header
+
+### Verification Checklist
+- [ ] Session cookies set with `SameSite=Strict`
+- [ ] CSRF token required on `POST /upload` and `PUT /admin/config/*` endpoints
+- [ ] WebSocket upgrade rejects requests with mismatched `Origin` header
+- [ ] CSRF token rotation works correctly across sessions
+
+---
+
+## Stage 3.3c: Denial-of-Wallet Protection
+
+### Goal
+Prevent runaway LLM costs from a single user exhausting the deployer's budget.
+
+### Steps
+1. Per-user token/cost quota per billing period. If a user exceeds their token budget, tasks are queued or rejected until the next period
+2. Default quota configurable by deployer
+3. Quota enforcement checks the `usage_events` continuous aggregates before forwarding a task to the gateway
+
+### Verification Checklist
+- [ ] Per-user token quota enforced per billing period
+- [ ] User exceeding quota receives a structured rejection (not a silent drop)
+- [ ] Default quota is configurable by deployer via shared config
+- [ ] Admin can override quota for specific users
 
 ---
 

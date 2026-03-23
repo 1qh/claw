@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Multiple users share each gateway process (10-20 users per gateway). OpenClaw's [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB.
+Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw's [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB.
 
 ## Identity Model
 
@@ -159,7 +159,7 @@ This is why multi-agent went from "possible but risky" to "the obvious choice."
 
 ## Cost Projection
 
-Most agents will be idle most of the time (fire-and-forget = bursts, not constant load). Each gateway (10-20 users) uses ~200-500MB RAM.
+Most agents will be idle most of the time (fire-and-forget = bursts, not constant load). Each gateway (10-20 users) uses ~500MB-1.5GB RAM depending on active agent count (at 20 agents × ~50MB idle each = 1GB minimum, plus gateway overhead).
 
 | Users | Gateways | Infrastructure | Est. Monthly Cost |
 |---|---|---|---|
@@ -167,6 +167,8 @@ Most agents will be idle most of the time (fire-and-forget = bursts, not constan
 | 200-1000 | 50-100 | 2-3 VMs | ~$200-300 |
 | 1000-5000 | 50-500 | 5-10 VMs | ~$300-600 |
 | 10,000 | 500-1000 | 10-20 VMs | ~$600-1200 |
+
+> **Note:** Infrastructure costs above exclude LLM API costs, which dominate at scale. At 10K users × 5 tasks/day × 50K tokens/task = 2.5B tokens/month. With coding plan providers (~$1/1M tokens): ~$2,500/month. With premium providers (~$15/1M tokens): ~$37,500/month. Deployers should budget LLM costs separately. Security gate adds ~100K LLM calls/day for content classification.
 
 ## Scaling: Adding Hosts
 
@@ -297,9 +299,9 @@ The two stay in sync naturally:
 - Agent builds the full user profile on top through conversation
 - No sync mechanism needed — email is set once, everything else grows organically
 
-## PII Note: Email in Filesystem Paths
+## Filesystem Paths: UUID, Not Email
 
-Using email directly in filesystem paths (e.g., `/mnt/tigerfs/users/alice@co.com/`) exposes PII. Consider using an opaque user ID (UUID) for internal paths and mapping email→UUID at the auth layer. This also avoids filesystem issues with special characters in email addresses (e.g., `+`, `@`).
+Filesystem paths use an opaque user ID (UUID), not email. Email is mapped to UUID at the auth layer. Paths follow the pattern `/mnt/tigerfs/users/{user_id}/` where `user_id` is a UUID. This avoids PII in paths and special character issues with email addresses (e.g., `+`, `@`).
 
 ## Simplicity Constraints
 

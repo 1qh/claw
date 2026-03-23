@@ -63,6 +63,8 @@ graph TB
    - **Connection pooling is critical:** PostgreSQL default `max_connections` is 100. At 500+ gateways (each with its own DB connection for TigerFS + memory-timescaledb), connections will be exhausted without a pooler
    - Configure PgBouncer in transaction pooling mode between gateways and TimescaleDB
    - All gateway `DATABASE_URL` values should point to PgBouncer, not directly to TimescaleDB
+   - Configure PgBouncer with pool_size matching expected gateway count per host. Control plane connects directly to TimescaleDB (needs full SQL). TigerFS may need direct connection — verify whether TigerFS works through PgBouncer or requires a direct connection.
+   - **Warning: PgBouncer + RLS interaction.** PgBouncer in transaction pooling mode resets `SET ROLE` when connections return to pool. The application MUST set the role at the start of every transaction. Test this explicitly: verify that consecutive transactions from different gateways through PgBouncer never see each other's data.
 3. Set up TigerFS mount pointing to local TimescaleDB
 4. Deploy control plane as systemd service
 5. Set up Caddy as reverse proxy (automatic HTTPS)
@@ -82,6 +84,7 @@ graph TB
 - [ ] Multiple gateways running, each hosting test users
 - [ ] PgBouncer running and proxying connections to TimescaleDB
 - [ ] Gateways connect via PgBouncer (not directly to TimescaleDB)
+- [ ] Consecutive transactions from different gateways through PgBouncer never see each other's data (RLS + SET ROLE verified)
 - [ ] Resource usage acceptable (< 80% RAM, < 50% CPU at idle)
 - [ ] System survives a reboot (all services start automatically)
 
@@ -122,9 +125,10 @@ graph TB
 2. Write Nomad job spec for gateway processes:
    - Driver: `raw_exec` (no Docker)
    - Task: run OpenClaw gateway with specific config
-   - Resources: memory + CPU limits per gateway
-   - Health check: HTTP health endpoint
-   - Restart policy: on failure
+   - Resource stanza: memory + CPU limits per gateway
+   - Service stanza with health check (HTTP health endpoint)
+   - Restart policy: on failure, max 3 attempts
+   - Meta stanza with `gateway_id` for control plane discovery. The control plane discovers gateway addresses via Nomad API (list allocations for the gateway job).
 3. Migrate existing gateway processes from manual systemd to Nomad jobs
 4. Control plane integration: submit/stop jobs via Nomad HTTP API instead of Bun.spawn
 5. Test: Nomad starts gateways, health checks work, restart on crash

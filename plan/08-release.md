@@ -96,7 +96,8 @@ graph TB
 5. Write `config/AGENTS.md` with deployer-facing comments explaining each section
 6. Create `.env.example` with all required environment variables documented
 7. Create `docker-compose.yml` for local dev (TimescaleDB + TigerFS + ClamAV)
-8. Verify: clone fresh, follow README, get a working instance
+8. **Version pinning:** The template repo should document that deployers MUST pin CLI versions in production (e.g., `bunx @mycompany/cli@1.2.3`, not `@latest`). The `@latest` pattern is for development only. Add a `tools.json` manifest listing pinned CLI versions as a convention.
+9. Verify: clone fresh, follow README, get a working instance
 
 ### Verification Checklist
 - [ ] Fresh clone + `bun install` succeeds
@@ -133,7 +134,7 @@ graph LR
 ```
 
 1. **@uniclaw/control-plane** — the Elysia server with auth, WebSocket proxy, gateway management
-2. **@uniclaw/hooks** — React hooks extracted from the reference app (useChat, useTaskFeed, useNotifications, useUsage)
+2. **@uniclaw/hooks** — React hooks for chat and task management. Before publishing, extract reusable hooks from `apps/web/` into `packages/hooks/`. Identify hooks that are framework-generic (useChat, useTaskFeed, etc.) vs app-specific. Only publish framework-generic hooks.
 3. **@uniclaw/memory-timescaledb** — the OpenClaw memory plugin
 4. **@uniclaw/gate** — security gate middleware (hai-guardrails + AI SDK integration)
 5. For each package: set up `package.json`, build config, type exports
@@ -144,6 +145,7 @@ graph LR
 - [ ] All packages published to npm
 - [ ] `bun add @uniclaw/control-plane` installs successfully
 - [ ] `bun add @uniclaw/hooks` installs successfully
+- [ ] `@uniclaw/hooks` contains only framework-generic hooks (no app-specific hooks)
 - [ ] `bun add @uniclaw/memory-timescaledb` installs successfully
 - [ ] `bun add @uniclaw/gate` installs successfully
 - [ ] TypeScript types exported correctly (autocomplete works)

@@ -67,15 +67,16 @@ sequenceDiagram
     Note over GW: Agent starts working...
     Note over GW: Agent hits ambiguity
 
-    GW->>CP: Event: clarification.requested<br/>{question, options, expiresAt}
-    CP->>FE: Forward clarification event
+    GW->>CP: Event: exec approval request<br/>(tool: request_clarification)
+    CP->>CP: Intercepts as clarification (special case)
+    CP->>FE: Forward clarification prompt
     FE->>User: Notification: "Your agent has a question"
 
     Note over User: User sees the question
 
     User->>FE: Responds to question
-    FE->>CP: clarification.resolve(id, response)
-    CP->>GW: Forward resolution
+    FE->>CP: Send response via WebSocket
+    CP->>GW: Provide response as tool result
 
     Note over GW: Agent resumes with new context
     Note over GW: Agent completes task
@@ -91,7 +92,7 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> AgentWorking: Task submitted
     AgentWorking --> NeedsClarification: Agent calls request_clarification tool
-    NeedsClarification --> WaitingForUser: Gateway broadcasts event, agent pauses
+    NeedsClarification --> WaitingForUser: Gateway emits exec approval event, agent pauses
     WaitingForUser --> AgentWorking: User responds, agent resumes
     WaitingForUser --> TimedOut: No response within timeout
     TimedOut --> AgentWorking: Agent handles timeout gracefully
@@ -99,16 +100,16 @@ stateDiagram-v2
     Done --> [*]
 ```
 
-**Phase 1 — Register request:**
+**Phase 1 — Agent calls tool:**
 - Agent calls `request_clarification` tool with question + optional choices
-- Gateway creates a clarification record with unique ID and timeout
-- Gateway broadcasts `clarification.requested` event to WebSocket clients
-- Returns immediately with the record ID
+- Gateway emits an exec approval event (the standard tool approval mechanism)
+- Control plane intercepts this as a special case — recognizes `request_clarification` as requiring user input
+- Control plane forwards the clarification prompt to the frontend via WebSocket
 
-**Phase 2 — Wait for response:**
-- Agent waits on `clarification.waitResponse` with the record ID
-- Blocks until user responds or timeout expires
-- User's response is forwarded back via `clarification.resolve`
+**Phase 2 — User responds:**
+- Agent is paused waiting for the tool result
+- User's response is sent back through the WebSocket proxy to the control plane
+- Control plane provides the response as the tool result to the gateway
 - Agent resumes with the response
 
 ### What the Frontend Shows
@@ -118,7 +119,7 @@ Three types of messages from the agent, distinguishable by event type:
 | Event Type | Frontend Behavior |
 |---|---|
 | `agent` (progress/tool events) | Route to **readonly live feed** |
-| `clarification.requested` | Route to **interactive prompt** (question + optional choices) |
+| Exec approval for `request_clarification` | Route to **interactive prompt** (question + optional choices) |
 | `chat` with final state | Route to **notification + result view** |
 
 ### Agent Behavior Guidelines (SOUL.md / AGENTS.md)

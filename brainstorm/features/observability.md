@@ -54,6 +54,8 @@ OpenClaw already provides comprehensive per-message and per-session usage data:
 - `/usage full` — show tokens + cost per response
 - `/usage cost` — show local cost summary
 
+> **Note:** OpenClaw's `usage.cost` gateway method reads from local session transcript files, not a database. For cross-gateway analytics, the control plane must build its own `usage_events` hypertable in TimescaleDB (see plan Phase 6.3).
+
 ## Architecture: Two Data Paths
 
 ```mermaid

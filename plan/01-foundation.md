@@ -136,14 +136,15 @@ erDiagram
 
 1. Install Drizzle ORM + drizzle-kit as dependencies
 2. Define schema tables:
-   - `users` — email (PK), name, timestamps (managed by better-auth)
+   - `users` — managed by better-auth via Drizzle adapter (UUID `id` column as PK, not email). Do not define a conflicting custom `users` table. Use better-auth's schema as the source of truth and extend it if needed.
    - `gateways` — id, host, port, status, agent_count, max_agents
    - `user_gateway` — email → gateway mapping with agent_id and workspace_path
-   - `cache` — shared key-value cache with TTL
+   - `cache` — shared key-value store with TTL. Used by deployer CLIs and the shared intelligence layer for cross-user data deduplication (e.g., caching API responses, crawled content). The framework provides the table; deployers decide what to cache.
 3. Define RLS policies:
    - Each gateway connection can only access its own agents' data
    - Control plane has full access
-4. Run `drizzle-kit push` to apply schema to local TimescaleDB
+4. Create per-gateway PostgreSQL roles: when creating a gateway, the control plane also creates a PostgreSQL role for that gateway with RLS policies scoped to its agents. TigerFS mounts for that gateway use this scoped role.
+5. Run `drizzle-kit push` to apply schema to local TimescaleDB
 5. Write tests: schema creation, RLS enforcement, basic CRUD
 
 ### External References
@@ -156,6 +157,7 @@ erDiagram
 - [ ] `drizzle-kit push` succeeds without errors
 - [ ] Insert + read on every table works
 - [ ] RLS policy blocks cross-agent data access (test with different roles)
+- [ ] RLS policy blocks cross-gateway data access (test with different roles)
 - [ ] Cache table: insert with TTL, read before expiry succeeds, read after expiry returns null
 - [ ] Schema types are inferred correctly in TypeScript
 - [ ] Migration is reproducible (drop + push from scratch)
