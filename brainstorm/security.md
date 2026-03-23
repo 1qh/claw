@@ -22,7 +22,7 @@ flowchart TD
     end
 
     subgraph "Infrastructure"
-        L6["Layer 6: Process Isolation\n(1 user = 1 gateway process)"]
+        L6["Layer 6: Per-Agent Isolation\n(PostgreSQL RLS + agent path boundaries)"]
     end
 
     L1 -->|pass| L2
@@ -133,27 +133,32 @@ Catches: Even if a manipulated prompt reaches the agent, it can only use tools t
 
 ---
 
-### Layer 6 — Process Isolation via OS User Separation (infrastructure)
+### Layer 6 — Per-Agent Isolation + PostgreSQL RLS (infrastructure)
 
 **Cost:** Infrastructure cost (already part of architecture)
-**Dependencies:** OS user separation (Unix filesystem permissions)
+**Dependencies:** PostgreSQL row-level security, OpenClaw per-agent path boundaries
 
-Each user runs in their own gateway process under a dedicated OS user with their own workspace directory. There is no shared state, no shared database, no cross-user access path.
+Each user's agent runs within a shared gateway but with strict isolation:
+- **PostgreSQL RLS** on TigerFS data — each agent can only access rows belonging to its user
+- **OpenClaw per-agent path boundaries** — each agent is scoped to its own workspace path in TigerFS
+- **Security gate** (Layers 1-4) — validates all input before it reaches any agent
 
-Catches: Everything else. Even a fully compromised agent can only access that one user's own data.
+No cross-user access path exists. Even a fully compromised agent can only access that one user's own data within TigerFS.
+
+Catches: Everything else. The blast radius of a compromised agent is one user's data, not the gateway's other users.
 
 ---
 
 ### Layer 7 — Architectural Blast Radius
 
-This isn't a "layer" you implement — it's a property of the 1:1 architecture:
+This isn't a "layer" you implement — it's a property of the per-agent isolation architecture:
 
 | Attack Scenario | Traditional SaaS | This Architecture |
 |---|---|---|
-| Prompt injection succeeds | Access shared DB → all users' data | Access one gateway process → one user's data |
-| Agent goes rogue | Shared infra at risk | One gateway process at risk |
-| Credentials leaked | Shared secrets exposed | One user's auth profiles only |
-| Data exfiltration | Entire database | One user's workspace files |
+| Prompt injection succeeds | Access shared DB → all users' data | RLS + path boundaries → one user's data only |
+| Agent goes rogue | Shared infra at risk | One agent's scoped workspace at risk |
+| Credentials leaked | Shared secrets exposed | One user's auth profiles only (per-agent isolation) |
+| Data exfiltration | Entire database | One user's workspace files (RLS enforced) |
 
 ## Tech Stack Summary
 
@@ -165,7 +170,7 @@ This isn't a "layer" you implement — it's a property of the 1:1 architecture:
 | Model provider for guards | `ai` (Vercel AI SDK) | Model-agnostic — swap providers without code changes |
 | Domain scope classifier | `ai` (Vercel AI SDK) middleware | Custom per deployed product, clean middleware pattern |
 | Tool restrictions | OpenClaw native (`openclaw.json`) | Already built-in, zero code |
-| Process isolation | OS user separation | Unix filesystem permissions per gateway process |
+| Per-agent isolation | PostgreSQL RLS + OpenClaw path boundaries | Per-agent data isolation within shared gateways |
 
 ## Flow Timing Estimate
 

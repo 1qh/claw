@@ -15,9 +15,9 @@ email (primary key)
 | Benefit | Why |
 |---|---|
 | **Auth identity** | Google/Microsoft/GitHub OAuth all return email |
-| **Gateway routing** | Email maps deterministically to host, port, OS user |
+| **Gateway routing** | Email maps deterministically to gateway_id, host, port |
 | **Fallback notifications** | Email itself is a delivery channel |
-| **Deterministic gateway naming** | Hash email → OS user + port, no lookup needed |
+| **Deterministic gateway assignment** | Email maps to gateway_id for routing |
 | **Human readable** | Admin sees `alice@company.com` in logs, not a UUID |
 
 ## Control Plane Data Model
@@ -26,17 +26,16 @@ Essentially one table:
 
 ```
 email (PK) → {
-    host            // which host this user's gateway runs on
+    gateway_id      // which gateway hosts this user's agent
+    host            // which host the gateway runs on
     port            // gateway process port
-    os_user         // dedicated OS user (e.g., oc-<hash>)
-    workspace_dir   // workspace directory path
     status          // active | idle | stopped | provisioning
     created_at
     last_active_at
 }
 ```
 
-Could be a database table, a key-value store, or even a flat file.
+Stored in TimescaleDB. Gateway assignment is managed by the control plane; gateways are fully stateless so users can be rebalanced across gateways without data migration.
 
 ## Identity Split
 

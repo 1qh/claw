@@ -108,5 +108,5 @@ The "most verbose" view a user or operator can get:
 | Storage used | Per user | Workspace directory metrics |
 | File uploads | Per upload | Control plane logs |
 | Gate rejections | Per attempt | Control plane logs |
-| Compute time | Per gateway | Process runtime metrics (from process manager) |
+| Compute time | Per agent | Agent runtime metrics (from gateway) |
 

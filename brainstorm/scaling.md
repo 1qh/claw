@@ -2,17 +2,17 @@
 
 ## Target
 
-10,000 users from day one. ~50 hosts, ~200 gateway processes per host.
+10,000 users from day one. 500-1000 gateways (10-20 users each) across 10-20 VMs.
 
 ## Why Orchestration Is Needed
 
-| Problem | At 1 host | At 50 hosts |
+| Problem | At 1 host | At 10-20 hosts |
 |---|---|---|
-| New user signup | Start a process | Which host? |
-| Host dies | Process manager restarts | 200 users offline — who reschedules? |
-| Host overloaded | Doesn't happen at 200 | Need rebalancing |
+| New user signup | Assign to existing gateway | Which gateway on which host? |
+| Host dies | Process manager restarts | 50-100 gateways offline (500-2000 users) — who reschedules? |
+| Host overloaded | Doesn't happen at 50 gateways | Need rebalancing |
 | Add capacity | N/A | New host must be discovered and used |
-| Rolling updates | Restart processes | Coordinate across 50 machines |
+| Rolling updates | Restart gateways | Coordinate across 10-20 machines |
 
 ## Choice: [Nomad](https://www.nomadproject.io/)
 
@@ -33,10 +33,10 @@ The only tool that schedules bare processes across multiple hosts without requir
 
 ```
 Deployer adds host → registers with Nomad
-User signs up → control plane submits job to Nomad
+User signs up → control plane assigns to existing gateway (or submits new gateway job to Nomad)
 Nomad → places gateway on best host (raw_exec, no containers)
-Gateway crashes → Nomad restarts
-Host dies → Nomad reschedules to another host
+Gateway crashes → Nomad restarts on any host (fully stateless, all data in TigerFS)
+Host dies → Nomad reschedules gateways to other hosts, zero data loss
 OpenClaw update → Nomad rolling restart across all hosts
 ```
 
@@ -51,7 +51,7 @@ Nomad is BSL (Business Source License) — not pure open source. BSL allows free
 | Kubernetes | Requires containers, high complexity |
 | Docker Swarm | Requires containers, maintenance mode |
 | Apache Mesos | Retired 2025 |
-| Build our own | Risky for critical infrastructure at 50-host scale |
+| Build our own | Risky for critical infrastructure at 10-20 host scale |
 | Nomad open source fork | Discussed by community, never materialized |
 
 ### Future Option

@@ -12,7 +12,7 @@ This is an **open source framework** for building agent-native SaaS products whe
 
 - [**Vision**](vision.md) — the fire-and-forget agent-native SaaS concept
 - [**Personalization**](personalization.md) — why memory is core, how OpenClaw's workspace handles it
-- [**Architecture**](architecture.md) — 1 user = 1 gateway process, multi-gateway per host, isolation model
+- [**Architecture**](architecture.md) — multi-agent per gateway, fully stateless via TigerFS, isolation model
 - [**Identity**](identity.md) — email as the universal key, control plane data model
 - [**Security**](security.md) — 7-layer defense in depth, blocking threats before they reach OpenClaw
 - [**File Handling**](file-handling.md) — uploads, validation, antivirus, workspace storage

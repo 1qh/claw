@@ -161,15 +161,15 @@ One Linux VM:
   ├── TimescaleDB            (1 system service)
   ├── TigerFS mount          (/mnt/tigerfs/)
   ├── ClamAV daemon          (1 system service)
-  └── User gateway processes  (N OpenClaw processes, all read/write via TigerFS)
+  └── Gateway processes        (N OpenClaw multi-agent gateways, all read/write via TigerFS)
 ```
 
-No per-user directories. No git sync. No OS users. No separate backup infra.
+No local disk dependency. No git sync. No OS users. No separate backup infra. Gateways are fully stateless.
 
 ## Open Questions
 
 - **OpenClaw's `O_NOFOLLOW` flag** — FUSE files present as regular files (not symlinks), should be fine. Needs testing.
 - **Session transcript append performance** — OpenClaw appends to JSONL files frequently. FUSE write latency for append-heavy workloads needs benchmarking.
 - **File watchers** — OpenClaw watches workspace files for hot-reload. Does FUSE trigger `inotify`/`FSEvents` correctly?
-- **OpenClaw `--profile` compatibility** — each profile expects filesystem paths. TigerFS paths should work but needs verification.
+- **OpenClaw multi-agent compatibility** — each agent expects filesystem paths for its workspace. TigerFS paths should work but needs verification.
 - **TigerFS maturity** — "early, but core idea is stable" per their docs. Need to evaluate production readiness.

@@ -47,4 +47,4 @@ Standard Linux ops — nothing framework-specific:
 | Log rotation | `logrotate` |
 | Disk monitoring | Alerting via process manager |
 | TimescaleDB maintenance | Built-in `VACUUM`, retention policies for cache table |
-| Git backup repo cleanup | GitHub handles storage, prune old branches if needed |
+| TigerFS `.history/` cleanup | Retention policies via TimescaleDB background jobs |

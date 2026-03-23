@@ -8,10 +8,11 @@ No formal SLA required at launch. No on-call rotation. No status page. Things au
 
 | Failure | Recovery |
 |---|---|
-| Gateway process crashes | Process manager (systemd/PM2) auto-restarts it |
-| Gateway becomes unresponsive | Health check detects, kills and restarts process |
-| Host machine reboots | Process manager starts all gateways on boot |
+| Gateway process crashes | Nomad auto-restarts on any available host (stateless — zero data loss) |
+| Gateway becomes unresponsive | Health check detects, Nomad kills and restarts process |
+| Host machine reboots | Nomad reschedules gateways to other hosts immediately |
 | Control plane crashes | Process manager auto-restarts it |
+| Gateway crash affects 10-20 users | Nomad restarts gateway in seconds; all data intact in TigerFS |
 | Disk fills up | Alerting notifies operator to add space or clean up |
 | LLM provider goes down | OpenClaw [model failover](https://docs.openclaw.ai/concepts/model-failover) switches to fallback model |
 

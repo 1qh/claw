@@ -21,7 +21,7 @@ graph LR
 | | Traditional (S3 + DB) | Workspace Directory |
 |---|---|---|
 | Storage | S3 bucket (shared) + metadata in DB | User's workspace directory (isolated) |
-| Access control | IAM policies, signed URLs, DB lookups | OS user boundary — only this user's agent |
+| Access control | IAM policies, signed URLs, DB lookups | PostgreSQL RLS + agent path boundaries — only this user's agent |
 | Agent access | Needs S3 SDK, credentials, download step | Just reads a local file |
 | Cleanup | Orphaned S3 files, DB records to maintain | Delete workspace = delete everything |
 | Backup | S3 versioning + DB backup separately | Back up workspace = everything backed up |
@@ -121,6 +121,6 @@ Important context from community and security researchers:
 | Workspace size | Limits per tier (free: 1GB, paid: 10GB, enterprise: 100GB) |
 | Cleanup | Agent manages workspace, archives/deletes old uploads |
 | Large data | Agent processes in streaming fashion without storing full file |
-| Backup | Regular workspace backups (git-based) |
+| Backup | TigerFS `.history/` + `pg_dump` |
 | Deletion (GDPR) | Delete workspace directory = delete everything |
 

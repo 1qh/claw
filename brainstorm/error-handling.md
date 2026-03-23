@@ -14,14 +14,14 @@ These are reliability problems, not error handling. They must be solved at the i
 | **Content filter triggered** | 7-layer security gate catches this before OpenClaw |
 | **Process crash (OOM)** | Process manager auto-restart + proper resource limits |
 | **Process eviction** | OS-level resource limits + proper sizing |
-| **Workspace directory failure** | Reliable filesystem + regular backups |
+| **Workspace directory failure** | TigerFS backed by TimescaleDB — ACID durability |
 | **Network partition** | Redundant networking + health probes |
 | **Tool execution errors** | OpenClaw retries tools internally |
 | **Agent loops** | OpenClaw has built-in [loop detection](https://docs.openclaw.ai/tools/loop-detection) |
 | **Task timeout** | Configure max task duration |
 | **Control plane down** | Multiple replicas, load balanced |
-| **Host failure** | Reassign users to another host, start gateway processes |
-| **Storage failure** | Filesystem backups + git-based workspace recovery |
+| **Host failure** | Nomad reschedules gateways to other hosts — fully stateless, zero data loss |
+| **Storage failure** | TigerFS `.history/` + `pg_dump` recovery |
 
 **Principle:** If infrastructure is properly set up, these are non-events. Standard process management and cloud reliability practices.
 

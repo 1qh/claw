@@ -9,7 +9,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | [Bun](https://bun.sh/) | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js |
 | [Elysia](https://elysiajs.com/) | HTTP/WebSocket framework — Bun-native, end-to-end type safety, better-auth adapter |
 | TypeScript + ESM | Language — same everywhere (framework, control plane, deployer CLIs) |
-| [OpenClaw](https://openclaw.ai) | Agent runtime — [multi-gateway per host](https://docs.openclaw.ai/gateway/multiple-gateways) via `--profile` |
+| [OpenClaw](https://openclaw.ai) | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
 | `bunx cli@latest` | Tool execution — deployer's backend as npm CLIs, always latest |
 
 ## Data
@@ -19,6 +19,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | [TimescaleDB](https://www.timescale.com/) | PostgreSQL + hypertables + compression + continuous aggregates + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) + [pgai](https://github.com/timescale/pgai) + background jobs |
 | [TigerFS](https://tigerfs.io/) | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest |
 | [Drizzle](https://orm.drizzle.team/) | ORM for control plane (auth, billing, routing) |
+| memory-timescaledb | Custom OpenClaw memory plugin (~800 LOC) — replaces SQLite, stores all memory/sessions in TimescaleDB |
 
 ## Auth & Billing
 
@@ -42,7 +43,8 @@ This framework is opinionated. Deployers adopt these choices as-is.
 |---|---|
 | Linux VM | Host |
 | PostgreSQL roles + RLS | Per-user data isolation (via TigerFS) |
-| systemd / PM2 | Process management, auto-restart |
+| [Nomad](https://www.nomadproject.io/) | Gateway scheduling, failover, rolling updates across hosts |
+| systemd / PM2 | Local process management, auto-restart |
 
 ## Excluded
 
