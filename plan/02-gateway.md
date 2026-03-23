@@ -136,7 +136,8 @@ sequenceDiagram
    - `chat` events with `state: "delta"` → live feed
    - `chat` events with `state: "final"` → task complete notification
    - Clarification requests → interactive prompt (see Stage 2.5)
-7. Write tests: full message round-trip, event forwarding, disconnect handling
+7. The control plane intercepts `chat` events with `state: 'final'` and extracts token counts, cost, model, and latency. It writes these as rows to the `usage_events` hypertable. This is a side effect of the proxy, not a separate service — the control plane writes to the DB while forwarding events.
+8. Write tests: full message round-trip, event forwarding, disconnect handling
 
 ### External References
 - [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol)
@@ -152,6 +153,7 @@ sequenceDiagram
 - [ ] Gateway disconnect notifies frontend
 - [ ] Multiple users can connect simultaneously to different gateways
 - [ ] Concurrent task queueing works (second task queued while first runs, default `collect` mode)
+- [ ] `usage_events` table has rows after a task completes
 - [ ] All tests pass
 
 ---
@@ -166,7 +168,8 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 
 ### Steps
 
-1. Implement `request_clarification` as a custom tool registered on the gateway:
+1. Create a custom OpenClaw plugin package (`extensions/clarification-tool/`) following the same pattern as `memory-timescaledb`. The plugin uses `api.registerTool()` to register the `request_clarification` tool with the gateway. The tool's `execute()` function triggers an exec approval event via `callGatewayTool('exec.approval.request', ...)` and waits for resolution.
+2. Implement `request_clarification` as a custom tool registered on the gateway:
    - Tool accepts `{ question: string, options?: string[] }` as input
    - When the agent calls this tool, the gateway emits an exec approval event (the same pattern used for tool execution approval)
    - The control plane intercepts this event and forwards a clarification prompt to the frontend via WebSocket
@@ -238,7 +241,7 @@ graph TB
 6. Register hooks: `before_agent_start` (auto-recall), `agent_end` (auto-capture)
 7. Register CLI commands: `ltm list`, `ltm search`, `ltm stats`
 8. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
-9. **Critical: every query MUST include `WHERE agent_id = $1`** — enforce in code AND via RLS
+9. **Critical: every query MUST scope by agent_id. RLS policy allows own rows + `__shared__` rows.** Policy: `USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')` — enforce in code AND via RLS
     > **Note:** The `memory-timescaledb` plugin generates embeddings in application code (not via pgai). If pgai is available locally, it can be used for auto-vectorizing the shared intelligence layer (crawled_pages) in a future phase, but the memory plugin does not depend on it.
 10. Write comprehensive tests: store/search/delete, agent isolation, concurrent access
 

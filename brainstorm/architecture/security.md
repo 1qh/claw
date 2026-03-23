@@ -229,12 +229,12 @@ API keys are process-global but belong to the deployer, not individual users. Al
 Shell commands bypass OpenClaw's file boundary checks. A command like `cat /other-user/file` could theoretically succeed.
 
 **Framework must enforce:**
-- `tools.exec.security: "deny"` explicitly in shared config — OpenClaw's default depends on exec host: `sandbox` → `deny`, `gateway` → `allowlist`. Since uniclaw doesn't use Docker sandboxes, exec runs on gateway host where the default is `allowlist`, NOT `deny`. The framework MUST set this explicitly.
-- Deployer configures `safeBins` for allowed commands
+- `tools.exec.security: "allowlist"` with `safeBins: ["bunx"]` explicitly in shared config — OpenClaw's default depends on exec host: `sandbox` → `deny`, `gateway` → `allowlist` (all binaries). Since uniclaw doesn't use Docker sandboxes, exec runs on gateway host where the default allows ALL binaries. The framework MUST explicitly set `safeBins: ["bunx"]` to restrict execution to only the CLI runner.
+- Deployer can add additional safe binaries to `safeBins` as needed
 - Security gate blocks prompt injection before OpenClaw
 
 ### memory-timescaledb Plugin — Our responsibility
-Shared pgvector table in TimescaleDB. Every query MUST include `WHERE agent_id = $1`. The table schema enforces this:
+Shared pgvector table in TimescaleDB. Every query MUST scope by agent_id. The RLS policy allows access to the agent's own rows AND rows with `agent_id = '__shared__'` (shared knowledge). Policy: `USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')`. The table schema enforces this:
 
 ```sql
 CREATE TABLE memory_chunks (
@@ -245,8 +245,9 @@ CREATE TABLE memory_chunks (
     created_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS policy: each agent connection can only see its own rows
--- Every search query: WHERE agent_id = $1 AND embedding <=> $query_vector
+-- RLS policy: each agent can see its own rows + shared knowledge
+-- USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')
+-- Every search query: WHERE agent_id IN ($1, '__shared__') AND embedding <=> $query_vector
 -- Every insert: agent_id set from runtime context, never from user input
 ```
 

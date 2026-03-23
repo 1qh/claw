@@ -58,7 +58,7 @@ The deployer's entire "backend" is a set of CLI tools published to npm. The agen
 |---|---|
 | **Self-documenting** | `--help` tells the agent everything |
 | **Language-agnostic** | Build in any language, publish to npm |
-| **Always up to date** | `bunx some-cli@latest` — no install, no cache, no manifest |
+| **Always up to date** | `bunx @package@latest` — Bun resolves from the npm registry and caches locally. The `@latest` tag ensures the newest published version is fetched when the cache is stale. For time-critical updates, deployers can clear the Bun cache (`bun pm cache rm`) or use `--no-cache` flag. |
 | **Composable** | Agent chains tools naturally |
 | **Testable independently** | Deployer tests CLI without needing OpenClaw |
 | **Zero infrastructure** | No registry auth, no cron, no version management |

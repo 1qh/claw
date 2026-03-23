@@ -123,8 +123,9 @@ graph TD
 1. Control plane maintains `gateways` table with current agent count
 2. On user signup: find gateway with lowest agent count below max (default 20)
 3. If no gateway has capacity: start a new gateway process (Bun.spawn), register it, then assign
-4. On user deletion: decrement agent count, if gateway is empty for a threshold period, stop it
-5. Periodic sync: control plane verifies gateway agent counts match actual (in case of drift)
+4. When spawning a new gateway, the control plane also creates a PostgreSQL role for that gateway and configures the gateway's TigerFS mount and memory plugin connection to use this role.
+5. On user deletion: decrement agent count, if gateway is empty for a threshold period, stop it
+6. Periodic sync: control plane verifies gateway agent counts match actual (in case of drift)
 
 ### Verification Checklist
 - [ ] New user assigned to gateway with most capacity
@@ -133,6 +134,7 @@ graph TD
 - [ ] User deletion decrements gateway agent count
 - [ ] Empty gateway stopped after idle timeout
 - [ ] Agent count sync catches drift between DB and actual
+- [ ] New gateway uses its own PostgreSQL role (verify via `SELECT current_user` through the gateway's DB connection)
 - [ ] All tests pass
 
 ---
