@@ -29,3 +29,4 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Tech Stack**](tech-stack.md) — opinionated choices: Bun, TypeScript, Drizzle, TimescaleDB, and what's excluded
 - [**Maintenance**](maintenance.md) — OpenClaw updates, workspace cleanup, host ops
 - [**TigerFS**](tigerfs.md) — mount TimescaleDB as filesystem, unify all storage into one system
+- [**Stack Capabilities**](stack-capabilities.md) — exhaustive inventory of every feature in every tool we use
