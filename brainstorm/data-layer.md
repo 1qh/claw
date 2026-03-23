@@ -1,4 +1,4 @@
-# Data Layer: PostgreSQL + Workspace, No Overlap
+# Data Layer: [TimescaleDB](https://www.timescale.com/) + Workspace, No Overlap
 
 ## Core Principle
 
@@ -8,7 +8,7 @@ Every piece of data has exactly one source of truth. Nothing is stored in two pl
 
 ```mermaid
 graph TB
-    subgraph "PostgreSQL (shared, operational — control plane owns)"
+    subgraph "TimescaleDB (shared — control plane owns)"
         AUTH["Auth (better-auth)"]
         ROUTE["User → gateway mapping\n(email, host, port, os_user)"]
         BILL["Billing / subscription (Stripe)"]
@@ -24,9 +24,9 @@ graph TB
     end
 ```
 
-### What PostgreSQL Stores (Source of Truth)
+### What TimescaleDB Stores (Source of Truth)
 
-| Data | Why PostgreSQL | Stale? |
+| Data | Why TimescaleDB | Stale? |
 |---|---|---|
 | Auth | [better-auth](https://www.better-auth.com/) manages it | No — it IS the source of truth |
 | User → gateway mapping | Control plane needs fast lookups | No — it IS the source of truth |
@@ -34,9 +34,9 @@ graph TB
 | Shared cache | Cross-user deduplication, TTL-based | No — expired rows self-invalidate |
 | Crawled content + embeddings | Concurrent access from all gateways, vector search | No — immutable once written |
 
-### What PostgreSQL Does NOT Store
+### What TimescaleDB Does NOT Store
 
-| Data | Where Instead | Why Not PostgreSQL |
+| Data | Where Instead | Why Not TimescaleDB |
 |---|---|---|
 | Gateway status | Check process live (`kill -0 <pid>`) | Stored status goes stale |
 | Usage data | Query gateway API on demand | Aggregates go stale |
@@ -58,7 +58,7 @@ No polling. No stored state. The [gateway event stream](https://docs.openclaw.ai
 
 ## Shared Cache
 
-[PostgreSQL](https://www.postgresql.org/) table with TTL:
+[TimescaleDB](https://www.postgresql.org/) table with TTL:
 
 ```sql
 CREATE TABLE cache (
@@ -88,44 +88,34 @@ CREATE TABLE crawled_pages (
 );
 
 -- Vector search: semantic matching / reranking
--- Full-text search: PostgreSQL built-in FTS
--- Concurrent reads/writes: PostgreSQL handles natively
+-- Full-text search: TimescaleDB built-in FTS
+-- Concurrent reads/writes: TimescaleDB handles natively
 ```
 
 - 50 users crawl overlapping websites → each URL stored once
 - Agent needs semantic search → pgvector similarity query
-- Agent needs full-text filter → PostgreSQL FTS
+- Agent needs full-text filter → TimescaleDB FTS
 - Millions of pages over time → pgvectorscale (DiskANN) for performance
 
-## Tech Stack
-
-| Component | Technology | Role |
-|---|---|---|
-| ORM | [Drizzle](https://orm.drizzle.team/) | Type-safe database access |
-| Auth | [better-auth](https://www.better-auth.com/) | Authentication |
-| Vector search | [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) | Embeddings, semantic search |
-| Full-text search | PostgreSQL FTS | Content filtering |
-| Cache | PostgreSQL table with TTL | Cross-user deduplication |
-
-## Host Layout (Updated)
+## Host Layout
 
 ```
 One Linux VM:
-  ├── Control plane          (1 Node.js process)
+  ├── Control plane          (1 Bun process)
+  ├── TimescaleDB            (1 system service)
   ├── ClamAV daemon          (1 system service)
-  ├── PostgreSQL + pgvector  (1 system service)
   ├── Shared config dir      (/shared-config/, git-synced)
   ├── User gateway processes  (N OpenClaw processes)
   └── User workspace dirs    (/data/oc-<user>/, git-backed)
 ```
 
-## Scaling PostgreSQL
+## Scaling TimescaleDB
 
 When the host can't handle the database load alongside gateways:
 
 | Scale | Strategy |
 |---|---|
-| 0-500 users | PostgreSQL on same host |
-| 500+ users | Move PostgreSQL to dedicated host |
+| 0-500 users | TimescaleDB on same host |
+| 500+ users | Move TimescaleDB to dedicated host |
 | Large crawl data | pgvectorscale DiskANN index for performance |
-| Multi-host | All hosts connect to single PostgreSQL instance |
+| Multi-host | All hosts connect to single TimescaleDB instance |

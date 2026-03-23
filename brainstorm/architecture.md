@@ -22,7 +22,7 @@ graph TB
         FE[Frontend<br/>Chat + Live Feed + Notifications]
     end
 
-    subgraph "Control Plane (single Node.js process, always-on)"
+    subgraph "Control Plane (single Bun process, always-on)"
         AUTH[Auth Service<br/>OAuth / Magic Link]
         ROUTER[WebSocket Router]
         PM[Process Manager]
@@ -219,8 +219,9 @@ The gateway IS the database. No Postgres, no Redis, no migrations, no ORM.
 
 ```
 One Linux VM:
-  ├── Control plane          (1 Node.js process)
-  ├── ClamAV daemon          (1 system service, shared)
+  ├── Control plane          (1 Bun process)
+  ├── TimescaleDB            (1 system service)
+  ├── ClamAV daemon          (1 system service)
   ├── Shared config dir      (/shared-config/, git-synced)
   ├── User gateway processes  (N OpenClaw processes)
   └── User workspace dirs    (/data/oc-<user>/, git-backed)
