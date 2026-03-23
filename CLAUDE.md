@@ -63,7 +63,7 @@
 ### Cross-linter rules
 
 - 2 linters with the same rule (biome `noAwaitInLoops` + oxlint `no-await-in-loop`) = double enforcement, NOT a conflict. Never disable one because the other covers it.
-- To suppress a shared eslint/oxlint rule: suppress eslint's version — oxlint auto-picks up eslint rules and is faster.
+- To suppress a shared eslint/oxlint rule: suppress eslint’s version — oxlint auto-picks up eslint rules and is faster.
 
 ### Safe-to-ignore rules
 
@@ -77,14 +77,14 @@
 
 ## Minimal DOM (React + Tailwind)
 
-Same UI, fewest DOM nodes. Every element must earn its place. If you can delete it and nothing breaks (semantics, layout, behavior, required styling) → it shouldn't exist.
+Same UI, fewest DOM nodes. Every element must earn its place. If you can delete it and nothing breaks (semantics, layout, behavior, required styling) → it shouldn’t exist.
 
 **A node is allowed only if it provides:**
 
 - **Semantics/a11y** — correct elements (`ul/li`, `button`, `label`, `form`, `nav`, `section`), ARIA patterns, focus behavior
 - **Layout constraint** — needs its own containing block / positioning / clipping / scroll / stacking context (`relative`, `overflow-*`, `sticky`, `z-*`, `min-w-0`)
 - **Behavior** — measurement refs, observers, portals, event boundary, virtualization
-- **Component API** — can't pass props/classes to the real root (and you tried `as`/`asChild`/prop forwarding)
+- **Component API** — can’t pass props/classes to the real root (and you tried `as`/`asChild`/prop forwarding)
 
 **Before adding wrappers:**
 
@@ -100,7 +100,7 @@ Same UI, fewest DOM nodes. Every element must earn its place. If you can delete 
 - Uniform direct children → `*:` or `[&>tag]:` to avoid repeating classes
 
 ```tsx
-<div className='divide-y [&>p]:px-3 [&>p]:py-2'>
+<div className="divide-y [&>p]:px-3 [&>p]:py-2">
   <p>A</p>
   <p>B</p>
 </div>

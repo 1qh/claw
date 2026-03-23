@@ -2,19 +2,19 @@
 
 ## Core Principle
 
-No formal SLA required at launch. No on-call rotation. No status page. Things auto-heal, and the deployer gets notified when they don't.
+No formal SLA required at launch. No on-call rotation. No status page. Things auto-heal, and the deployer gets notified when they don’t.
 
 ## What Auto-Recovery Covers
 
-| Failure | Recovery |
-|---|---|
-| Gateway process crashes | Nomad auto-restarts on any available host (stateless — zero data loss) |
-| Gateway becomes unresponsive | Health check detects, Nomad kills and restarts process |
-| Host machine reboots | Nomad reschedules gateways to other hosts immediately |
-| Control plane crashes | Process manager auto-restarts it |
-| Gateway crash affects 10-20 users | Nomad restarts gateway in seconds; all data intact in TigerFS |
-| Disk fills up | Alerting notifies operator to add space or clean up |
-| LLM provider goes down | OpenClaw [model failover](https://docs.openclaw.ai/concepts/model-failover) switches to fallback model |
+| Failure                           | Recovery                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Gateway process crashes           | Nomad auto-restarts on any available host (stateless — zero data loss)                                 |
+| Gateway becomes unresponsive      | Health check detects, Nomad kills and restarts process                                                 |
+| Host machine reboots              | Nomad reschedules gateways to other hosts immediately                                                  |
+| Control plane crashes             | Process manager auto-restarts it                                                                       |
+| Gateway crash affects 10-20 users | Nomad restarts gateway in seconds; all data intact in TigerFS                                          |
+| Disk fills up                     | Alerting notifies operator to add space or clean up                                                    |
+| LLM provider goes down            | OpenClaw [model failover](https://docs.openclaw.ai/concepts/model-failover) switches to fallback model |
 
 ## Health Check Design
 
@@ -27,18 +27,19 @@ graph LR
 ```
 
 Each gateway exposes a health endpoint. The process manager pings it periodically:
+
 - Responds healthy → no action
 - No response within timeout → restart the process
 - Fails 3+ times in a row → alert the operator
 
-## What the Framework Doesn't Include (Yet)
+## What the Framework Doesn’t Include (Yet)
 
-| Capability | Why Not Now |
-|---|---|
-| Formal SLA (99.9%) | No paying enterprise customers demanding it |
-| Status page | Build when users start asking |
-| On-call rotation | Single operator is enough at startup scale |
-| Multi-region redundancy | One host (or a few) is sufficient |
-| Automated failover across hosts | Add when multi-host becomes necessary |
+| Capability                      | Why Not Now                                 |
+| ------------------------------- | ------------------------------------------- |
+| Formal SLA (99.9%)              | No paying enterprise customers demanding it |
+| Status page                     | Build when users start asking               |
+| On-call rotation                | Single operator is enough at startup scale  |
+| Multi-region redundancy         | One host (or a few) is sufficient           |
+| Automated failover across hosts | Add when multi-host becomes necessary       |
 
-These are all "good problems to have" — they mean the deployed product is growing.
+These are all “good problems to have” — they mean the deployed product is growing.

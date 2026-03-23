@@ -4,66 +4,66 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 ## Core
 
-| Choice | Role |
-|---|---|
-| [Bun](https://bun.sh/) | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js |
-| [Elysia](https://elysiajs.com/) | HTTP/WebSocket framework — Bun-native, end-to-end type safety, better-auth adapter |
-| TypeScript + ESM | Language — same everywhere (framework, control plane, deployer CLIs) |
-| [OpenClaw](https://openclaw.ai) | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
-| `bunx cli@latest` | Tool execution — deployer's backend as npm CLIs, always latest |
-| [Vitest](https://vitest.dev/) | Testing — fast Vite-native test runner, compatible with Bun |
-| [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Oxfmt](https://oxc.rs/) | Linting and formatting — Rust-based, fast, matches OpenClaw's tooling |
+| Choice                                                                      | Role                                                                                                           |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [Bun](https://bun.sh/)                                                      | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js                         |
+| [Elysia](https://elysiajs.com/)                                             | HTTP/WebSocket framework — Bun-native, end-to-end type safety, better-auth adapter                             |
+| TypeScript + ESM                                                            | Language — same everywhere (framework, control plane, deployer CLIs)                                           |
+| [OpenClaw](https://openclaw.ai)                                             | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
+| `bunx cli@latest`                                                           | Tool execution — deployer’s backend as npm CLIs, always latest                                                 |
+| [Vitest](https://vitest.dev/)                                               | Testing — fast Vite-native test runner, compatible with Bun                                                    |
+| [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Oxfmt](https://oxc.rs/) | Linting and formatting — Rust-based, fast, matches OpenClaw’s tooling                                          |
 
 ## Data
 
-| Choice | Role |
-|---|---|
+| Choice                                    | Role                                                                                                                                                                                                                                          |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [TimescaleDB](https://www.timescale.com/) | PostgreSQL + hypertables + compression + continuous aggregates + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) + [pgai](https://github.com/timescale/pgai) + background jobs |
-| [TigerFS](https://tigerfs.io/) | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest |
-| [Drizzle](https://orm.drizzle.team/) | ORM for control plane (auth, billing, routing) |
-| memory-timescaledb | Custom OpenClaw memory plugin (~800 LOC) — replaces memory-core and memory-lancedb with pgvector-backed storage in TimescaleDB |
+| [TigerFS](https://tigerfs.io/)            | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest                                                                                                                                                          |
+| [Drizzle](https://orm.drizzle.team/)      | ORM for control plane (auth, billing, routing)                                                                                                                                                                                                |
+| memory-timescaledb                        | Custom OpenClaw memory plugin (~800 LOC) — replaces memory-core and memory-lancedb with pgvector-backed storage in TimescaleDB                                                                                                                |
 
 ## Auth & Billing
 
-| Choice | Role |
-|---|---|
-| [better-auth](https://www.better-auth.com/) | Authentication |
-| Stripe | Billing (deployer-integrated, see note below) |
+| Choice                                      | Role                                          |
+| ------------------------------------------- | --------------------------------------------- |
+| [better-auth](https://www.better-auth.com/) | Authentication                                |
+| Stripe                                      | Billing (deployer-integrated, see note below) |
 
-> **Note:** Stripe is in the stack for deployers to integrate. The framework exposes per-user usage data via continuous aggregates; billing implementation (Stripe setup, subscriptions, webhooks) is the deployer's responsibility, not part of the framework MVP.
+> **Note:** Stripe is in the stack for deployers to integrate. The framework exposes per-user usage data via continuous aggregates; billing implementation (Stripe setup, subscriptions, webhooks) is the deployer’s responsibility, not part of the framework MVP.
 
 ## Security
 
-| Choice | Role |
-|---|---|
-| [hai-guardrails](https://github.com/presidio-oss/hai-guardrails) | Input validation — heuristic + LLM guards |
-| [AI SDK](https://ai-sdk.dev) | Model-agnostic provider for LLM guards |
-| [ClamAV](https://www.clamav.net/) | Antivirus — self-hosted via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) |
-| [`file-type`](https://www.npmjs.com/package/file-type) | MIME sniffing from binary headers |
+| Choice                                                           | Role                                                                                          |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [hai-guardrails](https://github.com/presidio-oss/hai-guardrails) | Input validation — heuristic + LLM guards                                                     |
+| [AI SDK](https://ai-sdk.dev)                                     | Model-agnostic provider for LLM guards                                                        |
+| [ClamAV](https://www.clamav.net/)                                | Antivirus — self-hosted via [`clamav-rest-api`](https://github.com/benzino77/clamav-rest-api) |
+| [`file-type`](https://www.npmjs.com/package/file-type)           | MIME sniffing from binary headers                                                             |
 
 ## Infrastructure
 
-| Choice | Role |
-|---|---|
-| Linux VM | Host |
-| PostgreSQL roles + RLS | Per-user data isolation (via TigerFS) |
-| [Nomad](https://www.nomadproject.io/) | Gateway scheduling, failover, rolling updates across hosts |
-| systemd / PM2 | Local process management, auto-restart |
-| [Caddy](https://caddyserver.com/) | Reverse proxy — automatic HTTPS via Let's Encrypt, zero-config TLS |
+| Choice                                | Role                                                               |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| Linux VM                              | Host                                                               |
+| PostgreSQL roles + RLS                | Per-user data isolation (via TigerFS)                              |
+| [Nomad](https://www.nomadproject.io/) | Gateway scheduling, failover, rolling updates across hosts         |
+| systemd / PM2                         | Local process management, auto-restart                             |
+| [Caddy](https://caddyserver.com/)     | Reverse proxy — automatic HTTPS via Let’s Encrypt, zero-config TLS |
 
 ## Excluded
 
-| What | Replaced By |
-|---|---|
+| What                                             | Replaced By                                                                                   |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | Docker / Kubernetes for production orchestration | Nomad + process-level isolation. Docker used for local dev dependencies only (docker-compose) |
-| Redis | TimescaleDB |
-| S3 | TigerFS + TimescaleDB |
-| Elasticsearch / Algolia | TimescaleDB FTS + pgvector |
-| Message queues | OpenClaw gateway |
-| Express / Nest / Hono | Elysia (Bun-native, type-safe) |
-| MongoDB | TimescaleDB JSONB |
-| Separate embedding pipeline | pgai (auto-vectorize inside database) |
-| External cron / job scheduler | TimescaleDB background jobs |
-| Git sync for config | TigerFS (instant ACID writes) |
-| GitHub backup per user | TigerFS `.history/` + `pg_dump` |
-| OS user separation | PostgreSQL row-level security via TigerFS |
+| Redis                                            | TimescaleDB                                                                                   |
+| S3                                               | TigerFS + TimescaleDB                                                                         |
+| Elasticsearch / Algolia                          | TimescaleDB FTS + pgvector                                                                    |
+| Message queues                                   | OpenClaw gateway                                                                              |
+| Express / Nest / Hono                            | Elysia (Bun-native, type-safe)                                                                |
+| MongoDB                                          | TimescaleDB JSONB                                                                             |
+| Separate embedding pipeline                      | pgai (auto-vectorize inside database)                                                         |
+| External cron / job scheduler                    | TimescaleDB background jobs                                                                   |
+| Git sync for config                              | TigerFS (instant ACID writes)                                                                 |
+| GitHub backup per user                           | TigerFS `.history/` + `pg_dump`                                                               |
+| OS user separation                               | PostgreSQL row-level security via TigerFS                                                     |

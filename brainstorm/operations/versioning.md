@@ -30,16 +30,16 @@ sequenceDiagram
 
 ### Why This Is Optimal
 
-| Property | |
-|---|---|
-| **Write operations** | One (to TigerFS) |
-| **Fan-out** | Zero (all gateways read same mount) |
-| **Propagation** | Instant (ACID commit) |
-| **Polling** | None |
-| **Cron jobs** | None |
-| **Restart required** | No (OpenClaw hot-reloads on file change) |
-| **Version history** | TigerFS `.history/` — timestamped snapshots of every change |
-| **Rollback** | Restore from `.history/` |
+| Property             |                                                             |
+| -------------------- | ----------------------------------------------------------- |
+| **Write operations** | One (to TigerFS)                                            |
+| **Fan-out**          | Zero (all gateways read same mount)                         |
+| **Propagation**      | Instant (ACID commit)                                       |
+| **Polling**          | None                                                        |
+| **Cron jobs**        | None                                                        |
+| **Restart required** | No (OpenClaw hot-reloads on file change)                    |
+| **Version history**  | TigerFS `.history/` — timestamped snapshots of every change |
+| **Rollback**         | Restore from `.history/`                                    |
 
 > **Note:** OpenClaw hot-reloads workspace files (SOUL.md, AGENTS.md, etc.) via chokidar file watching. However, config keys like `agents`, `tools`, `session`, `routing` have reload kind `none` — changes are absorbed lazily on next `loadConfig()` call, not hot-reloaded. The versioning strategy works because SOUL.md/AGENTS.md are workspace files (watched), not config keys.
 
@@ -55,14 +55,14 @@ cat /mnt/tigerfs/config/.history/SOUL.md/2026-03-22T100000Z > /mnt/tigerfs/confi
 
 ### Stopped Gateways
 
-Stopped gateway processes don't need updating — they're not running. When they start and read from TigerFS, they get the latest version immediately. No special handling.
+Stopped gateway processes don’t need updating — they’re not running. When they start and read from TigerFS, they get the latest version immediately. No special handling.
 
 ### Alternatives Considered and Rejected
 
-| Approach | Why Rejected |
-|---|---|
-| Git-synced shared directory with cron | Polling, propagation delay, extra infrastructure |
-| Bake into process startup script | Restart all processes every time |
-| GitHub webhook → fan-out to gateways | Per-gateway work, control plane complexity |
-| Agent fetches from URL per task | Burns tokens, adds latency, fragile |
-| OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) job to git pull | LLM cost per gateway per interval |
+| Approach                                                                       | Why Rejected                                     |
+| ------------------------------------------------------------------------------ | ------------------------------------------------ |
+| Git-synced shared directory with cron                                          | Polling, propagation delay, extra infrastructure |
+| Bake into process startup script                                               | Restart all processes every time                 |
+| GitHub webhook → fan-out to gateways                                           | Per-gateway work, control plane complexity       |
+| Agent fetches from URL per task                                                | Burns tokens, adds latency, fragile              |
+| OpenClaw [cron](https://docs.openclaw.ai/automation/cron-jobs) job to git pull | LLM cost per gateway per interval                |

@@ -37,9 +37,11 @@ graph TB
 ## Stage 3.1: Message Security Gate
 
 ### Goal
+
 Validate every user message through 4 layers before forwarding to the gateway.
 
 ### Dependencies
+
 - Phase 1 complete (control plane with auth)
 
 ### Steps
@@ -75,12 +77,14 @@ graph LR
 ```
 
 #### Layer 1: Input Sanitizer
+
 1. Strip hidden unicode characters, zero-width spaces, invisible markup
 2. Enforce max message length (configurable by deployer)
 3. Reject malformed payloads
 4. Test: known unicode trick payloads are stripped, oversized messages rejected
 
 #### Layer 2: Heuristic Guards
+
 1. Install `@presidio-dev/hai-guardrails`
 2. Configure guards in heuristic mode (no LLM call):
    - Injection Guard — known prompt injection patterns
@@ -92,6 +96,7 @@ graph LR
 5. Test: known injection patterns blocked, clean messages pass
 
 #### Layer 3: LLM Content Guards
+
 1. Install `ai` (Vercel AI SDK)
 2. Configure hai-guardrails LLM-mode guards with AI SDK as the model provider
 3. Guards: Toxic, Hate Speech, Bias, Adult Content, Copyright, Profanity
@@ -99,12 +104,14 @@ graph LR
 5. Test: toxic content blocked, normal business messages pass
 
 #### Layer 4: Domain Scope Classifier
+
 1. Use AI SDK `generateText()` with `Output.object()` + Zod schema
 2. Schema returns: `{ allowed: boolean, reason: string, category: string }`
-3. Prompt is deployer-configurable (defines what's in-scope for their product)
+3. Prompt is deployer-configurable (defines what’s in-scope for their product)
 4. Test: in-scope requests pass, out-of-scope requests blocked with reason
 
 #### Integration
+
 1. Wire all 4 layers as Elysia middleware on the WebSocket message handler
 2. Messages pass through layers sequentially (fast layers first)
 3. On block: return structured reason to frontend, do NOT forward to gateway
@@ -112,11 +119,13 @@ graph LR
 5. Log all blocks (message hash, layer that blocked, reason) for operator dashboard
 
 ### External References
+
 - [hai-guardrails](https://github.com/presidio-oss/hai-guardrails#readme)
 - [AI SDK generating text](https://ai-sdk.dev/docs/ai-sdk-core/generating-text)
 - [AI SDK getting started](https://ai-sdk.dev/docs/getting-started)
 
 ### Verification Checklist
+
 - [ ] Layer 1: unicode tricks stripped, oversized messages rejected
 - [ ] Layer 2: known prompt injection patterns blocked (test with OWASP examples)
 - [ ] Layer 2: PII detected and flagged (test with SSN, email, phone patterns)
@@ -136,9 +145,11 @@ graph LR
 ## Stage 3.2: File Security Gate
 
 ### Goal
-Validate all file uploads before they reach the agent's workspace.
+
+Validate all file uploads before they reach the agent’s workspace.
 
 ### Dependencies
+
 - Phase 1 complete (control plane)
 - ClamAV running (from docker-compose)
 
@@ -168,6 +179,7 @@ sequenceDiagram
 ```
 
 #### Layer 1: Format Validation
+
 1. Install `file-type` package
 2. Enforce file size limits (configurable per-type)
 3. Extension blocklist: `.exe`, `.dll`, `.bat`, `.sh`, `.ps1`, `.com`, `.scr`, etc.
@@ -176,6 +188,7 @@ sequenceDiagram
 6. Filename validation: reject path separators, null bytes, traversal
 
 #### Layer 2: Antivirus
+
 1. ClamAV running via docker-compose (from Phase 0 infra)
 2. Install or configure `clamav-rest-api` container
 3. On file upload, POST file to ClamAV REST API
@@ -183,27 +196,32 @@ sequenceDiagram
 5. If clean, proceed
 
 #### Layer 3: Deep Inspection
+
 1. For ZIP/TAR/RAR files: extract and scan contents before accepting
 2. For PDF files: check for embedded JavaScript, suspicious objects
 3. For Office files: flag macros
 
 #### File Upload Transport
+
 File uploads use multipart form upload (`multipart/form-data`) via a standard HTTP POST endpoint. Max request body size enforced at the Elysia level (default: 100MB). For files larger than 10MB, consider chunked upload (deferred post-MVP).
 
 #### Integration
+
 1. Wire as Elysia route: `POST /upload` with auth middleware
-2. After all layers pass, write file to user's workspace on TigerFS: `/mnt/tigerfs/users/{email}/uploads/{filename}`
+2. After all layers pass, write file to user’s workspace on TigerFS: `/mnt/tigerfs/users/{email}/uploads/{filename}`
 3. Return success response with file path (relative to workspace)
 
 ### External References
+
 - [file-type npm](https://www.npmjs.com/package/file-type)
 - [clamav-rest-api](https://github.com/benzino77/clamav-rest-api#readme)
 - [ClamAV docs](https://docs.clamav.net/)
 
 ### Verification Checklist
+
 - [ ] File size limits enforced (oversized files rejected)
 - [ ] Blocked extensions rejected (`.exe`, `.dll`, etc.)
-- [ ] MIME sniffing detects real file type (renamed `.jpg` that's actually `.exe`)
+- [ ] MIME sniffing detects real file type (renamed `.jpg` that’s actually `.exe`)
 - [ ] ClamAV scans file and returns clean/infected status
 - [ ] EICAR test file (antivirus test) is detected and rejected
 - [ ] Clean files pass all layers and appear in TigerFS workspace
@@ -219,9 +237,11 @@ File uploads use multipart form upload (`multipart/form-data`) via a standard HT
 ## Stage 3.3: Rate Limiting
 
 ### Goal
+
 Per-user rate limiting to prevent abuse and resource exhaustion.
 
 ### Dependencies
+
 - Phase 1 complete (control plane with auth)
 
 ### Steps
@@ -238,16 +258,18 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 7. Write tests: exceed each limit, verify rejection; stay under limits, verify pass-through
 
 ### External References
+
 - [Elysia rate limiting patterns](https://elysiajs.com/plugins/overview)
 - [better-auth rate limiting](https://www.better-auth.com/docs/concepts/rate-limit)
 
 ### Verification Checklist
+
 - [ ] Exceeding max concurrent tasks returns 429 with structured reason
 - [ ] Exceeding max tasks/minute returns 429 with `Retry-After` header
 - [ ] Exceeding file upload rate returns 429
 - [ ] Exceeding WebSocket message rate: messages are dropped with notification
 - [ ] Within limits: no interference with normal operation
-- [ ] Rate limit counters are per-user (User A's limits don't affect User B)
+- [ ] Rate limit counters are per-user (User A’s limits don’t affect User B)
 - [ ] Admin can override limits for specific users
 - [ ] Sixth redo on the same task is rejected by the control plane (hard cap of 5)
 - [ ] All tests pass
@@ -257,14 +279,17 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 ## Stage 3.3b: CSRF Protection
 
 ### Goal
+
 Prevent cross-site request forgery on state-changing endpoints.
 
 ### Steps
+
 1. Ensure better-auth session cookies use `SameSite=Strict`
 2. Add CSRF token verification on state-changing endpoints (file upload, admin config writes)
 3. WebSocket upgrade requests should verify the `Origin` header
 
 ### Verification Checklist
+
 - [ ] Session cookies set with `SameSite=Strict`
 - [ ] CSRF token required on `POST /upload` and `PUT /admin/config/*` endpoints
 - [ ] WebSocket upgrade rejects requests with mismatched `Origin` header
@@ -275,14 +300,17 @@ Prevent cross-site request forgery on state-changing endpoints.
 ## Stage 3.3c: Denial-of-Wallet Protection
 
 ### Goal
-Prevent runaway LLM costs from a single user exhausting the deployer's budget.
+
+Prevent runaway LLM costs from a single user exhausting the deployer’s budget.
 
 ### Steps
+
 1. Per-user token/cost quota per billing period. If a user exceeds their token budget, tasks are queued or rejected until the next period
 2. Default quota configurable by deployer
 3. Quota enforcement uses in-memory counters per user, tracked by the control plane from WebSocket gateway events (token usage reported in `chat` final events). No database dependency — counters are maintained in the control plane process and reset each billing period. On control plane restart, counters reset to zero (conservative: users get a fresh allowance). In Phase 6, continuous aggregates over `usage_events` can replace in-memory counters for persistent, accurate tracking across restarts
 
 ### Verification Checklist
+
 - [ ] Per-user token quota enforced per billing period
 - [ ] User exceeding quota receives a structured rejection (not a silent drop)
 - [ ] Default quota is configurable by deployer via shared config
@@ -293,9 +321,11 @@ Prevent runaway LLM costs from a single user exhausting the deployer's budget.
 ## Stage 3.4: Output Validation Gate
 
 ### Goal
+
 Scan agent responses for PII, secrets, and sensitive data before delivery to the user. This mirrors the input gate (Stage 3.1) but on the output side.
 
 ### Dependencies
+
 - Stage 3.1 complete (message security gate — reuses the same hai-guardrails infrastructure)
 - Phase 2 complete (gateway integration — need agent responses to scan)
 
@@ -314,6 +344,7 @@ Scan agent responses for PII, secrets, and sensitive data before delivery to the
 5. Write tests: agent response with embedded API key is redacted, clean responses pass through unmodified
 
 ### Verification Checklist
+
 - [ ] Agent response containing an API key pattern is redacted before reaching the user
 - [ ] Agent response containing PII (SSN, phone, email of other users) is redacted
 - [ ] Agent response leaking system prompt content is redacted
@@ -328,18 +359,21 @@ Scan agent responses for PII, secrets, and sensitive data before delivery to the
 ## Stage 3.5: Gate Integration Test
 
 ### Goal
+
 Verify the complete security gate works end-to-end with the gateway proxy.
 
 ### Dependencies
+
 - Stages 3.1 and 3.2 complete
 - Phase 2 complete (gateway integration)
 
 ### Verification Checklist
+
 - [ ] Clean message → passes gate → reaches gateway → agent responds
 - [ ] Prompt injection → blocked at Layer 2 → user sees reason → gateway never receives it
 - [ ] Toxic message → blocked at Layer 3 → user sees reason
 - [ ] Out-of-scope request → blocked at Layer 4 → user sees reason
 - [ ] Infected file → blocked at ClamAV → user sees reason
 - [ ] Clean file → passes gate → appears in agent workspace → agent can read it
-- [ ] Gate doesn't interfere with agent events flowing back to frontend
+- [ ] Gate doesn’t interfere with agent events flowing back to frontend
 - [ ] Performance: gate adds < 200ms to message flow, < 2s to file upload

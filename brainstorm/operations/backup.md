@@ -14,6 +14,7 @@ cat /mnt/tigerfs/users/alice@co.com/.history/USER.md/2026-03-23T150000Z  # speci
 ```
 
 Restore any file to any point in time:
+
 ```bash
 cat /mnt/tigerfs/users/alice@co.com/.history/USER.md/[timestamp] > /mnt/tigerfs/users/alice@co.com/USER.md
 ```
@@ -29,6 +30,7 @@ pg_dump $DATABASE_URL > backup.sql
 ```
 
 Recovery:
+
 ```bash
 psql $DATABASE_URL < backup.sql
 # remount TigerFS — all workspaces restored
@@ -36,19 +38,19 @@ psql $DATABASE_URL < backup.sql
 
 ### Backup Schedule
 
-| Strategy | How |
-|---|---|
-| Continuous versioning | TigerFS `.history/` — automatic, per-file |
-| Full database backup | `pg_dump` on schedule (daily or hourly) |
+| Strategy               | How                                              |
+| ---------------------- | ------------------------------------------------ |
+| Continuous versioning  | TigerFS `.history/` — automatic, per-file        |
+| Full database backup   | `pg_dump` on schedule (daily or hourly)          |
 | Point-in-time recovery | TimescaleDB continuous archiving (WAL) if needed |
 
 ### What Changed
 
-| Before (git-based) | After (TigerFS) |
-|---|---|
-| 1 GitHub repo per user | One database |
-| Daily git push cron | Built-in `.history/` |
-| GitHub rate limits at scale | No limits |
-| Restore = `git clone` | Restore = `pg_dump` / `.history/` |
-| Max 24h data loss | Continuous versioning, zero data loss |
-| Separate backup infra | Same system that serves the data |
+| Before (git-based)          | After (TigerFS)                       |
+| --------------------------- | ------------------------------------- |
+| 1 GitHub repo per user      | One database                          |
+| Daily git push cron         | Built-in `.history/`                  |
+| GitHub rate limits at scale | No limits                             |
+| Restore = `git clone`       | Restore = `pg_dump` / `.history/`     |
+| Max 24h data loss           | Continuous versioning, zero data loss |
+| Separate backup infra       | Same system that serves the data      |

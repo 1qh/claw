@@ -1,1 +1,9 @@
 openclaw-repo/
+node_modules/
+bun.lock
+dist/
+.cache/
+.eslintcache
+.next/
+.turbo/
+.env

@@ -24,34 +24,37 @@ graph TB
 
 All environment variables needed across the system. Set these before Phase 1.
 
-| Variable | Purpose | Example |
-|---|---|---|
-| `DATABASE_URL` | TimescaleDB connection string (or PgBouncer in production) | `postgresql://user:pass@localhost:5432/uniclaw` |
-| `OPENCLAW_STATE_DIR` | Gateway state directory (config, credentials, sessions) | `/mnt/tigerfs/state/` |
-| `OPENCLAW_CONFIG_PATH` | Path to gateway config file (must be on TigerFS for stateless gateways) | `/mnt/tigerfs/config/openclaw.json` |
-| `ANTHROPIC_API_KEY` | Primary LLM API key | `sk-ant-...` |
-| `OPENAI_API_KEY` | Fallback LLM API key (optional) | `sk-...` |
-| `GATEWAY_AUTH_TOKEN` | Token for control plane ↔ gateway auth | (generated) |
-| `BETTER_AUTH_SECRET` | better-auth session signing secret | (generated) |
-| `GITHUB_CLIENT_ID` | OAuth provider client ID | (from GitHub) |
-| `GITHUB_CLIENT_SECRET` | OAuth provider client secret | (from GitHub) |
-| `CLAMAV_URL` | ClamAV REST API endpoint | `http://localhost:3310` |
-| `TIGERFS_MOUNT_PATH` | TigerFS mount point | `/mnt/tigerfs` |
-| `OPENCLAW_VERSION` | OpenClaw version to install (pin for stability) | `2026.3.22` |
-| `EMBEDDING_MODEL` | Embedding model for memory-timescaledb plugin | `text-embedding-3-small` |
-| `EMBEDDING_API_KEY` | API key for embedding provider | `sk-...` |
+| Variable               | Purpose                                                                 | Example                                         |
+| ---------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
+| `DATABASE_URL`         | TimescaleDB connection string (or PgBouncer in production)              | `postgresql://user:pass@localhost:5432/uniclaw` |
+| `OPENCLAW_STATE_DIR`   | Gateway state directory (config, credentials, sessions)                 | `/mnt/tigerfs/state/`                           |
+| `OPENCLAW_CONFIG_PATH` | Path to gateway config file (must be on TigerFS for stateless gateways) | `/mnt/tigerfs/config/openclaw.json`             |
+| `ANTHROPIC_API_KEY`    | Primary LLM API key                                                     | `sk-ant-...`                                    |
+| `OPENAI_API_KEY`       | Fallback LLM API key (optional)                                         | `sk-...`                                        |
+| `GATEWAY_AUTH_TOKEN`   | Token for control plane ↔ gateway auth                                  | (generated)                                     |
+| `BETTER_AUTH_SECRET`   | better-auth session signing secret                                      | (generated)                                     |
+| `GITHUB_CLIENT_ID`     | OAuth provider client ID                                                | (from GitHub)                                   |
+| `GITHUB_CLIENT_SECRET` | OAuth provider client secret                                            | (from GitHub)                                   |
+| `CLAMAV_URL`           | ClamAV REST API endpoint                                                | `http://localhost:3310`                         |
+| `TIGERFS_MOUNT_PATH`   | TigerFS mount point                                                     | `/mnt/tigerfs`                                  |
+| `OPENCLAW_VERSION`     | OpenClaw version to install (pin for stability)                         | `2026.3.22`                                     |
+| `EMBEDDING_MODEL`      | Embedding model for memory-timescaledb plugin                           | `text-embedding-3-small`                        |
+| `EMBEDDING_API_KEY`    | API key for embedding provider                                          | `sk-...`                                        |
 
 ---
 
 ## Stage 0.1: TimescaleDB Local Setup
 
 ### Goal
+
 Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 
 ### Dependencies
+
 - Docker installed
 
 ### Steps
+
 1. Create a `docker-compose.yml` with TimescaleDB image including pgvector
 2. Start the container, verify PostgreSQL is accessible
 3. Enable pgvector and pgvectorscale extensions
@@ -60,6 +63,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 6. Verify pgai is available (or note if it requires Timescale Cloud)
 
 ### External References
+
 - [TimescaleDB self-hosted install](https://www.tigerdata.com/docs/self-hosted/latest/install)
 - [pgvector GitHub](https://github.com/pgvector/pgvector)
 - [pgvectorscale GitHub](https://github.com/timescale/pgvectorscale)
@@ -67,6 +71,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 - [TimescaleDB Docker image](https://hub.docker.com/r/timescale/timescaledb-ha)
 
 ### Verification Checklist
+
 - [ ] TimescaleDB container running and accessible on localhost
 - [ ] `CREATE EXTENSION vector` succeeds
 - [ ] `CREATE EXTENSION vectorscale` succeeds (or documented why not available locally)
@@ -81,15 +86,18 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 ## Stage 0.2: TigerFS Mount + Basic Operations
 
 ### Goal
+
 Mount TimescaleDB via TigerFS and verify basic file operations.
 
 ### Dependencies
+
 - Stage 0.1 complete
 
 ### Steps
+
 1. Install TigerFS on local machine
 2. Mount the local TimescaleDB instance via TigerFS
-3. Create a "markdown,history" app via `.build/`
+3. Create a “markdown,history” app via `.build/`
 4. Write a markdown file with YAML frontmatter, verify it appears as a row
 5. Read the file back, verify content matches
 6. Append to a file, verify append works
@@ -99,13 +107,16 @@ Mount TimescaleDB via TigerFS and verify basic file operations.
 10. Test concurrent writes from two terminals
 
 ### External References
+
 - [TigerFS docs](https://tigerfs.io/docs)
 - [TigerFS GitHub](https://github.com/timescale/tigerfs)
 
 ### Platform Note
+
 TigerFS uses FUSE on Linux and NFS on macOS. Benchmark results may differ between platforms. Run Phase 0 benchmarks on Linux (matching production target). macOS developers can use Docker for TimescaleDB + TigerFS in a Linux container, or accept NFS-mode differences for local dev.
 
 ### Verification Checklist
+
 - [ ] TigerFS mount succeeds on local machine
 - [ ] File write creates a row in TimescaleDB (verify via SQL)
 - [ ] File read returns correct content
@@ -113,7 +124,7 @@ TigerFS uses FUSE on Linux and NFS on macOS. Benchmark results may differ betwee
 - [ ] `.history/` shows timestamped versions after edits
 - [ ] Pipeline queries return correct filtered results
 - [ ] `.import/.append/csv` ingests data correctly
-- [ ] Two concurrent writes from different terminals don't corrupt data
+- [ ] Two concurrent writes from different terminals don’t corrupt data
 - [ ] File delete removes the row from TimescaleDB
 - [ ] Directory creation and listing work as expected
 
@@ -122,9 +133,11 @@ TigerFS uses FUSE on Linux and NFS on macOS. Benchmark results may differ betwee
 ## Stage 0.3: OpenClaw on TigerFS
 
 ### Goal
-Run a single OpenClaw gateway with its workspace on TigerFS. Validate that OpenClaw's core operations work correctly.
+
+Run a single OpenClaw gateway with its workspace on TigerFS. Validate that OpenClaw’s core operations work correctly.
 
 ### Dependencies
+
 - Stage 0.2 complete
 - OpenClaw installed (`npm install -g openclaw@latest`)
 
@@ -162,15 +175,17 @@ graph TB
 10. Kill the gateway, restart, verify it picks up existing sessions from TigerFS
 
 ### External References
+
 - [OpenClaw getting started](https://docs.openclaw.ai/start/getting-started)
 - [OpenClaw agent workspace](https://docs.openclaw.ai/concepts/agent-workspace)
 - [OpenClaw configuration](https://docs.openclaw.ai/gateway/configuration)
 
 ### Verification Checklist
+
 - [ ] Gateway starts with workspace on TigerFS without errors
 - [ ] Agent responds to messages correctly
 - [ ] Session JSONL files appear on TigerFS (verifiable via SQL)
-- [ ] Memory files (MEMORY.md, memory/*.md) written to TigerFS
+- [ ] Memory files (MEMORY.md, memory/\*.md) written to TigerFS
 - [ ] Hot-reload triggers when SOUL.md is edited externally
 - [ ] No `O_NOFOLLOW` or symlink errors in logs
 - [ ] Gateway restart picks up existing sessions from TigerFS
@@ -183,9 +198,11 @@ graph TB
 ## Stage 0.4: Benchmarks
 
 ### Goal
+
 Quantify performance to validate or invalidate the architecture.
 
 ### Dependencies
+
 - Stage 0.3 complete
 
 ### Steps
@@ -201,29 +218,34 @@ graph TB
 ```
 
 #### Benchmark 1: JSONL Append Latency
+
 - Write a script that appends lines to a JSONL file on TigerFS
 - Measure latency per append at file sizes: 1KB, 10KB, 100KB, 500KB, 1MB
 - Compare against local filesystem baseline
 - Run 1000 appends, report p50, p95, p99 latencies
 
 #### Benchmark 2: File Read Latency
+
 - Read workspace bootstrap files (SOUL.md, AGENTS.md, USER.md, MEMORY.md) from TigerFS
 - Measure latency per read at file sizes: 1KB, 10KB, 50KB, 100KB
 - Compare against local filesystem baseline
 - Run 1000 reads, report p50, p95, p99 latencies
 
 #### Benchmark 3: File Watch Latency
+
 - Start a chokidar watcher on a TigerFS directory
 - Write a file from another process
 - Measure time from write to watcher event firing
 - Run 100 write-watch cycles, report latencies
 
 #### Benchmark 4: Cross-Mount Change Detection
+
 - Write a file directly to TimescaleDB via SQL (simulating write from another host)
 - Measure time until TigerFS mount reflects the change (via stat or chokidar)
 - Report detection latency
 
 #### Benchmark 5: Concurrent Multi-Agent Simulation
+
 - Configure OpenClaw with 5, 10, 15, 20 agents on one gateway
 - Send simultaneous messages to different agents
 - Measure response latency per agent
@@ -231,6 +253,7 @@ graph TB
 - Report at what agent count performance degrades
 
 ### Verification Checklist
+
 - [ ] JSONL append p95 latency < 50ms at 500KB file size (acceptable for fire-and-forget)
 - [ ] File read p95 latency < 20ms for 100KB files (acceptable for bootstrap)
 - [ ] File watch detects changes within 500ms (chokidar polling acceptable)
@@ -244,6 +267,7 @@ graph TB
 ### Optimization Gate
 
 Benchmark results inform tuning, not architecture decisions. If any benchmark underperforms:
+
 - **Append latency high** → tune TigerFS config or TimescaleDB WAL settings
 - **Watch latency high** → accept polling interval or add explicit refresh on config writes
 - **Multi-agent degradation** → reduce agents per gateway (tune `max_agents` default)

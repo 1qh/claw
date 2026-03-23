@@ -1,0 +1,4 @@
+{
+  "extends": "lintmax/tsconfig",
+  "include": ["**/*.ts", "**/*.tsx"]
+}

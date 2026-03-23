@@ -1,0 +1,17 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb-ha:pg17
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: uniclaw
+      POSTGRES_USER: uniclaw
+      POSTGRES_PASSWORD: uniclaw
+    volumes:
+      - tsdb_data:/home/postgres/pgdata/data
+  clamav:
+    image: clamav/clamav:stable
+    ports:
+      - '3310:3310'
+volumes:
+  tsdb_data:

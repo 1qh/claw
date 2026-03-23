@@ -32,9 +32,11 @@ graph TB
 ## Stage 7.1: Single VM Deployment
 
 ### Goal
+
 Deploy the complete stack to a single cloud VM. Validate everything works outside local dev.
 
 ### Dependencies
+
 - Phase 6 complete (operations)
 
 ### Steps
@@ -64,7 +66,7 @@ graph TB
    - Configure PgBouncer in transaction pooling mode between gateways and TimescaleDB
    - All gateway `DATABASE_URL` values should point to PgBouncer, not directly to TimescaleDB
    - Configure PgBouncer with pool_size matching expected gateway count per host. Control plane connects directly to TimescaleDB (needs full SQL). TigerFS may need direct connection — verify whether TigerFS works through PgBouncer or requires a direct connection.
-   - **Warning: PgBouncer + RLS interaction.** PgBouncer in transaction pooling mode resets `SET ROLE` when connections return to pool. The application MUST set the role at the start of every transaction. Test this explicitly: verify that consecutive transactions from different gateways through PgBouncer never see each other's data.
+   - **Warning: PgBouncer + RLS interaction.** PgBouncer in transaction pooling mode resets `SET ROLE` when connections return to pool. The application MUST set the role at the start of every transaction. Test this explicitly: verify that consecutive transactions from different gateways through PgBouncer never see each other’s data.
 3. Set up TigerFS mount pointing to local TimescaleDB
 4. Deploy control plane as systemd service
 5. Set up Caddy as reverse proxy (automatic HTTPS)
@@ -74,6 +76,7 @@ graph TB
 9. Monitor resource usage (CPU, RAM, disk)
 
 ### Verification Checklist
+
 - [ ] VM provisioned and accessible via SSH
 - [ ] TimescaleDB running with extensions (pgvector, pgvectorscale)
 - [ ] TigerFS mount works on the VM
@@ -84,7 +87,7 @@ graph TB
 - [ ] Multiple gateways running, each hosting test users
 - [ ] PgBouncer running and proxying connections to TimescaleDB
 - [ ] Gateways connect via PgBouncer (not directly to TimescaleDB)
-- [ ] Consecutive transactions from different gateways through PgBouncer never see each other's data (RLS + SET ROLE verified)
+- [ ] Consecutive transactions from different gateways through PgBouncer never see each other’s data (RLS + SET ROLE verified)
 - [ ] Resource usage acceptable (< 80% RAM, < 50% CPU at idle)
 - [ ] System survives a reboot (all services start automatically)
 
@@ -93,9 +96,11 @@ graph TB
 ## Stage 7.2: Nomad Setup
 
 ### Goal
+
 Install and configure Nomad to schedule gateway processes.
 
 ### Dependencies
+
 - Stage 7.1 complete
 
 ### Steps
@@ -134,11 +139,13 @@ graph TB
 5. Test: Nomad starts gateways, health checks work, restart on crash
 
 ### External References
+
 - [Nomad getting started](https://developer.hashicorp.com/nomad/tutorials/get-started)
 - [Nomad raw_exec driver](https://developer.hashicorp.com/nomad/docs/drivers/raw-exec)
 - [Nomad HTTP API](https://developer.hashicorp.com/nomad/api-docs)
 
 ### Verification Checklist
+
 - [ ] Nomad installed and running (server + client)
 - [ ] Gateway job spec deploys successfully
 - [ ] Nomad starts gateway processes via raw_exec
@@ -146,7 +153,7 @@ graph TB
 - [ ] Nomad restarts crashed gateway automatically
 - [ ] Control plane creates/stops gateways via Nomad API
 - [ ] `nomad status` shows all running gateways
-- [ ] Resource limits enforced (gateway can't exceed memory limit)
+- [ ] Resource limits enforced (gateway can’t exceed memory limit)
 - [ ] All tests pass
 
 ---
@@ -154,9 +161,11 @@ graph TB
 ## Stage 7.3: Multi-Host Expansion
 
 ### Goal
+
 Add a second VM, verify Nomad schedules gateways across both hosts.
 
 ### Dependencies
+
 - Stage 7.2 complete
 
 ### Steps
@@ -184,11 +193,12 @@ sequenceDiagram
 3. Join Nomad cluster (point to server on VM 1)
 4. TigerFS on VM 2 mounts the same TimescaleDB as VM 1
 5. Submit a gateway job — verify Nomad places it on the less-loaded host
-6. Test: user on VM 2's gateway can read/write same TigerFS data
+6. Test: user on VM 2’s gateway can read/write same TigerFS data
 7. Test: move a user between hosts (remove agent from gateway on VM 1, add to gateway on VM 2)
 8. Test: VM 2 goes down — Nomad reschedules gateways to VM 1
 
 ### Verification Checklist
+
 - [ ] Second VM joins Nomad cluster
 - [ ] TigerFS on VM 2 accesses same database
 - [ ] Nomad schedules gateways across both VMs
@@ -203,9 +213,11 @@ sequenceDiagram
 ## Stage 7.4: Stress Test
 
 ### Goal
+
 Simulate 10K users and verify the system handles the load.
 
 ### Dependencies
+
 - Stage 7.3 complete
 
 ### Steps
@@ -244,6 +256,7 @@ graph TB
 6. Document capacity planning numbers
 
 ### Verification Checklist
+
 - [ ] 10K user accounts created successfully
 - [ ] 500 concurrent tasks complete within acceptable latency
 - [ ] 1000 concurrent tasks complete (may be degraded)

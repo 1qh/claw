@@ -6,7 +6,7 @@ Multiple users = multiple concurrent LLM calls. A single API key per provider wi
 
 ## How OpenClaw Solves This Natively
 
-OpenClaw's [auth profile rotation](https://docs.openclaw.ai/concepts/model-failover) handles multiple keys per provider out of the box:
+OpenClaw’s [auth profile rotation](https://docs.openclaw.ai/concepts/model-failover) handles multiple keys per provider out of the box:
 
 - **Multiple auth profiles** per provider — each key is a separate profile
 - **Round-robin rotation** — least-recently-used first
@@ -45,8 +45,16 @@ Add keys to one file in the shared config:
     "kimi:sub1": { "type": "api_key", "provider": "kimi", "key": "sk-..." },
     "kimi:sub2": { "type": "api_key", "provider": "kimi", "key": "sk-..." },
     "kimi:sub3": { "type": "api_key", "provider": "kimi", "key": "sk-..." },
-    "anthropic:key1": { "type": "api_key", "provider": "anthropic", "key": "sk-..." },
-    "anthropic:key2": { "type": "api_key", "provider": "anthropic", "key": "sk-..." },
+    "anthropic:key1": {
+      "type": "api_key",
+      "provider": "anthropic",
+      "key": "sk-..."
+    },
+    "anthropic:key2": {
+      "type": "api_key",
+      "provider": "anthropic",
+      "key": "sk-..."
+    },
     "openai:key1": { "type": "api_key", "provider": "openai", "key": "sk-..." }
   }
 }
@@ -66,11 +74,11 @@ For high-volume deployments, pay-per-token gets expensive. Deployers can use sub
 Keys needed = peak concurrent requests per minute / provider rate limit per key per minute
 ```
 
-| Provider | Rate limit/key | 200 active users (~200 req/min) | Keys needed |
-|---|---|---|---|
-| Example: 60 req/min/key | 60 | 200 | 4 |
-| Example: 30 req/min/key | 30 | 200 | 7 |
-| Example: 120 req/min/key | 120 | 200 | 2 |
+| Provider                 | Rate limit/key | 200 active users (~200 req/min) | Keys needed |
+| ------------------------ | -------------- | ------------------------------- | ----------- |
+| Example: 60 req/min/key  | 60             | 200                             | 4           |
+| Example: 30 req/min/key  | 30             | 200                             | 7           |
+| Example: 120 req/min/key | 120            | 200                             | 2           |
 
 Deployer buys enough subscriptions to cover their user base. The framework distributes load automatically.
 

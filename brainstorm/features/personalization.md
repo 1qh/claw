@@ -6,7 +6,7 @@ Same request from 2 different users must produce 2 different outcomes, personali
 
 ## Example
 
-> "Write me a weekly report"
+> “Write me a weekly report”
 
 - **User A (CFO):** Expects financial summaries, charts, KPIs, board-ready formatting
 - **User B (Eng Lead):** Expects sprint velocity, blockers, deployment stats, team-level detail
@@ -42,34 +42,34 @@ graph TB
 ```
 
 All three layers must:
+
 - **Persist** across tasks
 - **Be accessible** to the agent whenever it handles a task
 - **Grow over time** — the agent gets better the longer it works with a user
 
 ## How OpenClaw Already Solves This
 
-No custom personalization engine needed. OpenClaw's workspace IS the personalization layer:
+No custom personalization engine needed. OpenClaw’s workspace IS the personalization layer:
 
-| Personalization Need | OpenClaw Mechanism |
-|---|---|
-| User profile & preferences | `USER.md` (editable by user or agent) |
+| Personalization Need             | OpenClaw Mechanism                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| User profile & preferences       | `USER.md` (editable by user or agent)                                        |
 | Agent personality & instructions | [`SOUL.md`](https://docs.openclaw.ai/concepts/agent-workspace) + `AGENTS.md` |
-| Long-term memory | [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory) + vector search |
-| Daily activity & context | `memory/YYYY-MM-DD.md` |
-| Task history | [Session transcripts](https://docs.openclaw.ai/concepts/session) (JSONL) |
-| Accumulated knowledge | Workspace files the agent creates/maintains |
+| Long-term memory                 | [`MEMORY.md`](https://docs.openclaw.ai/concepts/memory) + vector search      |
+| Daily activity & context         | `memory/YYYY-MM-DD.md`                                                       |
+| Task history                     | [Session transcripts](https://docs.openclaw.ai/concepts/session) (JSONL)     |
+| Accumulated knowledge            | Workspace files the agent creates/maintains                                  |
 
-## How Users "Configure" Their Profile
+## How Users “Configure” Their Profile
 
 No settings page. No dropdown menus. No config UI.
 
 Users just talk to their agent:
-> "I prefer charts over tables"
-> "Always use formal tone"
-> "My fiscal year starts in April"
+
+> “I prefer charts over tables” “Always use formal tone” “My fiscal year starts in April”
 
 The agent updates `USER.md` and `MEMORY.md` itself. Configuration through conversation.
 
 ## Timezone Handling
 
-The framework stores user timezone in USER.md (populated during onboarding or from browser detection). Usage reports, billing periods, cron jobs, and "tasks completed today" use the user's timezone. Continuous aggregates store data in UTC; the control plane API converts to user timezone at query time.
+The framework stores user timezone in USER.md (populated during onboarding or from browser detection). Usage reports, billing periods, cron jobs, and “tasks completed today” use the user’s timezone. Continuous aggregates store data in UTC; the control plane API converts to user timezone at query time.

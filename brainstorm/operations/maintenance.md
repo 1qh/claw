@@ -10,7 +10,7 @@ OpenClaw is actively developed with frequent releases. Gateways stay updated via
 4. For each gateway: wait for active task to finish → restart with new version
 5. Long-running task → let it complete, restart after
 
-Gateway restart takes ~1-2s. Users won't notice.
+Gateway restart takes ~1-2s. Users won’t notice.
 
 ## Framework Updates
 
@@ -24,10 +24,10 @@ OpenClaw has built-in [session maintenance](https://docs.openclaw.ai/concepts/se
 {
   session: {
     maintenance: {
-      mode: "enforce",
-      pruneAfter: "30d",
+      mode: 'enforce',
+      pruneAfter: '30d',
       maxEntries: 500,
-      rotateBytes: "10mb"
+      rotateBytes: '10mb'
     }
   }
 }
@@ -41,10 +41,10 @@ For uploaded files — `AGENTS.md` instructs the agent to clean up old uploads a
 
 Standard Linux ops — nothing framework-specific:
 
-| Task | How |
-|---|---|
-| OS security patches | `unattended-upgrades` |
-| Log rotation | `logrotate` |
-| Disk monitoring | Alerting via process manager |
-| TimescaleDB maintenance | Built-in `VACUUM`, retention policies for cache table |
-| TigerFS `.history/` cleanup | Retention policies via TimescaleDB background jobs |
+| Task                        | How                                                   |
+| --------------------------- | ----------------------------------------------------- |
+| OS security patches         | `unattended-upgrades`                                 |
+| Log rotation                | `logrotate`                                           |
+| Disk monitoring             | Alerting via process manager                          |
+| TimescaleDB maintenance     | Built-in `VACUUM`, retention policies for cache table |
+| TigerFS `.history/` cleanup | Retention policies via TimescaleDB background jobs    |

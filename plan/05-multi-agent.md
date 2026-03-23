@@ -32,18 +32,20 @@ graph TB
 ## Stage 5.1: Dynamic Agent Management
 
 ### Goal
+
 Control plane can create and delete agents on a running gateway without restart.
 
 ### Prerequisites
+
 - **Stateless gateway config:** For stateless gateways, the config file must reside on TigerFS. Set `OPENCLAW_CONFIG_PATH` to a TigerFS path so that `agents.create` writes are visible to any gateway instance.
 - **Path distinction:** `OPENCLAW_STATE_DIR` and `agents.defaults.workspace` control DIFFERENT data:
   - `OPENCLAW_STATE_DIR` → config, credentials, sessions (gateway state)
-  - `agents.defaults.workspace` → agent files (SOUL.md, USER.md, MEMORY.md, etc.)
-  Both must point to TigerFS for multi-host setups.
+  - `agents.defaults.workspace` → agent files (SOUL.md, USER.md, MEMORY.md, etc.) Both must point to TigerFS for multi-host setups.
 
 ### Dependencies
+
 - Phase 2 complete (single gateway integration)
-- **Phase 3 complete (Security Gate) — HARD REQUIREMENT.** Multi-agent means multiple users share a gateway process. Without the security gate, a cross-tenant prompt injection could manipulate one user's agent to affect the shared gateway. The security gate (especially Layers 1-4) blocks injection attempts before they reach any agent. Do NOT start Phase 5 without Phase 3.
+- **Phase 3 complete (Security Gate) — HARD REQUIREMENT.** Multi-agent means multiple users share a gateway process. Without the security gate, a cross-tenant prompt injection could manipulate one user’s agent to affect the shared gateway. The security gate (especially Layers 1-4) blocks injection attempts before they reach any agent. Do NOT start Phase 5 without Phase 3.
 
 ### Steps
 
@@ -71,32 +73,34 @@ sequenceDiagram
     CP->>DB: Remove user → gateway mapping
 ```
 
-1. **Idempotency check:** Before calling `agents.create`, check if an agent for this user already exists. If the previous attempt partially completed (agent exists but DB mapping doesn't), clean up the orphan before retrying. Use the user's email as the idempotency key.
+1. **Idempotency check:** Before calling `agents.create`, check if an agent for this user already exists. If the previous attempt partially completed (agent exists but DB mapping doesn’t), clean up the orphan before retrying. Use the user’s email as the idempotency key.
 2. Implement agent creation via gateway `agents.create` method:
    - `agents.create` handles workspace provisioning, config writing, and identity files atomically
    - All paths point to TigerFS
    - New agent is available immediately (no restart, no hot-reload needed)
-2. Configure workspace defaults:
+3. Configure workspace defaults:
    - Directory structure on TigerFS: `users/{email}/workspace/`, `users/{email}/agent/`
-   - Initial `USER.md` with user's email (written by `agents.create`)
+   - Initial `USER.md` with user’s email (written by `agents.create`)
    - Shared config (SOUL.md, AGENTS.md) read from shared TigerFS path
-3. Implement agent deletion via `agents.delete`:
+4. Implement agent deletion via `agents.delete`:
    - Removes agent from gateway, cleans up identity files
-   - Archive workspace data (don't delete immediately — retention period)
-4. Write tests: create agent, verify it responds, delete agent, verify it's gone
+   - Archive workspace data (don’t delete immediately — retention period)
+5. Write tests: create agent, verify it responds, delete agent, verify it’s gone
 
 ### External References
+
 - [OpenClaw multi-agent](https://docs.openclaw.ai/concepts/multi-agent)
 - [OpenClaw agents CLI](https://docs.openclaw.ai/cli/agents)
 - [OpenClaw gateway configuration](https://docs.openclaw.ai/gateway/configuration)
 
 ### Verification Checklist
+
 - [ ] Agent created via `agents.create` appears in gateway agent list
 - [ ] New agent responds to messages immediately after creation (no restart)
-- [ ] New agent's workspace is on TigerFS (verify via SQL)
+- [ ] New agent’s workspace is on TigerFS (verify via SQL)
 - [ ] Agent deletion removes it from gateway (no restart)
-- [ ] Deleted agent's messages are rejected
-- [ ] Deleted agent's workspace data is archived (not immediately deleted)
+- [ ] Deleted agent’s messages are rejected
+- [ ] Deleted agent’s workspace data is archived (not immediately deleted)
 - [ ] Retrying signup for the same email does not create duplicate agents
 - [ ] Creating 10 agents on one gateway works
 - [ ] All tests pass
@@ -106,9 +110,11 @@ sequenceDiagram
 ## Stage 5.2: Capacity Management
 
 ### Goal
+
 Control plane tracks gateway capacity and assigns users to gateways with room.
 
 ### Dependencies
+
 - Stage 5.1 complete
 
 ### Steps
@@ -125,18 +131,19 @@ graph TD
 1. Control plane maintains `gateways` table with current agent count
 2. On user signup: find gateway with lowest agent count below max (default 20)
 3. If no gateway has capacity: start a new gateway process (Bun.spawn), register it, then assign. Cap total gateway count with a configurable maximum (`max_gateways`, default: deployer sets based on budget). When the cap is reached, new signups are queued or rejected. Additionally, enable better-auth CAPTCHA plugin for signup to prevent automated account creation attacks.
-4. When spawning a new gateway, the control plane also creates a PostgreSQL role for that gateway and configures the gateway's TigerFS mount and memory plugin connection to use this role.
+4. When spawning a new gateway, the control plane also creates a PostgreSQL role for that gateway and configures the gateway’s TigerFS mount and memory plugin connection to use this role.
 5. On user deletion: decrement agent count, if gateway is empty for a threshold period, stop it
 6. Periodic sync: control plane verifies gateway agent counts match actual (in case of drift)
 
 ### Verification Checklist
+
 - [ ] New user assigned to gateway with most capacity
 - [ ] Gateway agent count incremented on assignment
 - [ ] When all gateways full, new gateway spawned automatically
 - [ ] User deletion decrements gateway agent count
 - [ ] Empty gateway stopped after idle timeout
 - [ ] Agent count sync catches drift between DB and actual
-- [ ] New gateway uses its own PostgreSQL role (verify via `SELECT current_user` through the gateway's DB connection)
+- [ ] New gateway uses its own PostgreSQL role (verify via `SELECT current_user` through the gateway’s DB connection)
 - [ ] All tests pass
 
 ---
@@ -144,9 +151,11 @@ graph TD
 ## Stage 5.3: User Lifecycle
 
 ### Goal
+
 End-to-end user lifecycle from signup to deletion.
 
 ### Dependencies
+
 - Stages 5.1 and 5.2 complete
 - Phase 4 (frontend) complete for manual testing
 
@@ -179,13 +188,14 @@ stateDiagram-v2
    - Memory accumulates
    - Agent improves with feedback
 4. **Account deletion:**
-   - Before starting multi-step deletion, set the user's status to `deleting` in the DB. The control plane rejects any new messages for users with `deleting` status. Then proceed: remove agent from gateway → archive workspace → remove DB record. This prevents race conditions where a message arrives mid-deletion.
+   - Before starting multi-step deletion, set the user’s status to `deleting` in the DB. The control plane rejects any new messages for users with `deleting` status. Then proceed: remove agent from gateway → archive workspace → remove DB record. This prevents race conditions where a message arrives mid-deletion.
    - Agent removed from gateway
    - Workspace archived (TigerFS `.history/` preserves data for retention period)
    - After retention: workspace directory deleted
    - User record removed from better-auth
 
 ### Verification Checklist
+
 - [ ] New user goes from signup to first agent response in one flow
 - [ ] USER.md is created with correct email
 - [ ] Returning user after inactivity: agent still has memory and context
@@ -201,9 +211,11 @@ stateDiagram-v2
 ## Stage 5.4: Load Testing
 
 ### Goal
+
 Verify multi-agent performance at 10-20 concurrent users per gateway.
 
 ### Dependencies
+
 - Stage 5.3 complete
 
 ### Steps
@@ -230,6 +242,7 @@ graph LR
 6. Document results and set max_agents accordingly
 
 ### Verification Checklist
+
 - [ ] 5 concurrent users: all respond within baseline + 50%
 - [ ] 10 concurrent users: all respond within baseline + 100%
 - [ ] 15 concurrent users: all respond within baseline + 200%
@@ -246,15 +259,18 @@ graph LR
 ## Stage 5.5: Workspace Size Enforcement
 
 ### Goal
+
 Prevent individual users from consuming unbounded disk storage.
 
 ### Steps
+
 1. Enforce per-user workspace size limits via periodic check
 2. Control plane queries TigerFS-backed workspace size per user
 3. If exceeding limit, agent is restricted from creating new files
 4. Default limits configurable by deployer
 
 ### Verification Checklist
+
 - [ ] Per-user workspace size limit enforced (default configurable)
 - [ ] User exceeding limit cannot create new files via agent
 - [ ] User exceeding limit receives a notification explaining the restriction

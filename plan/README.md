@@ -5,7 +5,8 @@
 Each phase is a separate file. Phases must be completed in order — later phases depend on earlier ones. Within each phase, stages can sometimes be parallelized (noted where applicable).
 
 Every stage has:
-- **Goal** — what we're building
+
+- **Goal** — what we’re building
 - **Dependencies** — what must be complete first
 - **Steps** — what to do (logic and constraints, not code snippets)
 - **Verification checklist** — binary pass/fail gates (every item must pass)
@@ -68,17 +69,17 @@ gantt
 
 ## Phases
 
-| Phase | Name | Goal | Key Risk |
-|---|---|---|---|
-| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance | First integration of TigerFS with OpenClaw |
-| [1](01-foundation.md) | Foundation | Monorepo, control plane skeleton, auth, database schema | None — proven tools |
-| [2](02-gateway.md) | Gateway Integration | Connect control plane to OpenClaw, WebSocket proxy, memory plugin | memory-timescaledb plugin is custom code |
-| [3](03-security.md) | Security Gate | 7-layer input validation before OpenClaw | Integration between hai-guardrails + AI SDK |
-| [4](04-frontend.md) | Frontend | Next.js app with 4 surfaces, Eden Treaty | Real-time WebSocket UX |
-| [5](05-multi-agent.md) | Multi-Agent | Dynamic agent management, capacity, user lifecycle | OpenClaw multi-agent at 10-20 users untested |
-| [6](06-operations.md) | Operations | Versioning, backup, maintenance, observability | Continuous aggregates design |
-| [7](07-scale.md) | Scale | Nomad, multi-host, 10K users | Nomad + raw_exec configuration |
-| [8](08-release.md) | Release | Template repo, docs, npm packages | Packaging for deployers |
+| Phase                       | Name                  | Goal                                                              | Key Risk                                     |
+| --------------------------- | --------------------- | ----------------------------------------------------------------- | -------------------------------------------- |
+| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance  | First integration of TigerFS with OpenClaw   |
+| [1](01-foundation.md)       | Foundation            | Monorepo, control plane skeleton, auth, database schema           | None — proven tools                          |
+| [2](02-gateway.md)          | Gateway Integration   | Connect control plane to OpenClaw, WebSocket proxy, memory plugin | memory-timescaledb plugin is custom code     |
+| [3](03-security.md)         | Security Gate         | 7-layer input validation before OpenClaw                          | Integration between hai-guardrails + AI SDK  |
+| [4](04-frontend.md)         | Frontend              | Next.js app with 4 surfaces, Eden Treaty                          | Real-time WebSocket UX                       |
+| [5](05-multi-agent.md)      | Multi-Agent           | Dynamic agent management, capacity, user lifecycle                | OpenClaw multi-agent at 10-20 users untested |
+| [6](06-operations.md)       | Operations            | Versioning, backup, maintenance, observability                    | Continuous aggregates design                 |
+| [7](07-scale.md)            | Scale                 | Nomad, multi-host, 10K users                                      | Nomad + raw_exec configuration               |
+| [8](08-release.md)          | Release               | Template repo, docs, npm packages                                 | Packaging for deployers                      |
 
 ## Critical Path
 

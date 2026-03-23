@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw's [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB.
+Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw’s [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB.
 
 ## Identity Model
 
@@ -58,10 +58,10 @@ graph TB
 
 ## How OpenClaw Supports This Natively
 
-[OpenClaw's multi-agent mode](https://docs.openclaw.ai/concepts/multi-agent) provides built-in per-user isolation within a single gateway process:
+[OpenClaw’s multi-agent mode](https://docs.openclaw.ai/concepts/multi-agent) provides built-in per-user isolation within a single gateway process:
 
 - Each user gets an isolated agent with its own workspace, sessions, memory, and auth
-- OpenClaw enforces per-agent path boundaries — agents cannot access each other's data
+- OpenClaw enforces per-agent path boundaries — agents cannot access each other’s data
 - The gateway manages routing, lifecycle, and resource sharing across agents
 
 ## Isolation Model
@@ -131,44 +131,45 @@ sequenceDiagram
 
 Three approaches were evaluated:
 
-| | Multi-Agent Per Gateway | 1 Gateway Per User | Containers (1:1) |
-|---|---|---|---|
-| **Isolation** | Per-agent boundaries + PostgreSQL RLS | OS user + process level | OS-level (cgroups) |
-| **Failure blast radius** | 10-20 users | 1 user | 1 user |
-| **Security boundary** | RLS + agent path boundaries + security gate | Filesystem permissions | Container sandbox |
-| **Infrastructure** | 500-1000 gateways for 10K users | 10K processes, 50 hosts | Docker/Kubernetes required |
-| **Cold start** | ~100-500ms (start agent) | ~1-2s (start process) | ~2-5s (boot container) |
-| **Resource overhead** | Lowest — shared processes | Medium — one process per user | Highest — container runtime per user |
-| **Cost (10K users)** | ~$600-1200/mo (10-20 VMs) | ~$2-5K/mo (50 VMs) | ~$5-10K/mo (K8s + containers) |
-| **Complexity** | Low | Medium (process management at scale) | High (K8s, images, networking) |
-| **Statefulness** | Fully stateless (TigerFS) | Local disk dependency | Persistent volumes needed |
-| **Native OpenClaw support** | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) | Yes — built-in profiles | Deployer configures it |
+|                             | Multi-Agent Per Gateway                                            | 1 Gateway Per User                   | Containers (1:1)                     |
+| --------------------------- | ------------------------------------------------------------------ | ------------------------------------ | ------------------------------------ |
+| **Isolation**               | Per-agent boundaries + PostgreSQL RLS                              | OS user + process level              | OS-level (cgroups)                   |
+| **Failure blast radius**    | 10-20 users                                                        | 1 user                               | 1 user                               |
+| **Security boundary**       | RLS + agent path boundaries + security gate                        | Filesystem permissions               | Container sandbox                    |
+| **Infrastructure**          | 500-1000 gateways for 10K users                                    | 10K processes, 50 hosts              | Docker/Kubernetes required           |
+| **Cold start**              | ~100-500ms (start agent)                                           | ~1-2s (start process)                | ~2-5s (boot container)               |
+| **Resource overhead**       | Lowest — shared processes                                          | Medium — one process per user        | Highest — container runtime per user |
+| **Cost (10K users)**        | ~$600-1200/mo (10-20 VMs)                                          | ~$2-5K/mo (50 VMs)                   | ~$5-10K/mo (K8s + containers)        |
+| **Complexity**              | Low                                                                | Medium (process management at scale) | High (K8s, images, networking)       |
+| **Statefulness**            | Fully stateless (TigerFS)                                          | Local disk dependency                | Persistent volumes needed            |
+| **Native OpenClaw support** | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) | Yes — built-in profiles              | Deployer configures it               |
 
 **Verdict:** Multi-agent per gateway wins. Far fewer processes, fully stateless via TigerFS, dramatically cheaper. The 10-20 user blast radius is acceptable given the security gate, RLS, and agent isolation.
 
 ### Key Insight: Why Multi-Agent Became Possible
 
-Multi-agent was always an option in OpenClaw, but the original concern was data affinity — each agent's workspace, sessions, and memory lived on local disk. If a gateway crashed, data could be lost. If we needed to move an agent to another host, we'd have to migrate files.
+Multi-agent was always an option in OpenClaw, but the original concern was data affinity — each agent’s workspace, sessions, and memory lived on local disk. If a gateway crashed, data could be lost. If we needed to move an agent to another host, we’d have to migrate files.
 
 [TigerFS](data.md) eliminated this entirely. With all data in TimescaleDB:
+
 - **Gateway crash → zero data loss** (data is in the database, not on local disk)
 - **Any gateway on any host can serve any agent** (no file migration, no affinity)
 - **The downside of multi-agent (shared failure) became a non-issue** — failure means retrying a task, not losing data
 
-This is why multi-agent went from "possible but risky" to "the obvious choice."
+This is why multi-agent went from “possible but risky” to “the obvious choice.”
 
 ## Cost Projection
 
 Most agents will be idle most of the time (fire-and-forget = bursts, not constant load). Each gateway (10-20 users) uses ~500MB-1.5GB RAM depending on active agent count (at 20 agents × ~50MB idle each = 1GB minimum, plus gateway overhead).
 
-| Users | Gateways | Infrastructure | Est. Monthly Cost |
-|---|---|---|---|
-| 0-200 | 10-20 | 1 VM (32GB RAM, 8 vCPU) | ~$100-150 |
-| 200-1000 | 50-100 | 2-3 VMs | ~$200-300 |
-| 1000-5000 | 50-500 | 5-10 VMs | ~$300-600 |
-| 10,000 | 500-1000 | 10-20 VMs | ~$600-1200 |
+| Users     | Gateways | Infrastructure          | Est. Monthly Cost |
+| --------- | -------- | ----------------------- | ----------------- |
+| 0-200     | 10-20    | 1 VM (32GB RAM, 8 vCPU) | ~$100-150         |
+| 200-1000  | 50-100   | 2-3 VMs                 | ~$200-300         |
+| 1000-5000 | 50-500   | 5-10 VMs                | ~$300-600         |
+| 10,000    | 500-1000 | 10-20 VMs               | ~$600-1200        |
 
-> **Note:** Infrastructure costs above exclude LLM API costs, which dominate at scale. At 10K users × 5 tasks/day × 50K tokens/task = 2.5B tokens/month. With coding plan providers (~$1/1M tokens): ~$2,500/month. With premium providers (~$15/1M tokens): ~$37,500/month. Deployers should budget LLM costs separately. Security gate adds ~100K LLM calls/day for content classification.
+> **Note:** Infrastructure costs above exclude LLM API costs, which dominate at scale. At 10K users × 5 tasks/day × 50K tokens/task = 2.5B tokens/month. With coding plan providers (~$1/1M tokens): ~~$2,500/month. With premium providers (~~$15/1M tokens): ~$37,500/month. Deployers should budget LLM costs separately. Security gate adds ~100K LLM calls/day for content classification.
 
 ## Scaling: Adding Hosts
 
@@ -211,6 +212,7 @@ graph TB
 TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, no ORM for user data.
 
 **What the framework avoids:**
+
 - No data model design — agent organizes its own data through markdown files in TigerFS
 - No migration hell — workspace files evolve naturally
 - No sync problems — one source of truth (TigerFS/TimescaleDB)
@@ -218,6 +220,7 @@ TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, 
 - No backup complexity — `pg_dump` + TigerFS `.history/`
 
 **What the control plane actually does:**
+
 1. Auth — verify identity (OAuth, magic link)
 2. User → Gateway mapping — route WebSocket traffic
 3. Gateway lifecycle — manage via Nomad
@@ -253,13 +256,13 @@ email (primary key)
 
 ## What Email Gives Us for Free
 
-| Benefit | Why |
-|---|---|
-| **Auth identity** | Google/Microsoft/GitHub OAuth all return email |
-| **Gateway routing** | Email maps deterministically to gateway_id, host, port |
-| **Fallback notifications** | Email itself is a delivery channel |
-| **Deterministic gateway assignment** | Email maps to gateway_id for routing |
-| **Human readable** | Admin sees `alice@company.com` in logs, not a UUID |
+| Benefit                              | Why                                                    |
+| ------------------------------------ | ------------------------------------------------------ |
+| **Auth identity**                    | Google/Microsoft/GitHub OAuth all return email         |
+| **Gateway routing**                  | Email maps deterministically to gateway_id, host, port |
+| **Fallback notifications**           | Email itself is a delivery channel                     |
+| **Deterministic gateway assignment** | Email maps to gateway_id for routing                   |
+| **Human readable**                   | Admin sees `alice@company.com` in logs, not a UUID     |
 
 ## Control Plane Data Model
 
@@ -295,6 +298,7 @@ graph LR
 ```
 
 The two stay in sync naturally:
+
 - Control plane provisions gateway with email at creation
 - Agent builds the full user profile on top through conversation
 - No sync mechanism needed — email is set once, everything else grows organically

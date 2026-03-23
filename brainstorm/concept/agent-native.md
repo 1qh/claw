@@ -4,21 +4,23 @@
 
 This is not an adapter for existing backends. This is an **opinionated, agent-native architecture** that deployers adopt fully. No REST APIs, no databases, no microservices. Everything is rebuilt around the assumption that an intelligent agent is the executor.
 
-> **Clarification:** The "no REST APIs" principle applies to the deployer's backend — business logic is expressed as CLIs, not REST endpoints. The framework's control plane uses REST/WebSocket internally for auth, routing, and admin.
+> **Clarification:** The “no REST APIs” principle applies to the deployer’s backend — business logic is expressed as CLIs, not REST endpoints. The framework’s control plane uses REST/WebSocket internally for auth, routing, and admin.
 
 ## The Mental Model Shift
 
 **Traditional SaaS:**
+
 ```
 User → Frontend → API Server → Database → Backend Services → External APIs
 ```
 
 **Agent-Native SaaS:**
+
 ```
 User → Frontend → Control Plane → OpenClaw Gateway → Agent uses tools autonomously
 ```
 
-The agent IS the backend. It doesn't call an API server — it IS the logic layer. It doesn't query a database — its workspace IS the data. It doesn't orchestrate services — it runs CLIs.
+The agent IS the backend. It doesn’t call an API server — it IS the logic layer. It doesn’t query a database — its workspace IS the data. It doesn’t orchestrate services — it runs CLIs.
 
 ## Four Primitives
 
@@ -41,29 +43,29 @@ graph TB
     end
 ```
 
-| Primitive | Purpose | Example |
-|---|---|---|
-| **Instructions** | How the agent behaves, its workflows, its personality | "You are a financial analyst. Always include charts." |
-| **CLIs** | Capabilities the agent can execute | `bunx @mycompany/billing@latest charge --customer X` |
-| **Knowledge** | Domain expertise, reference data, docs | Product catalog, compliance rules, procedures |
-| **Constraints** | Hard rules that override everything | "Never delete production data. Never send money without confirmation." |
+| Primitive        | Purpose                                               | Example                                                                |
+| ---------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Instructions** | How the agent behaves, its workflows, its personality | “You are a financial analyst. Always include charts.”                  |
+| **CLIs**         | Capabilities the agent can execute                    | `bunx @mycompany/billing@latest charge --customer X`                   |
+| **Knowledge**    | Domain expertise, reference data, docs                | Product catalog, compliance rules, procedures                          |
+| **Constraints**  | Hard rules that override everything                   | “Never delete production data. Never send money without confirmation.” |
 
 ## CLIs as the Backend
 
 ### Why CLIs
 
-The deployer's entire "backend" is a set of CLI tools published to npm. The agent runs them via [bun](https://bun.sh/)'s `bunx` command.
+The deployer’s entire “backend” is a set of CLI tools published to npm. The agent runs them via [bun](https://bun.sh/)’s `bunx` command.
 
-| Property | Why It Works |
-|---|---|
-| **Self-documenting** | `--help` tells the agent everything |
-| **Language-agnostic** | Build in any language, publish to npm |
-| **Always up to date** | `bunx @package@latest` — Bun resolves from the npm registry and caches locally. The `@latest` tag ensures the newest published version is fetched when the cache is stale. For time-critical updates, deployers can clear the Bun cache (`bun pm cache rm`) or use `--no-cache` flag. |
-| **Composable** | Agent chains tools naturally |
-| **Testable independently** | Deployer tests CLI without needing OpenClaw |
-| **Zero infrastructure** | No registry auth, no cron, no version management |
-| **Ecosystem leverage** | Reuse any existing npm CLI tool (public or private) |
-| **Compilable** | [bun compile](https://bun.com/docs/bundler/executables) can package TypeScript into standalone binaries |
+| Property                   | Why It Works                                                                                                                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Self-documenting**       | `--help` tells the agent everything                                                                                                                                                                                                                                                   |
+| **Language-agnostic**      | Build in any language, publish to npm                                                                                                                                                                                                                                                 |
+| **Always up to date**      | `bunx @package@latest` — Bun resolves from the npm registry and caches locally. The `@latest` tag ensures the newest published version is fetched when the cache is stale. For time-critical updates, deployers can clear the Bun cache (`bun pm cache rm`) or use `--no-cache` flag. |
+| **Composable**             | Agent chains tools naturally                                                                                                                                                                                                                                                          |
+| **Testable independently** | Deployer tests CLI without needing OpenClaw                                                                                                                                                                                                                                           |
+| **Zero infrastructure**    | No registry auth, no cron, no version management                                                                                                                                                                                                                                      |
+| **Ecosystem leverage**     | Reuse any existing npm CLI tool (public or private)                                                                                                                                                                                                                                   |
+| **Compilable**             | [bun compile](https://bun.com/docs/bundler/executables) can package TypeScript into standalone binaries                                                                                                                                                                               |
 
 ### How It Works
 
@@ -89,20 +91,20 @@ sequenceDiagram
 Write CLI in TypeScript → npm publish → done
 ```
 
-That's it. No deployment. No CI/CD to a server. No infrastructure. The agent uses the latest version on next invocation via `bunx`.
+That’s it. No deployment. No CI/CD to a server. No infrastructure. The agent uses the latest version on next invocation via `bunx`.
 
 ### CLI Convention
 
 Deployers build CLIs following these conventions:
 
-| Convention | Requirement |
-|---|---|
-| **Output** | JSON to stdout by default |
-| **Errors** | Stderr with clear messages |
-| **Exit codes** | 0 = success, non-zero = error |
-| **Help** | `--help` with structured description of all commands and flags |
-| **Naming** | Scoped npm packages: `@org/domain-cli` |
-| **Auth** | Accept credentials via environment variables or flags |
+| Convention     | Requirement                                                    |
+| -------------- | -------------------------------------------------------------- |
+| **Output**     | JSON to stdout by default                                      |
+| **Errors**     | Stderr with clear messages                                     |
+| **Exit codes** | 0 = success, non-zero = error                                  |
+| **Help**       | `--help` with structured description of all commands and flags |
+| **Naming**     | Scoped npm packages: `@org/domain-cli`                         |
+| **Auth**       | Accept credentials via environment variables or flags          |
 
 ### Example CLI Structure
 
@@ -121,7 +123,9 @@ program
   .description('Check stock level for a SKU')
   .requiredOption('--sku <sku>', 'Product SKU')
   .action(async ({ sku }) => {
-    const result = await db.query('SELECT * FROM inventory WHERE sku = ?', [sku])
+    const result = await db.query('SELECT * FROM inventory WHERE sku = ?', [
+      sku
+    ])
     console.log(JSON.stringify(result))
   })
 
@@ -131,7 +135,10 @@ program
   .requiredOption('--sku <sku>', 'Product SKU')
   .requiredOption('--quantity <n>', 'Quantity to add', parseInt)
   .action(async ({ sku, quantity }) => {
-    await db.query('UPDATE inventory SET qty = qty + ? WHERE sku = ?', [quantity, sku])
+    await db.query('UPDATE inventory SET qty = qty + ? WHERE sku = ?', [
+      quantity,
+      sku
+    ])
     console.log(JSON.stringify({ success: true, sku, added: quantity }))
   })
 
@@ -172,20 +179,20 @@ The framework provides a directory where deployers place their domain knowledge.
 
 ### How the Agent Uses It
 
-OpenClaw's built-in [memory search](https://docs.openclaw.ai/concepts/memory) provides hybrid vector + BM25 search. The shared knowledge directory is indexed alongside memory files. The agent searches it naturally — no special API, no custom code.
+OpenClaw’s built-in [memory search](https://docs.openclaw.ai/concepts/memory) provides hybrid vector + BM25 search. The shared knowledge directory is indexed alongside memory files. The agent searches it naturally — no special API, no custom code.
 
 The deployer just drops files in the directory. The framework indexes them. The agent finds what it needs.
 
-**Shared knowledge and per-agent isolation:** The `memory-timescaledb` plugin scopes queries by `agent_id`. Shared knowledge files are indexed under a special `__shared__` agent_id that all agents can query. The plugin's search method checks both the agent's own embeddings AND the shared pool: `WHERE agent_id IN ($1, '__shared__')`. This preserves RLS isolation (agents can't see each other's memories) while allowing access to common knowledge.
+**Shared knowledge and per-agent isolation:** The `memory-timescaledb` plugin scopes queries by `agent_id`. Shared knowledge files are indexed under a special `__shared__` agent_id that all agents can query. The plugin’s search method checks both the agent’s own embeddings AND the shared pool: `WHERE agent_id IN ($1, '__shared__')`. This preserves RLS isolation (agents can’t see each other’s memories) while allowing access to common knowledge.
 
 ### What Goes Where
 
-| Content | Location | Who Writes It |
-|---|---|---|
-| How the agent behaves | `SOUL.md` / `AGENTS.md` (shared config) | Deployer |
-| What the agent knows (shared) | `/mnt/tigerfs/knowledge/` | Deployer |
-| What the agent knows (per user) | `MEMORY.md` / `memory/` (workspace) | Agent |
-| User profile and preferences | `USER.md` (workspace) | Agent |
+| Content                         | Location                                | Who Writes It |
+| ------------------------------- | --------------------------------------- | ------------- |
+| How the agent behaves           | `SOUL.md` / `AGENTS.md` (shared config) | Deployer      |
+| What the agent knows (shared)   | `/mnt/tigerfs/knowledge/`               | Deployer      |
+| What the agent knows (per user) | `MEMORY.md` / `memory/` (workspace)     | Agent         |
+| User profile and preferences    | `USER.md` (workspace)                   | Agent         |
 
 ## Instructions as Markdown
 
@@ -194,6 +201,7 @@ The deployer just drops files in the directory. The framework indexes them. The 
 Instead of encoding business logic in code, describe it in markdown:
 
 **Traditional (code):**
+
 ```javascript
 if (days_since_purchase <= 30 && item.condition === 'unused') {
   processRefund()
@@ -205,8 +213,10 @@ if (days_since_purchase <= 30 && item.condition === 'unused') {
 ```
 
 **Agent-native (markdown):**
+
 ```markdown
 ## Refund Policy
+
 - Full refund within 30 days if item is unused
 - Store credit within 90 days
 - Beyond 90 days, politely decline
@@ -218,13 +228,15 @@ The code version handles exactly the cases you coded. The markdown version handl
 ### Why This Works
 
 The agent can:
+
 - Read and understand natural language instructions
 - Apply judgment to ambiguous situations
-- Adapt when the real world doesn't match rigid rules
+- Adapt when the real world doesn’t match rigid rules
 - Ask for clarification when truly uncertain
 
 The deployer gets:
-- Business logic that's readable by anyone (not just developers)
+
+- Business logic that’s readable by anyone (not just developers)
 - Changes that take effect immediately (update markdown, hot-reload)
 - No compilation, no deployment, no testing of edge-case code paths
 
@@ -234,6 +246,7 @@ Some things must NEVER be left to agent judgment:
 
 ```markdown
 ## Hard Constraints (SOUL.md)
+
 - NEVER delete production data without explicit user confirmation
 - NEVER process payments exceeding $10,000 without manager approval
 - NEVER share one user's data with another user
@@ -244,15 +257,15 @@ These go in `SOUL.md` — loaded into every session, every time. Combined with [
 
 ## Comparison: Traditional vs Agent-Native
 
-| Aspect | Traditional SaaS | Agent-Native SaaS |
-|---|---|---|
-| **Backend** | API server with routes, controllers, models | CLIs executed via `bunx` |
-| **Database** | PostgreSQL, Redis, migrations, ORM | Workspace files (markdown, JSON, JSONL) |
-| **Business logic** | Code (if/else, state machines) | Markdown instructions |
-| **Domain knowledge** | Knowledge base service, Elasticsearch | Files in a directory, auto-indexed |
-| **Configuration** | Feature flags, admin panels, env vars | Markdown files, hot-reloaded |
-| **API design** | REST/GraphQL schema, versioning, docs | CLI `--help` output |
-| **Deployment** | Build → deploy → rollout | `npm publish` → done |
-| **Updates** | CI/CD pipeline, blue-green, canary | `bunx cli@latest` — always current |
-| **Testing** | Unit tests, integration tests, e2e | Test the CLI independently |
-| **Scaling** | Horizontal scaling, load balancers | Add hosts, add gateway processes |
+| Aspect               | Traditional SaaS                            | Agent-Native SaaS                       |
+| -------------------- | ------------------------------------------- | --------------------------------------- |
+| **Backend**          | API server with routes, controllers, models | CLIs executed via `bunx`                |
+| **Database**         | PostgreSQL, Redis, migrations, ORM          | Workspace files (markdown, JSON, JSONL) |
+| **Business logic**   | Code (if/else, state machines)              | Markdown instructions                   |
+| **Domain knowledge** | Knowledge base service, Elasticsearch       | Files in a directory, auto-indexed      |
+| **Configuration**    | Feature flags, admin panels, env vars       | Markdown files, hot-reloaded            |
+| **API design**       | REST/GraphQL schema, versioning, docs       | CLI `--help` output                     |
+| **Deployment**       | Build → deploy → rollout                    | `npm publish` → done                    |
+| **Updates**          | CI/CD pipeline, blue-green, canary          | `bunx cli@latest` — always current      |
+| **Testing**          | Unit tests, integration tests, e2e          | Test the CLI independently              |
+| **Scaling**          | Horizontal scaling, load balancers          | Add hosts, add gateway processes        |

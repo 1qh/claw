@@ -6,7 +6,7 @@ Every piece of data has exactly one source of truth. Nothing stored in two place
 
 [TigerFS](https://tigerfs.io/) mounts [TimescaleDB](https://www.timescale.com/) as a regular filesystem. Every file is a row, every write is a transaction, concurrent access is ACID-guaranteed. By the same team as TimescaleDB.
 
-Agents work with files natively. TigerFS makes the database look like a filesystem. No SQL, no ORM, no database client needed from the agent's perspective.
+Agents work with files natively. TigerFS makes the database look like a filesystem. No SQL, no ORM, no database client needed from the agent’s perspective.
 
 ## Full TigerFS Capabilities
 
@@ -25,16 +25,16 @@ Chained segments compiled into a single optimized SQL query:
 cat /mnt/db/orders/.by/customer_id/123/.order/created_at/.last/10/.export/json
 ```
 
-| Segment | Purpose |
-|---|---|
-| `.by/column/value` | Index lookup |
-| `.filter/column/value` | Filter |
-| `.order/column` | Sort |
-| `.columns/col1,col2` | Select columns |
-| `.first/N/`, `.last/N/` | Pagination |
-| `.sample/N/` | Random sample |
-| `.all/` | Bypass listing limit |
-| `.export/json\|csv\|tsv\|yaml` | Output format |
+| Segment                        | Purpose              |
+| ------------------------------ | -------------------- |
+| `.by/column/value`             | Index lookup         |
+| `.filter/column/value`         | Filter               |
+| `.order/column`                | Sort                 |
+| `.columns/col1,col2`           | Select columns       |
+| `.first/N/`, `.last/N/`        | Pagination           |
+| `.sample/N/`                   | Random sample        |
+| `.all/`                        | Bypass listing limit |
+| `.export/json\|csv\|tsv\|yaml` | Output format        |
 
 ### Version History
 
@@ -121,16 +121,16 @@ graph TB
 
 ## What TigerFS Eliminates
 
-| Before | After |
-|---|---|
-| Git-sync cron for shared config | Write to TigerFS, all gateways see it instantly (ACID) |
-| OS user separation for isolation | PostgreSQL row-level security |
-| Per-user directories on local disk | Per-user paths in TigerFS |
-| GitHub daily backup per user | `.history/` for versioning, `pg_dump` for disaster recovery |
-| Separate cache system | Pipeline queries via file paths |
-| Separate crawled content index | Files in TigerFS with pgvector underneath |
-| SQL/Drizzle for agent data access | Agents just read/write files |
-| Bulk data import/export tooling | `.import/` and `.export/` built-in |
+| Before                             | After                                                       |
+| ---------------------------------- | ----------------------------------------------------------- |
+| Git-sync cron for shared config    | Write to TigerFS, all gateways see it instantly (ACID)      |
+| OS user separation for isolation   | PostgreSQL row-level security                               |
+| Per-user directories on local disk | Per-user paths in TigerFS                                   |
+| GitHub daily backup per user       | `.history/` for versioning, `pg_dump` for disaster recovery |
+| Separate cache system              | Pipeline queries via file paths                             |
+| Separate crawled content index     | Files in TigerFS with pgvector underneath                   |
+| SQL/Drizzle for agent data access  | Agents just read/write files                                |
+| Bulk data import/export tooling    | `.import/` and `.export/` built-in                          |
 
 ## The Unified Layout
 
@@ -172,11 +172,11 @@ No local disk dependency. No git sync. No OS users. No separate backup infra. Ga
 
 ## TigerFS Open Questions
 
-- **OpenClaw's `O_NOFOLLOW` flag** — FUSE files present as regular files (not symlinks), should be fine. Needs testing.
+- **OpenClaw’s `O_NOFOLLOW` flag** — FUSE files present as regular files (not symlinks), should be fine. Needs testing.
 - **Session transcript append performance** — OpenClaw appends to JSONL files frequently. FUSE write latency for append-heavy workloads needs benchmarking.
 - **File watchers** — OpenClaw watches workspace files for hot-reload. Does FUSE trigger `inotify`/`FSEvents` correctly?
 - **OpenClaw multi-agent compatibility** — each agent expects filesystem paths for its workspace. TigerFS paths should work but needs verification.
-- **TigerFS maturity** — "early, but core idea is stable" per their docs. Need to evaluate production readiness.
+- **TigerFS maturity** — “early, but core idea is stable” per their docs. Need to evaluate production readiness.
 
 ---
 
@@ -208,9 +208,9 @@ graph TB
 
 ### What TimescaleDB Does NOT Store
 
-| Data | Where Instead | Why |
-|---|---|---|
-| Gateway status | Check process live (`kill -0 <pid>`) | Stored status goes stale |
+| Data                | Where Instead                                                                                         | Why                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Gateway status      | Check process live (`kill -0 <pid>`)                                                                  | Stored status goes stale     |
 | Live usage/progress | [WebSocket stream](https://docs.openclaw.ai/gateway/protocol) from gateway → control plane → frontend | Real-time, no storage needed |
 
 Everything else is in TimescaleDB.
@@ -220,6 +220,7 @@ Everything else is in TimescaleDB.
 ### [Hypertables](https://docs.timescale.com/use-timescale/latest/hypertables/)
 
 Auto-partitioned by time. Used for:
+
 - Session transcripts (time-series append-only logs)
 - Crawled pages (partitioned by `crawled_at`)
 - Usage events (if we ever store them)
@@ -231,6 +232,7 @@ Auto-partitioned by time. Used for:
 ### [Continuous Aggregates](https://docs.timescale.com/use-timescale/latest/continuous-aggregates/)
 
 Auto-refreshing materialized views. Used for:
+
 - Usage analytics across all users (no polling gateways)
 - Cache hit rates
 - Task completion metrics
@@ -245,6 +247,7 @@ Continuous aggregates + latest raw data = always accurate. No stale aggregates, 
 ### [Background Jobs](https://docs.timescale.com/use-timescale/latest/user-defined-actions/)
 
 Built-in job scheduler inside the database:
+
 - Cache cleanup (delete expired TTL rows)
 - Workspace pruning (old sessions, temp files)
 - Compression scheduling (compress data older than N days)
@@ -253,6 +256,7 @@ Built-in job scheduler inside the database:
 ### [pgai](https://github.com/timescale/pgai)
 
 Call embedding models from inside the database:
+
 - **Auto-vectorize** — embeddings generated automatically as data is written
 - **Auto-sync** — embeddings update when source data changes
 - **Batch processing** — handles model failures, rate limits, latency spikes
@@ -309,22 +313,22 @@ CREATE TABLE crawled_pages (
 
 ## What Changed With Full TimescaleDB + TigerFS
 
-| Before | After |
-|---|---|
-| Poll gateways for usage data | Continuous aggregates auto-compute |
-| Separate embedding pipeline | pgai auto-generates embeddings on write |
-| System cron for cache cleanup | Background jobs inside the database |
-| Usage aggregates go stale | Real-time aggregates — always fresh |
-| Session transcripts grow unbounded | Hypertable compression — 90%+ reduction |
-| Manual embedding regeneration | pgai Vectorizer — auto-syncs on data change |
-| Separate storage for time-series data | Hypertables — native time partitioning |
+| Before                                | After                                       |
+| ------------------------------------- | ------------------------------------------- |
+| Poll gateways for usage data          | Continuous aggregates auto-compute          |
+| Separate embedding pipeline           | pgai auto-generates embeddings on write     |
+| System cron for cache cleanup         | Background jobs inside the database         |
+| Usage aggregates go stale             | Real-time aggregates — always fresh         |
+| Session transcripts grow unbounded    | Hypertable compression — 90%+ reduction     |
+| Manual embedding regeneration         | pgai Vectorizer — auto-syncs on data change |
+| Separate storage for time-series data | Hypertables — native time partitioning      |
 
 ## Scaling
 
-| Scale | Strategy |
-|---|---|
-| 0-500 users | TimescaleDB on same host |
-| 500+ users | Move TimescaleDB to dedicated host |
-| Large crawl data | pgvectorscale DiskANN + compression |
-| Multi-host | All hosts connect to single TimescaleDB instance |
-| Massive scale | TimescaleDB Cloud with automatic scaling |
+| Scale            | Strategy                                         |
+| ---------------- | ------------------------------------------------ |
+| 0-500 users      | TimescaleDB on same host                         |
+| 500+ users       | Move TimescaleDB to dedicated host               |
+| Large crawl data | pgvectorscale DiskANN + compression              |
+| Multi-host       | All hosts connect to single TimescaleDB instance |
+| Massive scale    | TimescaleDB Cloud with automatic scaling         |

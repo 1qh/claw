@@ -43,13 +43,16 @@ graph TB
 ## Stage 1.1: Monorepo Setup
 
 ### Goal
+
 Initialize a Bun workspace monorepo with the project structure.
 
 ### Dependencies
+
 - Phase 0 complete (TigerFS validated)
 - Bun installed
 
 ### Steps
+
 1. Initialize the repo with Bun workspace configuration
 2. Create package structure:
    ```
@@ -64,16 +67,18 @@ Initialize a Bun workspace monorepo with the project structure.
    docker-compose.yml   ← TimescaleDB + TigerFS + ClamAV (from Phase 0)
    ```
 3. Configure TypeScript (strict, ESM, path aliases)
-4. Set up Oxlint + Oxfmt (matching OpenClaw's tooling)
+4. Set up Oxlint + Oxfmt (matching OpenClaw’s tooling)
 5. Set up Vitest for testing
 6. Create `bun run` scripts: `dev`, `build`, `test`, `lint`, `format`
 
 ### External References
+
 - [Bun workspace docs](https://bun.sh/docs/install/workspaces)
 - [Bun quickstart](https://bun.sh/docs/quickstart)
 - [Vitest with Bun](https://vitest.dev/guide/)
 
 ### Verification Checklist
+
 - [ ] `bun install` succeeds from repo root
 - [ ] `bun run build` succeeds (even if empty)
 - [ ] `bun run test` runs Vitest (even with zero tests)
@@ -87,9 +92,11 @@ Initialize a Bun workspace monorepo with the project structure.
 ## Stage 1.2: Database Schema
 
 ### Goal
+
 Define the core TimescaleDB schema via Drizzle with RLS policies.
 
 ### Dependencies
+
 - Stage 1.1 complete
 - docker-compose running (TimescaleDB from Phase 0)
 
@@ -151,13 +158,13 @@ erDiagram
 
 1. Install Drizzle ORM + drizzle-kit as dependencies
 2. Define schema tables:
-   - `users` — managed by better-auth via Drizzle adapter (UUID `id` column as PK, not email). Do not define a conflicting custom `users` table. Use better-auth's schema as the source of truth and extend it if needed.
+   - `users` — managed by better-auth via Drizzle adapter (UUID `id` column as PK, not email). Do not define a conflicting custom `users` table. Use better-auth’s schema as the source of truth and extend it if needed.
    - `gateways` — id, host, port, status, agent_count, max_agents
    - `user_gateway` — email → gateway mapping with agent_id and workspace_path
    - `cache` — shared key-value store with TTL. Used by deployer CLIs and the shared intelligence layer for cross-user data deduplication (e.g., caching API responses, crawled content). The framework provides the table; deployers decide what to cache.
    - `usage_events` — TimescaleDB hypertable (partitioned by time) for usage tracking. Control plane writes token counts, cost, model, latency from gateway WebSocket events. Continuous aggregates in Phase 6 query this table for billing and analytics.
 3. Define RLS policies:
-   - Each gateway connection can only access its own agents' data
+   - Each gateway connection can only access its own agents’ data
    - Control plane has full access
 4. Create per-gateway PostgreSQL roles: when creating a gateway, the control plane also creates a PostgreSQL role for that gateway with RLS policies scoped to its agents. TigerFS mounts for that gateway use this scoped role.
 5. **Set database-level default for RLS:** `ALTER DATABASE uniclaw SET app.agent_id = '__none__'`. This ensures any connection that forgets to `SET LOCAL app.agent_id` gets no data (no rows match `__none__`).
@@ -165,11 +172,13 @@ erDiagram
 7. Write tests: schema creation, RLS enforcement, basic CRUD
 
 ### External References
+
 - [Drizzle + PostgreSQL setup](https://orm.drizzle.team/docs/get-started/postgresql-new)
 - [Drizzle RLS](https://orm.drizzle.team/docs/rls)
 - [Drizzle Kit](https://orm.drizzle.team/docs/kit-overview)
 
 ### Verification Checklist
+
 - [ ] All tables created in TimescaleDB
 - [ ] `drizzle-kit push` succeeds without errors
 - [ ] Insert + read on every table works
@@ -185,9 +194,11 @@ erDiagram
 ## Stage 1.3: Control Plane Skeleton
 
 ### Goal
+
 Elysia HTTP + WebSocket server with basic routing, health check, and CORS.
 
 ### Dependencies
+
 - Stage 1.1 complete
 
 ### Steps
@@ -215,12 +226,14 @@ graph LR
 6. Write tests: health check returns 200, WebSocket connects, CORS headers present, Helmet headers present
 
 ### External References
+
 - [Elysia quick start](https://elysiajs.com/quick-start)
 - [Elysia CORS plugin](https://elysiajs.com/plugins/cors)
 - [Elysia WebSocket](https://elysiajs.com/patterns/websocket)
 - [Eden Treaty overview](https://elysiajs.com/eden/treaty/overview)
 
 ### Verification Checklist
+
 - [ ] `bun run dev` starts Elysia server
 - [ ] `GET /health` returns 200 with status JSON
 - [ ] WebSocket connection to `/ws` succeeds
@@ -235,9 +248,11 @@ graph LR
 ## Stage 1.4: Authentication
 
 ### Goal
+
 Integrate better-auth with Elysia for user signup, login, and session management.
 
 ### Dependencies
+
 - Stage 1.2 complete (database schema)
 - Stage 1.3 complete (Elysia server)
 
@@ -275,11 +290,13 @@ sequenceDiagram
 11. Write tests: signup, login, session validation, logout, unauthenticated rejection
 
 ### External References
+
 - [better-auth installation](https://www.better-auth.com/docs/installation)
 - [better-auth Elysia integration](https://www.better-auth.com/docs/integrations/elysia)
 - [better-auth Drizzle adapter](https://www.better-auth.com/docs/storage/drizzle)
 
 ### Verification Checklist
+
 - [ ] User signup creates record in TimescaleDB
 - [ ] User login returns session token
 - [ ] Session token validates on subsequent requests
@@ -289,5 +306,5 @@ sequenceDiagram
 - [ ] OAuth flow works (GitHub)
 - [ ] better-auth admin plugin accessible (user management)
 - [ ] Two signups with `user+tag@gmail.com` and `user@gmail.com` result in ONE account (not two)
-- [ ] Regular user cannot access /admin/* endpoints
+- [ ] Regular user cannot access /admin/\* endpoints
 - [ ] All tests pass

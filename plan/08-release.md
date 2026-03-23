@@ -32,16 +32,18 @@ graph TB
 ## Stage 8.0: CI/CD Pipeline
 
 ### Goal
+
 Set up GitHub Actions for automated quality checks. Should be configured early (Phase 1) but formalized here for release readiness.
 
 ### Dependencies
+
 - Phase 1 complete (monorepo with lint, format, test, build scripts)
 
 ### Steps
 
 1. Create `.github/workflows/ci.yml` with the following jobs:
    - **Lint:** `bun run lint` (Oxlint)
-   - **Format:** `bun run format --check` (Oxfmt — verify, don't auto-fix)
+   - **Format:** `bun run format --check` (Oxfmt — verify, don’t auto-fix)
    - **Type check:** `bun run typecheck` (TypeScript strict)
    - **Test:** `bun run test` (Vitest)
    - **Build:** `bun run build` (verify production build succeeds)
@@ -51,6 +53,7 @@ Set up GitHub Actions for automated quality checks. Should be configured early (
 5. Cache `node_modules` and Bun cache for faster CI runs
 
 ### Verification Checklist
+
 - [ ] CI runs on every pull request
 - [ ] CI runs on every push to main
 - [ ] Lint failure blocks merge
@@ -66,9 +69,11 @@ Set up GitHub Actions for automated quality checks. Should be configured early (
 ## Stage 8.1: Template Repo
 
 ### Goal
+
 Create the repo that deployers clone to build their SaaS.
 
 ### Dependencies
+
 - All previous phases complete
 
 ### Steps
@@ -100,6 +105,7 @@ graph TB
 9. Verify: clone fresh, follow README, get a working instance
 
 ### Verification Checklist
+
 - [ ] Fresh clone + `bun install` succeeds
 - [ ] `docker-compose up` starts all dependencies
 - [ ] Copy `.env.example` to `.env`, fill in one LLM key → system works
@@ -114,9 +120,11 @@ graph TB
 ## Stage 8.2: npm Packages
 
 ### Goal
+
 Publish reusable packages to npm under the `uniclaw` scope.
 
 ### Dependencies
+
 - Stage 8.1 complete
 
 ### Steps
@@ -139,10 +147,11 @@ graph LR
 4. **@uniclaw/gate** — security gate middleware (hai-guardrails + AI SDK integration)
 5. For each package: set up `package.json`, build config, type exports
 6. Publish to npm under `uniclaw` scope
-7. **Lockstep versioning:** All @uniclaw/* packages use lockstep versioning — all packages share the same version number and are published together. The template repo pins exact versions. Deployers upgrade all packages simultaneously. The framework rejects mismatched versions at startup.
+7. **Lockstep versioning:** All @uniclaw/\* packages use lockstep versioning — all packages share the same version number and are published together. The template repo pins exact versions. Deployers upgrade all packages simultaneously. The framework rejects mismatched versions at startup.
 8. Verify: install from npm into a fresh project, verify it works
 
 ### Verification Checklist
+
 - [ ] All packages published to npm
 - [ ] `bun add @uniclaw/control-plane` installs successfully
 - [ ] `bun add @uniclaw/hooks` installs successfully
@@ -151,19 +160,22 @@ graph LR
 - [ ] `bun add @uniclaw/gate` installs successfully
 - [ ] TypeScript types exported correctly (autocomplete works)
 - [ ] Each package works when installed from npm (not just from monorepo)
-- [ ] Control plane startup rejects if @uniclaw/gate and @uniclaw/control-plane versions don't match
+- [ ] Control plane startup rejects if @uniclaw/gate and @uniclaw/control-plane versions don’t match
 
 ---
 
 ## Stage 8.3: Documentation
 
 ### Goal
+
 Deployer-facing documentation: getting started, configuration, architecture, and API reference.
 
 ### Dependencies
+
 - Stage 8.2 complete
 
 ### Steps
+
 1. **Getting Started** — step-by-step from clone to running instance
 2. **Configuration Guide** — what each file does, how to customize
 3. **Architecture Overview** — how the system works (reference brainstorm docs)
@@ -174,6 +186,7 @@ Deployer-facing documentation: getting started, configuration, architecture, and
 8. **API Reference** — auto-generated from Elysia types (OpenAPI)
 
 ### Verification Checklist
+
 - [ ] Getting Started: a developer can follow it end-to-end
 - [ ] Configuration: every configurable value is documented
 - [ ] Architecture: diagrams explain the system clearly
@@ -188,12 +201,15 @@ Deployer-facing documentation: getting started, configuration, architecture, and
 ## Stage 8.4: Launch
 
 ### Goal
+
 Public release on GitHub + npm.
 
 ### Dependencies
+
 - Stages 8.1–8.3 complete
 
 ### Steps
+
 1. Create GitHub release with changelog
 2. Ensure all npm packages are published at matching versions
 3. Template repo is public and clean
@@ -202,6 +218,7 @@ Public release on GitHub + npm.
 6. Write announcement post explaining uniclaw
 
 ### Verification Checklist
+
 - [ ] GitHub repo is public (MIT license)
 - [ ] npm packages are public
 - [ ] Documentation site accessible
