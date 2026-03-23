@@ -2,7 +2,7 @@
 
 ## The Problem
 
-Same request from 2 different users must produce 2 different outcomes.
+Same request from 2 different users must produce 2 different outcomes, personalized to each user. Without memory and user context, the agent is just a stateless tool — no better than a generic API call.
 
 ## Example
 
@@ -41,11 +41,14 @@ graph TB
     C --> G --> J
 ```
 
-All three persist across tasks and grow over time.
+All three layers must:
+- **Persist** across tasks
+- **Be accessible** to the agent whenever it handles a task
+- **Grow over time** — the agent gets better the longer it works with a user
 
-## How OpenClaw Solves This
+## How OpenClaw Already Solves This
 
-OpenClaw's workspace IS the personalization layer:
+No custom personalization engine needed. OpenClaw's workspace IS the personalization layer:
 
 | Personalization Need | OpenClaw Mechanism |
 |---|---|
@@ -56,12 +59,14 @@ OpenClaw's workspace IS the personalization layer:
 | Task history | [Session transcripts](https://docs.openclaw.ai/concepts/session) (JSONL) |
 | Accumulated knowledge | Workspace files the agent creates/maintains |
 
-## How Users Configure Their Profile
+## How Users "Configure" Their Profile
 
-Users talk to their agent:
+No settings page. No dropdown menus. No config UI.
+
+Users just talk to their agent:
 > "I prefer charts over tables"
 > "Always use formal tone"
 > "My fiscal year starts in April"
 
-The agent updates `USER.md` and `MEMORY.md` itself.
+The agent updates `USER.md` and `MEMORY.md` itself. Configuration through conversation.
 

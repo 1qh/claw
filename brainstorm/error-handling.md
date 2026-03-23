@@ -23,6 +23,7 @@ These are reliability problems, not error handling. They must be solved at the i
 | **Host failure** | Reassign users to another host, start gateway processes |
 | **Storage failure** | Filesystem backups + git-based workspace recovery |
 
+**Principle:** If infrastructure is properly set up, these are non-events. Standard process management and cloud reliability practices.
 
 ### Agent-Level Failures (Handle at Runtime)
 
@@ -38,11 +39,15 @@ The agent is running fine but cannot deliver the outcome. These cannot be preven
 | **Quality failure** | Agent completes task but output is wrong or low quality |
 | **Out of scope** | Request slipped past the gate but agent can't handle it |
 
-The agent must communicate, not guess. When uncertain, ask. When blocked, explain.
+**Principle:** The agent must communicate, not guess. When uncertain, ask. When blocked, explain.
 
 ## Clarification Mechanism
 
-### Custom Tool Following Exec Approval Pattern
+### The Problem
+
+User doesn't talk directly to OpenClaw. The control plane proxies everything. So when the agent needs to ask a question, it must flow through the proxy cleanly.
+
+### The Solution: Custom Tool Following Exec Approval Pattern
 
 OpenClaw has a built-in two-phase pattern for "agent asks, pauses, waits for response, resumes" — used for [exec approvals](https://docs.openclaw.ai/tools/exec-approvals). The framework registers a custom `request_clarification` tool that follows the same pattern.
 

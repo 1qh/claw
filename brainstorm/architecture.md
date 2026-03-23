@@ -1,10 +1,18 @@
 # Architecture: 1 User = 1 Gateway Process
 
+## Core Principle
+
+Every user gets their own dedicated OpenClaw gateway process on a shared host. Process-level isolation via OS user separation, without the overhead of containers or orchestrators.
+
 ## Identity Model
+
+Dead simple:
 
 ```
 1 email = 1 user = 1 OS user = 1 gateway process = 1 workspace directory
 ```
+
+No multi-email. No shared accounts. No teams (for now). Just one email per user.
 
 ## High-Level Architecture
 
@@ -94,7 +102,7 @@ stateDiagram-v2
     Idle --> Active: New task arrives
 ```
 
-Gateway startup: ~1-2s.
+Starting a gateway process is fast (~1-2s) — much faster than booting a container.
 
 ## Task Flow
 
@@ -140,7 +148,7 @@ Three approaches were evaluated:
 | **Scaling** | Add more VMs | Orchestrator handles it | Rebalance agents |
 | **Native OpenClaw support** | Yes — built-in profiles | Deployer configures it | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) |
 
-**Verdict:** Multi-gateway per host. Same isolation as containers via OS users, simpler and cheaper. Migrate to containers later only if needed.
+**Verdict:** Multi-gateway per host wins for early-stage deployments. Same isolation guarantees as containers (via OS users), dramatically simpler and cheaper. Migrate to containers later only if needed.
 
 ## Cost Projection
 
@@ -155,7 +163,7 @@ Most gateways will be idle most of the time (fire-and-forget = bursts, not const
 
 ## Scaling: Adding Hosts
 
-The control plane has a lookup table:
+No load balancer needed. The control plane has a lookup table:
 
 ```
 alice@co.com  → host-1:18789
@@ -163,7 +171,7 @@ bob@gmail.com → host-1:18809
 carol@io.com  → host-2:18789
 ```
 
-When a host fills up, add another VM and assign new users to it.
+When a host fills up, add another VM and assign new users to it. The routing logic doesn't change — it's still email → host:port.
 
 ## What Lives Where
 
@@ -191,7 +199,14 @@ graph TB
 
 ## No Traditional Backend
 
-The gateway IS the database. No Postgres, no Redis, no migrations, no ORM. The agent organizes its own data through workspace files.
+The gateway IS the database. No Postgres, no Redis, no migrations, no ORM.
+
+**What the framework avoids:**
+- No data model design — agent organizes its own data through markdown
+- No migration hell — workspace files evolve naturally
+- No sync problems — one source of truth (the workspace)
+- No API layer for CRUD — agent reads/writes its own workspace
+- No backup complexity — daily git push to GitHub
 
 **What the control plane actually does:**
 1. Auth — verify identity (OAuth, magic link)
@@ -212,5 +227,5 @@ One Linux VM:
   └── User workspace dirs    (/data/oc-<user>/, git-backed)
 ```
 
-Just processes on a Linux box.
+No Docker. No Kubernetes. No container registry. No orchestrator. No network volumes. Just processes on a Linux box.
 

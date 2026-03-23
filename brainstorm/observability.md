@@ -1,6 +1,8 @@
 # Observability: Usage Tracking and Metering
 
-Leverage OpenClaw's native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). The control plane polls each gateway and aggregates.
+## Core Principle
+
+Leverage OpenClaw's native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). No extra observability infrastructure needed at launch. The control plane simply polls each gateway and aggregates.
 
 ## What OpenClaw Tracks Out of the Box (Per Gateway)
 
@@ -112,7 +114,7 @@ graph TB
 | [Helicone](https://www.helicone.ai/) | Proxy-based logging — unnecessary, OpenClaw already tracks everything |
 | Custom metrics pipeline | Over-engineering — polling gateway API is sufficient |
 
-Add later if needed for prompt debugging, A/B testing, or quality evaluation.
+These can be added later if needed (e.g., for prompt debugging, A/B testing models, quality evaluation). The gateway API provides everything needed for usage, billing, and basic observability at launch.
 
 ## Data Available Per User (Verbose)
 

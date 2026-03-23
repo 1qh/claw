@@ -1,6 +1,8 @@
 # Security: Defense in Depth — 7 Layers
 
-Block threats BEFORE they reach OpenClaw. Every layer is independent.
+## Core Principle
+
+Block threats BEFORE they reach OpenClaw. Let OpenClaw focus on real work, not noisy filtering decisions. Every layer is independent — an attacker must beat ALL seven to do meaningful damage.
 
 ## Architecture Overview
 
@@ -51,11 +53,14 @@ What it does:
 - Reject malformed payloads
 - Basic structure validation — does it look like a normal user message?
 
+Catches: Encoding tricks, oversized payloads, malformed inputs.
+
 ---
 
 ### Layer 2 — Heuristic Guards ([hai-guardrails](https://github.com/presidio-oss/hai-guardrails), local mode)
 
 **Cost:** Free, instant, no network calls
+**Dependencies:** `@presidio-dev/hai-guardrails`
 
 Guards enabled in heuristic/pattern mode:
 
@@ -66,13 +71,18 @@ Guards enabled in heuristic/pattern mode:
 | **PII Guard** | Pattern matching | Personal data (names, emails, SSNs, phone numbers) |
 | **Secret Guard** | Pattern + entropy | API keys, credentials, tokens, secrets |
 
+Catches: Known attack patterns, accidental secret/PII exposure.
+
 ---
 
 ### Layer 3 — LLM Content Guards (hai-guardrails + [AI SDK](https://ai-sdk.dev))
 
 **Cost:** LLM call per message (cheap model, fast)
+**Dependencies:** `@presidio-dev/hai-guardrails`, `ai` (Vercel AI SDK)
 
-AI SDK as model provider makes hai-guardrails model-agnostic. Guards enabled in LLM mode:
+Uses AI SDK as the model provider so hai-guardrails is fully model-agnostic. Can use Claude, GPT, Gemini, or any provider — swappable without code changes.
+
+Guards enabled in LLM mode:
 
 | Guard | What It Catches |
 |-------|-----------------|
@@ -83,13 +93,16 @@ AI SDK as model provider makes hai-guardrails model-agnostic. Guards enabled in 
 | **Copyright Guard** | Copyrighted material reproduction |
 | **Profanity Guard** | Inappropriate language |
 
+Catches: Content policy violations, harmful intent, inappropriate requests.
+
 ---
 
 ### Layer 4 — Domain Scope Classifier (AI SDK middleware)
 
 **Cost:** LLM call (can batch with Layer 3)
+**Dependencies:** `ai` (Vercel AI SDK)
 
-Custom middleware validating whether the request falls within the deployer's domain.
+Custom middleware that validates whether the request falls within the deployed product's domain. This is product-specific — each deployer defines their own scope.
 
 Example for a financial reporting product:
 ```
@@ -99,11 +112,16 @@ BLOCK: "Write me a poem about cats"
 BLOCK: "Help me debug this Python script"
 ```
 
-Can be combined with Layer 3 LLM call (one call, multiple checks).
+Implementation: AI SDK middleware with a tight classification prompt. Can be combined with the Layer 3 LLM call to minimize latency (one call, multiple checks).
+
+Catches: Out-of-scope requests, misuse of the service.
 
 ---
 
 ### Layer 5 — OpenClaw [Tool Policy](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated) (built-in)
+
+**Cost:** Free (configuration only)
+**Dependencies:** OpenClaw native
 
 Configured in `openclaw.json` per gateway:
 - `tools.allow` / `tools.deny` — whitelist/blacklist tools
@@ -111,13 +129,18 @@ Configured in `openclaw.json` per gateway:
 - `tools.exec.safeBins` — restrict to safe binaries only
 - Remove unnecessary capabilities entirely (no bash, no browser, no file system escape)
 
-Even if a manipulated prompt reaches the agent, it can only use explicitly allowed tools.
+Catches: Even if a manipulated prompt reaches the agent, it can only use tools the deployer has explicitly allowed.
 
 ---
 
 ### Layer 6 — Process Isolation via OS User Separation (infrastructure)
 
-Each user runs in their own gateway process under a dedicated OS user. Even a fully compromised agent can only access that one user's data.
+**Cost:** Infrastructure cost (already part of architecture)
+**Dependencies:** OS user separation (Unix filesystem permissions)
+
+Each user runs in their own gateway process under a dedicated OS user with their own workspace directory. There is no shared state, no shared database, no cross-user access path.
+
+Catches: Everything else. Even a fully compromised agent can only access that one user's own data.
 
 ---
 
@@ -134,14 +157,15 @@ This isn't a "layer" you implement — it's a property of the 1:1 architecture:
 
 ## Tech Stack Summary
 
-| Component | Library |
-|---|---|
-| Input sanitization | Custom TypeScript (~50 lines) |
-| Heuristic guards | `@presidio-dev/hai-guardrails` (no LLM needed) |
-| LLM content guards | `@presidio-dev/hai-guardrails` + `ai` (Vercel AI SDK) |
-| Domain scope classifier | `ai` (Vercel AI SDK) middleware |
-| Tool restrictions | OpenClaw native (`openclaw.json`) |
-| Process isolation | OS user separation |
+| Component | Library | Why |
+|---|---|---|
+| Input sanitization | Custom TypeScript | Trivial, no dependency needed |
+| Heuristic guards | `@presidio-dev/hai-guardrails` | TypeScript-native, battle-tested, no LLM needed for heuristic mode |
+| LLM content guards | `@presidio-dev/hai-guardrails` | Covers toxic, hate, bias, adult, copyright, profanity |
+| Model provider for guards | `ai` (Vercel AI SDK) | Model-agnostic — swap providers without code changes |
+| Domain scope classifier | `ai` (Vercel AI SDK) middleware | Custom per deployed product, clean middleware pattern |
+| Tool restrictions | OpenClaw native (`openclaw.json`) | Already built-in, zero code |
+| Process isolation | OS user separation | Unix filesystem permissions per gateway process |
 
 ## Flow Timing Estimate
 

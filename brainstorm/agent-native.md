@@ -1,12 +1,22 @@
 # Agent-Native Paradigm: Rethinking the Backend
 
-## Mental Model
+## Core Principle
 
+This is not an adapter for existing backends. This is an **opinionated, agent-native architecture** that deployers adopt fully. No REST APIs, no databases, no microservices. Everything is rebuilt around the assumption that an intelligent agent is the executor.
+
+## The Mental Model Shift
+
+**Traditional SaaS:**
+```
+User → Frontend → API Server → Database → Backend Services → External APIs
+```
+
+**Agent-Native SaaS:**
 ```
 User → Frontend → Control Plane → OpenClaw Gateway → Agent uses tools autonomously
 ```
 
-The agent IS the backend. Its workspace IS the data. It runs CLIs instead of orchestrating services.
+The agent IS the backend. It doesn't call an API server — it IS the logic layer. It doesn't query a database — its workspace IS the data. It doesn't orchestrate services — it runs CLIs.
 
 ## Four Primitives
 
@@ -38,14 +48,20 @@ graph TB
 
 ## CLIs as the Backend
 
-The deployer's entire "backend" is CLI tools published to npm, executed via `bunx`.
+### Why CLIs
 
-| Property | Detail |
+The deployer's entire "backend" is a set of CLI tools published to npm. The agent runs them via [bun](https://bun.sh/)'s `bunx` command.
+
+| Property | Why It Works |
 |---|---|
 | **Self-documenting** | `--help` tells the agent everything |
-| **Always up to date** | `bunx some-cli@latest` — no install, no cache |
-| **Testable independently** | Test CLI without needing OpenClaw |
-| **Compilable** | [bun compile](https://bun.com/docs/bundler/executables) → standalone binaries |
+| **Language-agnostic** | Build in any language, publish to npm |
+| **Always up to date** | `bunx some-cli@latest` — no install, no cache, no manifest |
+| **Composable** | Agent chains tools naturally |
+| **Testable independently** | Deployer tests CLI without needing OpenClaw |
+| **Zero infrastructure** | No registry auth, no cron, no version management |
+| **Ecosystem leverage** | Reuse any existing npm CLI tool (public or private) |
+| **Compilable** | [bun compile](https://bun.com/docs/bundler/executables) can package TypeScript into standalone binaries |
 
 ### How It Works
 
@@ -71,7 +87,7 @@ sequenceDiagram
 Write CLI in TypeScript → npm publish → done
 ```
 
-The agent uses the latest version on next invocation via `bunx`.
+That's it. No deployment. No CI/CD to a server. No infrastructure. The agent uses the latest version on next invocation via `bunx`.
 
 ### CLI Convention
 
@@ -122,12 +138,18 @@ program.parse()
 
 ### Leveraging Bun
 
-| Feature | Usage |
+[Bun](https://bun.sh/) is the runtime foundation:
+
+| Feature | How the Framework Uses It |
 |---|---|
 | **bunx** | Execute any npm CLI at latest version, 100x faster than npx |
-| **bun compile** | Compile TypeScript CLIs into standalone binaries |
-| **TypeScript native** | No build step |
-| **Lower memory** | 30-40% less than Node.js — matters with many gateways |
+| **bun compile** | Deployers can compile TypeScript CLIs into standalone binaries |
+| **bun install** | 20-40x faster than npm for any setup steps |
+| **bun test** | Deployers test their CLIs with bun's built-in test runner |
+| **TypeScript native** | No build step — write TypeScript, run directly |
+| **Lower memory** | 30-40% less memory than Node.js — matters when running many gateways |
+
+OpenClaw already prefers bun for TypeScript execution in its dev workflow.
 
 ### Public vs Private CLIs
 
@@ -145,7 +167,9 @@ For private npm packages, the host needs a `.npmrc` with an auth token. One-time
 
 ## Knowledge as Files
 
-Deployers place domain knowledge in a directory. The agent searches it when needed.
+### The Pluggable Knowledge Slot
+
+The framework provides a directory where deployers place their domain knowledge. The agent searches it when needed.
 
 ```
 /shared-knowledge/
@@ -159,7 +183,11 @@ Deployers place domain knowledge in a directory. The agent searches it when need
     country-codes.csv
 ```
 
-OpenClaw's [memory search](https://docs.openclaw.ai/concepts/memory) (hybrid vector + BM25) indexes the shared knowledge directory alongside memory files. Drop files in, they're searchable.
+### How the Agent Uses It
+
+OpenClaw's built-in [memory search](https://docs.openclaw.ai/concepts/memory) provides hybrid vector + BM25 search. The shared knowledge directory is indexed alongside memory files. The agent searches it naturally — no special API, no custom code.
+
+The deployer just drops files in the directory. The framework indexes them. The agent finds what it needs.
 
 ### What Goes Where
 
@@ -172,8 +200,22 @@ OpenClaw's [memory search](https://docs.openclaw.ai/concepts/memory) (hybrid vec
 
 ## Instructions as Markdown
 
-Business logic as markdown instead of code:
+### Business Logic in Natural Language
 
+Instead of encoding business logic in code, describe it in markdown:
+
+**Traditional (code):**
+```javascript
+if (days_since_purchase <= 30 && item.condition === 'unused') {
+  processRefund()
+} else if (days_since_purchase <= 90) {
+  offerStoreCredit()
+} else {
+  denyRefund()
+}
+```
+
+**Agent-native (markdown):**
 ```markdown
 ## Refund Policy
 - Full refund within 30 days if item is unused
@@ -182,7 +224,20 @@ Business logic as markdown instead of code:
 - Use your judgment for edge cases (defective items, loyal customers)
 ```
 
-Markdown handles edge cases that rigid code doesn't. Changes take effect immediately via hot-reload.
+The code version handles exactly the cases you coded. The markdown version handles everything, including edge cases.
+
+### Why This Works
+
+The agent can:
+- Read and understand natural language instructions
+- Apply judgment to ambiguous situations
+- Adapt when the real world doesn't match rigid rules
+- Ask for clarification when truly uncertain
+
+The deployer gets:
+- Business logic that's readable by anyone (not just developers)
+- Changes that take effect immediately (update markdown, hot-reload)
+- No compilation, no deployment, no testing of edge-case code paths
 
 ## Constraints as Hard Rules
 
@@ -198,12 +253,17 @@ Some things must NEVER be left to agent judgment:
 
 These go in `SOUL.md` — loaded into every session, every time. Combined with [tool policies](https://docs.openclaw.ai/gateway/sandbox-vs-tool-policy-vs-elevated) at the gateway level for enforcement beyond prompt-level rules.
 
-## Summary: What Replaces What
+## Comparison: Traditional vs Agent-Native
 
-| Traditional | Agent-Native |
-|---|---|
-| API server + routes | CLIs via `bunx` |
-| PostgreSQL + Redis + ORM | Workspace files |
-| Code business logic | Markdown instructions |
-| Elasticsearch | Auto-indexed files |
-| CI/CD pipeline | `npm publish` → done |
+| Aspect | Traditional SaaS | Agent-Native SaaS |
+|---|---|---|
+| **Backend** | API server with routes, controllers, models | CLIs executed via `bunx` |
+| **Database** | PostgreSQL, Redis, migrations, ORM | Workspace files (markdown, JSON, JSONL) |
+| **Business logic** | Code (if/else, state machines) | Markdown instructions |
+| **Domain knowledge** | Knowledge base service, Elasticsearch | Files in a directory, auto-indexed |
+| **Configuration** | Feature flags, admin panels, env vars | Markdown files, hot-reloaded |
+| **API design** | REST/GraphQL schema, versioning, docs | CLI `--help` output |
+| **Deployment** | Build → deploy → rollout | `npm publish` → done |
+| **Updates** | CI/CD pipeline, blue-green, canary | `bunx cli@latest` — always current |
+| **Testing** | Unit tests, integration tests, e2e | Test the CLI independently |
+| **Scaling** | Horizontal scaling, load balancers | Add hosts, add gateway processes |
