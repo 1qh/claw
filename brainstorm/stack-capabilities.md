@@ -268,6 +268,134 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 
 ---
 
+## [Bun](https://bun.sh/)
+
+### Runtime APIs
+| API | What |
+|---|---|
+| `Bun.serve()` | HTTP/WebSocket server with routing, TLS, cookies, CSRF |
+| `Bun.sql()` | Native PostgreSQL/MySQL/SQLite client (Promise-based) |
+| `Bun.s3()` | Native S3-compatible object storage bindings |
+| `Bun.redis()` | Native Redis client |
+| `Bun.shell()` | Shell scripting API — run commands programmatically |
+| `Bun.spawn()` / `Bun.spawnSync()` | Child process management with IPC |
+| `Bun.file()` / `Bun.write()` | File I/O with MIME detection |
+| `Bun.glob()` | Native fast file globbing |
+| `Bun.tar()` / `Bun.untarStream()` | Archive creation/extraction |
+| `Bun.cron()` | Built-in cron scheduling |
+| `Bun.dns()` | DNS resolution |
+| `Bun.password.hash()` / `.verify()` | bcrypt, argon2, scrypt built-in |
+| `Bun.generateCSRFToken()` | CSRF protection |
+| `Bun.gzip()` / `Bun.deflate()` | Compression/decompression |
+| `HTMLRewriter` | Transform HTML with CSS selectors (web crawling) |
+| Native SQLite | Built-in high-performance SQLite3 |
+| JSONL parser | Streaming newline-delimited JSON |
+| Secrets API | Secure credential storage |
+| Workers API | Multi-threaded JavaScript |
+
+### Data Format Support (Built-in imports)
+JSON5, TOML, YAML, Markdown (GFM), JSX/TSX — all importable directly.
+
+### Package Manager
+- 30x faster than npm
+- `bunx` — execute npm packages without install (100x faster than npx)
+- `bun audit` — security vulnerability scanning
+- `bun patch` — persistently patch node_modules
+- Workspaces + catalogs for monorepos
+- Private registry support (.npmrc)
+
+### Bundler & Compiler
+- `bun build` — native bundler with code splitting, tree shaking, minification
+- `bun compile` — standalone single-file executables from TypeScript
+- Bytecode caching for faster startup
+- Standalone HTML bundling (single-page apps)
+- Macros (`bun:macro`) — run code at bundle-time
+
+### Test Runner
+- Jest-compatible with TypeScript-first
+- Snapshots, mocking, DOM testing (happy-dom)
+- Code coverage with thresholds
+- Watch mode
+- `setSystemTime()` — time manipulation in tests
+
+### Deployment
+Documented support for: AWS Lambda, Google Cloud Run, DigitalOcean, Railway, Render, Docker, PM2, systemd
+
+---
+
+## [OpenClaw](https://openclaw.ai) — Extended Capabilities
+
+See [architecture.md](architecture.md) for core usage. Below are capabilities beyond basic agent runtime.
+
+### Automation
+| Feature | What |
+|---|---|
+| [Cron jobs](https://docs.openclaw.ai/automation/cron-jobs) | One-shot + recurring schedules, timezone support, per-job model/thinking overrides, delivery to channels/webhooks |
+| [Standing orders](https://docs.openclaw.ai/automation/standing-orders) | Autonomous programs with approval gates, escalation rules, execute-verify-report pattern |
+| [Heartbeat](https://docs.openclaw.ai/concepts/agent-workspace) | Periodic agent wakeup with system events |
+| [Hooks](https://docs.openclaw.ai/concepts/agent-workspace) | 15+ event types (message received/sent, session compact, gateway startup, etc.) |
+
+### Workflow Engine
+| Feature | What |
+|---|---|
+| [Lobster](https://docs.openclaw.ai/tools/lobster) | Deterministic multi-step pipelines with approval gates, JSON piping, resume tokens, timeout enforcement |
+| [llm-task](https://docs.openclaw.ai/tools/llm-task) | Structured LLM steps with JSON schema validation and thinking levels, composable with Lobster |
+| [Subagents](https://docs.openclaw.ai/tools/subagents) | Hierarchical agent spawning with isolated sessions, announce-back delivery |
+
+### HTTP API Endpoints
+| Endpoint | What |
+|---|---|
+| `/v1/chat/completions` | [OpenAI-compatible API](https://docs.openclaw.ai/gateway/openai-http-api) — third-party tools can talk to agents |
+| `/v1/responses` | [OpenResponses API](https://docs.openclaw.ai/gateway/openresponses-http-api) — richer input types, file/image support |
+| `/tools/invoke` | [Direct tool invocation](https://docs.openclaw.ai/gateway/tools-invoke-http-api) — run tools without LLM call |
+| `/hooks/agent` | [Webhook ingress](https://docs.openclaw.ai/automation/cron-jobs) — trigger agent tasks via HTTP |
+| `/hooks/wake` | System events + heartbeat trigger |
+
+### Security & Auth
+| Feature | What |
+|---|---|
+| [Trusted-proxy auth](https://docs.openclaw.ai/gateway/trusted-proxy-auth) | Delegate auth to reverse proxy (Pomerium, Caddy, nginx) — enterprise SSO |
+| [Exec approvals](https://docs.openclaw.ai/tools/exec-approvals) | Operator allowlist for host execution |
+| [Elevated mode](https://docs.openclaw.ai/tools/elevated) | Sender-based approval for sensitive operations |
+| [Tool loop detection](https://docs.openclaw.ai/tools/loop-detection) | Detect repeat patterns, ping-pong, no-progress loops |
+
+### Memory & Retrieval
+| Feature | What |
+|---|---|
+| Hybrid search | BM25 + vector similarity |
+| MMR diversity re-ranking | Avoid redundant results |
+| Temporal decay | Recent memories weighted higher |
+| QMD sidecar | Advanced retrieval backend |
+| Multiple embedding providers | OpenAI, Gemini, Voyage, Mistral, Ollama, GGUF |
+
+### Web Interfaces (Built-in)
+| Interface | What |
+|---|---|
+| [Control UI](https://docs.openclaw.ai/web/control-ui) | Full browser admin — chat, sessions, cron, skills, channels, config, logs, debug |
+| [WebChat](https://docs.openclaw.ai/web/webchat) | Native chat client via WebSocket |
+| [Dashboard](https://docs.openclaw.ai/web/dashboard) | Entry point UI with i18n (en, zh-CN, zh-TW, pt-BR, de, es) |
+| [TUI](https://docs.openclaw.ai/web/tui) | Terminal UI |
+
+### Media & Multimodal
+| Feature | What |
+|---|---|
+| Image understanding | OpenAI, Anthropic, Google, MiniMax, Moonshot, Z.AI |
+| Audio transcription | OpenAI, Groq, Deepgram, Google, Mistral + CLI fallbacks |
+| Video understanding | Google, Moonshot |
+| Text-to-speech | Multiple providers |
+| [Diffs viewer](https://docs.openclaw.ai/tools/diffs) | Visual diff with PNG/PDF rendering |
+
+### Advanced
+| Feature | What |
+|---|---|
+| [Canvas / A2UI](https://docs.openclaw.ai/platforms/mac/canvas) | Interactive UI rendered by agent — forms, buttons, text inputs |
+| [Agent-to-agent messaging](https://docs.openclaw.ai/tools/agent-send) | Inter-agent communication with explicit allowlists |
+| [Polls](https://docs.openclaw.ai/tools/reactions) | Create polls on Telegram, WhatsApp, Discord, Teams |
+| Queue modes | `steer` (inject into current run), `followup`, `collect` (batch + debounce) |
+| 35+ model providers | Anthropic, OpenAI, Google, Groq, Mistral, DeepSeek, Ollama, vLLM, etc. |
+
+---
+
 ## What We Get for Free (No Custom Code)
 
 | Need | Provided By |
@@ -279,13 +407,18 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 | Billing (Stripe) | better-auth plugin |
 | Admin user management | better-auth admin plugin |
 | Anonymous / demo mode | better-auth anonymous plugin |
+| Organization / teams | better-auth organization plugin |
+| SSO (enterprise) | better-auth SAML plugin |
 | Per-user data isolation (RLS) | Drizzle RLS + TimescaleDB |
 | Database admin browser | Drizzle Studio |
 | Schema validation | Drizzle + Zod |
+| Read replicas | Drizzle built-in |
 | LLM call debugging | AI SDK DevTools |
 | Reranking search results | AI SDK `rerank()` |
 | Embedding generation | AI SDK `embed()` / pgai |
+| Structured LLM output | AI SDK `generateObject()` + Zod |
 | Observability upgrade path | AI SDK OpenTelemetry |
+| MCP client | AI SDK `createMCPClient()` |
 | Input validation (prompt injection, PII, etc.) | hai-guardrails |
 | Usage analytics (cross-user) | TimescaleDB continuous aggregates |
 | Auto-embedding sync | pgai Vectorizer |
@@ -293,3 +426,21 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 | Data compression | TimescaleDB compression |
 | Version history | TigerFS `.history/` |
 | Backup | `pg_dump` |
+| HTTP/WebSocket server | `Bun.serve()` |
+| PostgreSQL client | `Bun.sql()` |
+| Cron scheduling (control plane) | `Bun.cron()` |
+| Process management | `Bun.spawn()` + `Bun.shell()` |
+| Password hashing | `Bun.password.hash()` |
+| File globbing | `Bun.glob()` |
+| JSONL parsing (session transcripts) | Bun native JSONL |
+| HTML transformation (crawling) | `HTMLRewriter` |
+| Archive creation (data export) | `Bun.tar()` |
+| Deterministic workflows | OpenClaw Lobster |
+| Scheduled tasks | OpenClaw cron |
+| Webhook ingress | OpenClaw `/hooks/agent` |
+| OpenAI-compatible API | OpenClaw `/v1/chat/completions` |
+| Direct tool invocation | OpenClaw `/tools/invoke` |
+| Enterprise SSO (gateway) | OpenClaw trusted-proxy auth |
+| Admin dashboard | OpenClaw Control UI |
+| Agent orchestration | OpenClaw subagents |
+| Autonomous programs | OpenClaw standing orders |
