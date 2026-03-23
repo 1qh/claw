@@ -282,7 +282,6 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 | `Bun.tar()` / `Bun.untarStream()` | Archive creation/extraction |
 | `Bun.cron()` | Built-in cron scheduling |
 | `Bun.dns()` | DNS resolution |
-| `Bun.password.hash()` / `.verify()` | bcrypt, argon2, scrypt built-in |
 | `Bun.generateCSRFToken()` | CSRF protection |
 | `Bun.gzip()` / `Bun.deflate()` | Compression/decompression |
 | `HTMLRewriter` | Transform HTML with CSS selectors (web crawling) |
@@ -427,7 +426,6 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | HTTP/WebSocket server | `Bun.serve()` |
 | Cron scheduling (control plane) | `Bun.cron()` |
 | Process management | `Bun.spawn()` + `Bun.shell()` |
-| Password hashing | `Bun.password.hash()` |
 | File globbing | `Bun.glob()` |
 | JSONL parsing (session transcripts) | Bun native JSONL |
 | HTML transformation (crawling) | `HTMLRewriter` |
