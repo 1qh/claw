@@ -75,7 +75,7 @@ sequenceDiagram
    - All paths point to TigerFS
    - New agent is available immediately (no restart, no hot-reload needed)
 2. Configure workspace defaults:
-   - Directory structure on TigerFS: `users/{user_id}/workspace/`, `users/{user_id}/agent/` where `user_id` is a UUID. Use opaque UUID for filesystem paths, not email. Email is mapped to UUID at the auth layer. This avoids PII in paths and special character issues.
+   - Directory structure on TigerFS: `users/{email}/workspace/`, `users/{email}/agent/`
    - Initial `USER.md` with user's email (written by `agents.create`)
    - Shared config (SOUL.md, AGENTS.md) read from shared TigerFS path
 3. Implement agent deletion via `agents.delete`:

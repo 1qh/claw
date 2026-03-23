@@ -299,9 +299,9 @@ The two stay in sync naturally:
 - Agent builds the full user profile on top through conversation
 - No sync mechanism needed — email is set once, everything else grows organically
 
-## Filesystem Paths: UUID, Not Email
+## Filesystem Paths
 
-Filesystem paths use an opaque user ID (UUID), not email. Email is mapped to UUID at the auth layer. Paths follow the pattern `/mnt/tigerfs/users/{user_id}/` where `user_id` is a UUID. This avoids PII in paths and special character issues with email addresses (e.g., `+`, `@`).
+Filesystem paths use email as the folder name: `/mnt/tigerfs/users/alice@company.com/`. Email is the universal key — consistent across auth, routing, and storage.
 
 ## Simplicity Constraints
 
