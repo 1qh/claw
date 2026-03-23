@@ -54,7 +54,7 @@ gantt
     Phase 3 — Security Gate        :p3, after p1, 1
 
     section Product
-    Phase 4 — Frontend             :p4, after p2, 1
+    Phase 4 — Frontend             :p4, after p3, 1
     Phase 5 — Multi-Agent          :p5, after p3, 1
 
     section Ship
@@ -63,7 +63,7 @@ gantt
     Phase 8 — Release              :p8, after p7, 1
 ```
 
-**Parallelizable:** Phase 2 + Phase 3 can run in parallel. Phase 4 can start after Phase 2. Phase 5 requires both Phase 2 AND Phase 3 (security gate must be active before multi-agent goes live).
+**Parallelizable:** Phase 2 + Phase 3 can run in parallel. Phase 4 and Phase 5 both require Phase 2 AND Phase 3 complete (security gate must be active before users connect to live gateways).
 
 ## Phases
 

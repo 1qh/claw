@@ -156,6 +156,7 @@ sequenceDiagram
 - [ ] Multiple users can connect simultaneously to different gateways
 - [ ] Concurrent task queueing works (second task queued while first runs, default `collect` mode)
 - [ ] `usage_events` table has rows after a task completes
+- [ ] Verify `chat` final events contain token counts (input_tokens, output_tokens), cost, model, and latency fields. If these fields are missing from WebSocket events, the control plane must query the gateway's `usage.cost` API after each task instead. Document the actual event schema.
 - [ ] All tests pass
 
 ---
