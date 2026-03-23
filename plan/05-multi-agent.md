@@ -71,7 +71,8 @@ sequenceDiagram
     CP->>DB: Remove user → gateway mapping
 ```
 
-1. Implement agent creation via gateway `agents.create` method:
+1. **Idempotency check:** Before calling `agents.create`, check if an agent for this user already exists. If the previous attempt partially completed (agent exists but DB mapping doesn't), clean up the orphan before retrying. Use the user's email as the idempotency key.
+2. Implement agent creation via gateway `agents.create` method:
    - `agents.create` handles workspace provisioning, config writing, and identity files atomically
    - All paths point to TigerFS
    - New agent is available immediately (no restart, no hot-reload needed)
@@ -96,6 +97,7 @@ sequenceDiagram
 - [ ] Agent deletion removes it from gateway (no restart)
 - [ ] Deleted agent's messages are rejected
 - [ ] Deleted agent's workspace data is archived (not immediately deleted)
+- [ ] Retrying signup for the same email does not create duplicate agents
 - [ ] Creating 10 agents on one gateway works
 - [ ] All tests pass
 
@@ -122,7 +124,7 @@ graph TD
 
 1. Control plane maintains `gateways` table with current agent count
 2. On user signup: find gateway with lowest agent count below max (default 20)
-3. If no gateway has capacity: start a new gateway process (Bun.spawn), register it, then assign
+3. If no gateway has capacity: start a new gateway process (Bun.spawn), register it, then assign. Cap total gateway count with a configurable maximum (`max_gateways`, default: deployer sets based on budget). When the cap is reached, new signups are queued or rejected. Additionally, enable better-auth CAPTCHA plugin for signup to prevent automated account creation attacks.
 4. When spawning a new gateway, the control plane also creates a PostgreSQL role for that gateway and configures the gateway's TigerFS mount and memory plugin connection to use this role.
 5. On user deletion: decrement agent count, if gateway is empty for a threshold period, stop it
 6. Periodic sync: control plane verifies gateway agent counts match actual (in case of drift)
@@ -177,7 +179,7 @@ stateDiagram-v2
    - Memory accumulates
    - Agent improves with feedback
 4. **Account deletion:**
-   - User requests deletion
+   - Before starting multi-step deletion, set the user's status to `deleting` in the DB. The control plane rejects any new messages for users with `deleting` status. Then proceed: remove agent from gateway → archive workspace → remove DB record. This prevents race conditions where a message arrives mid-deletion.
    - Agent removed from gateway
    - Workspace archived (TigerFS `.history/` preserves data for retention period)
    - After retention: workspace directory deleted
@@ -191,6 +193,7 @@ stateDiagram-v2
 - [ ] Account deletion: workspace archived, not immediately destroyed
 - [ ] After retention period: workspace data fully deleted
 - [ ] GDPR: no user data remains after deletion (verify via SQL)
+- [ ] Messages sent during deletion are rejected with a clear error (not routed to a deleted agent)
 - [ ] All tests pass
 
 ---

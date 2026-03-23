@@ -132,6 +132,8 @@ sequenceDiagram
 2. Forward all messages from frontend to gateway
 3. Forward all events from gateway to frontend
 4. Handle disconnections: if frontend disconnects, keep gateway connection alive (task continues). If gateway disconnects, notify frontend.
+5. **Implement event buffering:** The control plane maintains a short rolling buffer (last 100 events per user session, ~60s TTL) in memory. On WebSocket reconnect, the frontend sends its last received event sequence number. The control plane replays missed events from the buffer. If the buffer has expired, the frontend shows a "reconnected — some events may be missing" notice.
+5. **WebSocket connection limit:** Enforce maximum 2 concurrent WebSocket connections per user. Additional connections from the same user are rejected. This prevents connection exhaustion attacks. The control plane tracks active connections per user in memory.
 5. **Concurrent sessions per user:** When a user sends a second task while the first is running, the control plane configures OpenClaw's queue mode. Default: `collect` — new messages are batched and delivered after the current task completes. Deployer can configure to `followup` or `steer` via shared config.
 6. Classify gateway events for the frontend:
    - `agent` events → live feed
@@ -153,6 +155,8 @@ sequenceDiagram
 - [ ] Tool call events visible in event stream
 - [ ] Frontend disconnect doesn't kill the gateway task
 - [ ] Gateway disconnect notifies frontend
+- [ ] Frontend reconnects after brief disconnect and receives missed events
+- [ ] Third WebSocket connection from same user is rejected
 - [ ] Multiple users can connect simultaneously to different gateways
 - [ ] Concurrent task queueing works (second task queued while first runs, default `collect` mode)
 - [ ] `usage_events` table has rows after a task completes
@@ -179,7 +183,8 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 2. Frontend displays the clarification prompt to the user (interactive prompt UI implemented in Phase 4)
 3. User's response is sent back through the WebSocket proxy to the gateway, which provides it as the tool result
 4. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the control plane recognizes `request_clarification` as a special case requiring user input rather than auto-approval. The control plane inspects the tool name in the exec approval event. If the tool name is `request_clarification`, it routes to the frontend as a clarification prompt. All other exec approvals are handled normally (auto-approved or denied based on tool policy)
-5. Write tests: agent requests clarification, user responds, agent continues with the answer
+5. **Clarification timeout reaper:** The control plane runs a periodic reaper (every 60s) that checks for timed-out clarification requests. If a clarification has been pending longer than the timeout (default 5 min), the control plane sends a timeout response to the gateway, freeing the agent to abort gracefully. This prevents stuck agents from consuming gateway capacity.
+6. Write tests: agent requests clarification, user responds, agent continues with the answer
 
 ### External References
 - [OpenClaw tool approval](https://docs.openclaw.ai/gateway/configuration#exec-approval)
@@ -192,6 +197,7 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 - [ ] User response flows back to agent as tool result
 - [ ] Agent continues task with clarification answer
 - [ ] Timeout: if user doesn't respond within configurable window, agent proceeds with a default
+- [ ] Timed-out clarification releases the agent slot (verify gateway agent count doesn't grow with stuck clarifications)
 - [ ] This stage must be complete before Phase 4 frontend can show interactive prompts
 - [ ] All tests pass
 

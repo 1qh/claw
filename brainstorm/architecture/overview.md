@@ -303,7 +303,7 @@ The two stay in sync naturally:
 
 Filesystem paths use email as the folder name: `/mnt/tigerfs/users/alice@company.com/`. Email is the universal key — consistent across auth, routing, and storage.
 
-Email normalization: the framework lowercases email addresses and strips `+` aliases (e.g., `User+Tag@Gmail.com` normalizes to `user@gmail.com`). This prevents duplicate accounts from email aliases and case variations. After normalization, the `@` is the only special character remaining — it is replaced with `_at_` in filesystem paths (e.g., `alice@company.com` becomes `alice_at_company.com`).
+Email normalization: the framework lowercases email addresses and strips `+` aliases (e.g., `User+Tag@Gmail.com` normalizes to `user@gmail.com`). This prevents duplicate accounts from email aliases and case variations. Email normalization (lowercase + strip `+` aliases) MUST be applied by better-auth BEFORE creating the user record. The `email` column in the users table stores the NORMALIZED email. This prevents two accounts (`alice+1@company.com` and `alice@company.com`) from creating separate auth records that map to the same workspace. Add a better-auth `beforeSignup` hook that normalizes email before account creation. After normalization, the `@` is the only special character remaining — it is replaced with `_at_` in filesystem paths (e.g., `alice@company.com` becomes `alice_at_company.com`).
 
 ## Simplicity Constraints
 

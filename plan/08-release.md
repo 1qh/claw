@@ -139,7 +139,8 @@ graph LR
 4. **@uniclaw/gate** — security gate middleware (hai-guardrails + AI SDK integration)
 5. For each package: set up `package.json`, build config, type exports
 6. Publish to npm under `uniclaw` scope
-7. Verify: install from npm into a fresh project, verify it works
+7. **Lockstep versioning:** All @uniclaw/* packages use lockstep versioning — all packages share the same version number and are published together. The template repo pins exact versions. Deployers upgrade all packages simultaneously. The framework rejects mismatched versions at startup.
+8. Verify: install from npm into a fresh project, verify it works
 
 ### Verification Checklist
 - [ ] All packages published to npm
@@ -150,6 +151,7 @@ graph LR
 - [ ] `bun add @uniclaw/gate` installs successfully
 - [ ] TypeScript types exported correctly (autocomplete works)
 - [ ] Each package works when installed from npm (not just from monorepo)
+- [ ] Control plane startup rejects if @uniclaw/gate and @uniclaw/control-plane versions don't match
 
 ---
 

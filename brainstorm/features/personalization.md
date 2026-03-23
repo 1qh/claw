@@ -69,3 +69,7 @@ Users just talk to their agent:
 > "My fiscal year starts in April"
 
 The agent updates `USER.md` and `MEMORY.md` itself. Configuration through conversation.
+
+## Timezone Handling
+
+The framework stores user timezone in USER.md (populated during onboarding or from browser detection). Usage reports, billing periods, cron jobs, and "tasks completed today" use the user's timezone. Continuous aggregates store data in UTC; the control plane API converts to user timezone at query time.

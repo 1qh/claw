@@ -269,7 +269,10 @@ sequenceDiagram
 5. Enable at least one OAuth provider (GitHub — easiest for dev)
 6. Configure session management (cookie-based)
 7. Add auth middleware to WebSocket — reject unauthenticated connections
-8. Write tests: signup, login, session validation, logout, unauthenticated rejection
+8. **Email normalization at signup:** Email normalization (lowercase + strip `+` aliases) MUST be applied by better-auth BEFORE creating the user record. The `email` column in the users table stores the NORMALIZED email. This prevents two accounts (`alice+1@company.com` and `alice@company.com`) from creating separate auth records that map to the same workspace. Add a better-auth `beforeSignup` hook that normalizes email before account creation.
+9. **Enable better-auth CAPTCHA for signup** to prevent bot-driven account creation.
+10. **Admin role assignment:** The first user does NOT auto-become admin. Admin role is assigned explicitly by the deployer via better-auth CLI or database. The admin plugin must be configured with `requireAdminCreation: true` or equivalent. Document this in the template repo README.
+11. Write tests: signup, login, session validation, logout, unauthenticated rejection
 
 ### External References
 - [better-auth installation](https://www.better-auth.com/docs/installation)
@@ -285,4 +288,6 @@ sequenceDiagram
 - [ ] Authenticated WebSocket connection succeeds
 - [ ] OAuth flow works (GitHub)
 - [ ] better-auth admin plugin accessible (user management)
+- [ ] Two signups with `user+tag@gmail.com` and `user@gmail.com` result in ONE account (not two)
+- [ ] Regular user cannot access /admin/* endpoints
 - [ ] All tests pass

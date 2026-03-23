@@ -249,8 +249,9 @@ CREATE TABLE memory_chunks (
     created_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS policy: each agent can see its own rows + shared knowledge
+-- SELECT RLS policy: each agent can see its own rows + shared knowledge
 -- USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')
+-- INSERT RLS policy: WITH CHECK (agent_id = current_setting('app.agent_id')) — agents can only write their own agent_id. The `__shared__` rows are inserted by the control plane's knowledge indexer using a separate privileged database role that bypasses RLS.
 -- Every search query: WHERE agent_id IN ($1, '__shared__') AND embedding <=> $query_vector
 -- Every insert: agent_id set from runtime context, never from user input
 ```
