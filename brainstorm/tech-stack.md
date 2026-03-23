@@ -15,8 +15,9 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 | Choice | Role |
 |---|---|
-| [TimescaleDB](https://www.timescale.com/) | PostgreSQL + time-series + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) — one database for everything shared |
-| [Drizzle](https://orm.drizzle.team/) | ORM — type-safe, SQL-like |
+| [TimescaleDB](https://www.timescale.com/) | PostgreSQL + hypertables + compression + continuous aggregates + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) + [pgai](https://github.com/timescale/pgai) + background jobs |
+| [TigerFS](https://tigerfs.io/) | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest |
+| [Drizzle](https://orm.drizzle.team/) | ORM for control plane (auth, billing, routing) |
 
 ## Auth & Billing
 
@@ -39,18 +40,22 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | Choice | Role |
 |---|---|
 | Linux VM | Host |
-| OS user separation | Per-gateway isolation |
+| PostgreSQL roles + RLS | Per-user data isolation (via TigerFS) |
 | systemd / PM2 | Process management, auto-restart |
-| Git + GitHub | Config sync + workspace backup |
 
 ## Excluded
 
 | What | Replaced By |
 |---|---|
-| Docker / Kubernetes | OS user isolation |
+| Docker / Kubernetes | Process-level isolation |
 | Redis | TimescaleDB |
-| S3 | Local workspace + TimescaleDB for shared data |
+| S3 | TigerFS + TimescaleDB |
 | Elasticsearch / Algolia | TimescaleDB FTS + pgvector |
 | Message queues | OpenClaw gateway |
 | REST API frameworks | WebSocket proxy in control plane |
 | MongoDB | TimescaleDB JSONB |
+| Separate embedding pipeline | pgai (auto-vectorize inside database) |
+| External cron / job scheduler | TimescaleDB background jobs |
+| Git sync for config | TigerFS (instant ACID writes) |
+| GitHub backup per user | TigerFS `.history/` + `pg_dump` |
+| OS user separation | PostgreSQL row-level security via TigerFS |

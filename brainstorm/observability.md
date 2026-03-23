@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Leverage OpenClaw's native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). No extra observability infrastructure needed at launch. The control plane simply polls each gateway and aggregates.
+Leverage OpenClaw's native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). With [TigerFS](tigerfs.md), session data lives in TimescaleDB — enabling continuous aggregates for cross-user analytics without polling. Real-time data streams via WebSocket.
 
 ## What OpenClaw Tracks Out of the Box (Per Gateway)
 
@@ -54,67 +54,41 @@ OpenClaw already provides comprehensive per-message and per-session usage data:
 - `/usage full` — show tokens + cost per response
 - `/usage cost` — show local cost summary
 
-## Architecture: Simple Aggregation
+## Architecture: Two Data Paths
 
 ```mermaid
 graph TB
-    subgraph "User Gateways"
-        GW1["Gateway 1 (alice@co.com)\nTracks own usage natively"]
-        GW2["Gateway 2 (bob@gmail.com)\nTracks own usage natively"]
-        GW3["Gateway 3 (carol@io.com)\nTracks own usage natively"]
+    subgraph "Real-Time (live monitoring)"
+        GW["Gateway"] -->|WebSocket stream| CP["Control Plane"] -->|WebSocket| FE["Frontend"]
     end
 
-    subgraph "Control Plane"
-        POLLER["Usage Poller\n(scheduled, periodic)"]
-        STORE["Usage Store\n(keyed by user email)"]
-        API["Usage API"]
+    subgraph "Historical (analytics, billing)"
+        TSDB["TimescaleDB<br/>(session data via TigerFS)"]
+        CA["Continuous Aggregates<br/>(auto-refreshing)"]
+        TSDB --> CA
+        CA --> DASH["Operator Dashboard"]
+        CA --> BILL["Billing Service"]
+        CA --> UVIEW["User Usage View"]
     end
-
-    GW1 -->|"poll usage.cost\npoll sessions.usage"| POLLER
-    GW2 -->|"poll usage.cost\npoll sessions.usage"| POLLER
-    GW3 -->|"poll usage.cost\npoll sessions.usage"| POLLER
-
-    POLLER --> STORE
-    STORE --> API
-
-    API --> USER_VIEW["User View\n'Here is your usage'"]
-    API --> OPERATOR_VIEW["Operator View\n'All users usage'"]
-    API --> BILLING["Billing\nPer-user cost calculation"]
 ```
 
-## How It Works
+### Real-Time Path
+Live progress, token counts, task status → [WebSocket stream](https://docs.openclaw.ai/gateway/protocol) from gateway → control plane → frontend. No storage, no polling.
 
-### Collection
-1. Control plane runs a scheduled poller (e.g., every 5 minutes)
-2. For each **active** gateway, call `usage.cost` via [WebSocket API](https://docs.openclaw.ai/gateway/protocol)
-3. Store results keyed by user email + timestamp
-4. For deeper detail on demand, call `sessions.usage` or `sessions.usage.logs`
+### Historical Path
+Session transcripts written to TigerFS → stored in TimescaleDB → [continuous aggregates](https://docs.timescale.com/use-timescale/latest/continuous-aggregates/) auto-compute cross-user analytics:
+- Per-user: total tokens, cost, tasks completed, breakdown by day/model
+- Operator: all users aggregated, per-model usage, cost distribution
+- Billing: sum cost per user per billing period → Stripe
+
+Continuous aggregates refresh in the background as data changes. Always up to date, never stale. No polling gateways.
 
 ### User-Facing View
-- User asks "how much have I used?" → query the store filtered by their email
-- Or user asks their agent directly → `/usage full` already works natively in OpenClaw
-- Data: tokens consumed, estimated cost, tasks completed, breakdown by day
-
-### Operator-Facing View
-- Aggregate across all users: total tokens, total cost, active users, tasks/day
-- Per-user drill-down: who's using the most, cost distribution
-- Per-model: which models are being used, relative cost
+- User asks "how much have I used?" → query continuous aggregate filtered by email
+- Or user asks their agent directly → `/usage full` works natively in OpenClaw
 
 ### Billing Integration
-- Usage store has per-user cost in USD already calculated by OpenClaw
-- Billing service reads from usage store
-- Simple: sum cost per user per billing period → charge
-
-## What the Framework Doesn't Need (Yet)
-
-| Tool | Why Not Now |
-|---|---|
-| [Langfuse](https://langfuse.com/) | Rich tracing/eval — overkill for launch |
-| [OpenTelemetry](https://opentelemetry.io/) | Standard protocol — useful later for cross-system tracing |
-| [Helicone](https://www.helicone.ai/) | Proxy-based logging — unnecessary, OpenClaw already tracks everything |
-| Custom metrics pipeline | Over-engineering — polling gateway API is sufficient |
-
-These can be added later if needed (e.g., for prompt debugging, A/B testing models, quality evaluation). The gateway API provides everything needed for usage, billing, and basic observability at launch.
+Continuous aggregate computes per-user cost in USD → billing service reads it at billing time → charges via Stripe.
 
 ## Data Available Per User (Verbose)
 

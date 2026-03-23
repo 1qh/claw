@@ -1,64 +1,101 @@
-# Data Layer: [TimescaleDB](https://www.timescale.com/) + Workspace, No Overlap
+# Data Layer: [TimescaleDB](https://www.timescale.com/) + [TigerFS](tigerfs.md), No Overlap
 
-## Core Principle
+Every piece of data has exactly one source of truth. Nothing stored in two places.
 
-Every piece of data has exactly one source of truth. Nothing is stored in two places. Nothing can go stale.
+## Unified Storage via TigerFS
 
-## Two Storage Systems
+With [TigerFS](tigerfs.md), all data — shared and per-user — lives in TimescaleDB, accessed as files:
 
 ```mermaid
 graph TB
-    subgraph "TimescaleDB (shared — control plane owns)"
-        AUTH["Auth (better-auth)"]
-        ROUTE["User → gateway mapping\n(email, host, port, os_user)"]
-        BILL["Billing / subscription (Stripe)"]
-        CACHE["Shared cache\n(key-value, TTL, self-expiring)"]
-        INTEL["Crawled content + embeddings\n(pgvector + pgvectorscale, immutable)"]
-    end
+    subgraph "TimescaleDB via TigerFS (/mnt/tigerfs/)"
+        subgraph "Shared (control plane owns)"
+            AUTH["Auth (better-auth)"]
+            ROUTE["User → gateway mapping"]
+            BILL["Billing / subscription (Stripe)"]
+            CONFIG["config/ — SOUL.md, AGENTS.md"]
+            KNOW["knowledge/ — shared domain docs"]
+            CACHE["cache/ — TTL-based shared cache"]
+            INTEL["crawled/ — content + embeddings"]
+        end
 
-    subgraph "Workspace (per-user — agent owns)"
-        USER["USER.md — profile, preferences"]
-        MEM["MEMORY.md + memory/ — learned knowledge"]
-        SESS["sessions/ — task history (JSONL)"]
-        FILES["uploads/ — user files"]
+        subgraph "Per-User (agent owns)"
+            USER["users/email/USER.md"]
+            MEM["users/email/MEMORY.md + memory/"]
+            SESS["users/email/sessions/"]
+            FILES["users/email/uploads/"]
+        end
     end
 ```
-
-### What TimescaleDB Stores (Source of Truth)
-
-| Data | Why TimescaleDB | Stale? |
-|---|---|---|
-| Auth | [better-auth](https://www.better-auth.com/) manages it | No — it IS the source of truth |
-| User → gateway mapping | Control plane needs fast lookups | No — it IS the source of truth |
-| Billing/subscription | Stripe integration | No — it IS the source of truth |
-| Shared cache | Cross-user deduplication, TTL-based | No — expired rows self-invalidate |
-| Crawled content + embeddings | Concurrent access from all gateways, vector search | No — immutable once written |
 
 ### What TimescaleDB Does NOT Store
 
-| Data | Where Instead | Why Not TimescaleDB |
+| Data | Where Instead | Why |
 |---|---|---|
 | Gateway status | Check process live (`kill -0 <pid>`) | Stored status goes stale |
-| Usage data | Query gateway API on demand | Aggregates go stale |
-| User profile/preferences | `USER.md` in workspace | Agent owns this |
-| Agent memory | `MEMORY.md` + `memory/` in workspace | Agent owns this |
-| Task history | `sessions/` in workspace | Agent owns this |
-| User files | `uploads/` in workspace | Agent owns this |
+| Live usage/progress | [WebSocket stream](https://docs.openclaw.ai/gateway/protocol) from gateway → control plane → frontend | Real-time, no storage needed |
 
-## Real-Time Data
+Everything else is in TimescaleDB.
 
-For anything that needs to be monitored live (usage numbers, token counts, task progress):
+## TimescaleDB Capabilities We Leverage
 
-```mermaid
-graph LR
-    GW["Gateway\n(live data)"] -->|WebSocket| CP["Control Plane"] -->|WebSocket| FE["Frontend"]
-```
+### [Hypertables](https://docs.timescale.com/use-timescale/latest/hypertables/)
 
-No polling. No stored state. The [gateway event stream](https://docs.openclaw.ai/gateway/protocol) pipes through the control plane to the frontend in real-time. When the user closes the page, the stream stops. No stale data because there's no stored data.
+Auto-partitioned by time. Used for:
+- Session transcripts (time-series append-only logs)
+- Cached data with TTL (auto-partition by `created` timestamp)
+- Crawled pages (partitioned by `crawled_at`)
+- Usage events (if we ever store them)
+
+### [Compression](https://docs.timescale.com/use-timescale/latest/compression/)
+
+90%+ size reduction on older data. Millions of crawled pages and session transcripts compress dramatically. Storage cost drops by 10x for historical data.
+
+### [Continuous Aggregates](https://docs.timescale.com/use-timescale/latest/continuous-aggregates/)
+
+Auto-refreshing materialized views. Used for:
+- Usage analytics across all users (no polling gateways)
+- Cache hit rates
+- Task completion metrics
+- Any cross-user reporting the operator needs
+
+These refresh in the background as data changes — always up to date, no manual refresh.
+
+### [Real-Time Aggregates](https://docs.timescale.com/use-timescale/latest/continuous-aggregates/real-time-aggregates/)
+
+Continuous aggregates + latest raw data = always accurate. No stale aggregates, no eventual consistency. The operator dashboard shows real numbers.
+
+### [Background Jobs](https://docs.timescale.com/use-timescale/latest/user-defined-actions/)
+
+Built-in job scheduler inside the database:
+- Cache cleanup (delete expired TTL rows)
+- Workspace pruning (old sessions, temp files)
+- Compression scheduling (compress data older than N days)
+- No external cron needed for database maintenance
+
+### [pgai](https://github.com/timescale/pgai)
+
+Call embedding models from inside the database:
+- **Auto-vectorize** — embeddings generated automatically as data is written
+- **Auto-sync** — embeddings update when source data changes
+- **Batch processing** — handles model failures, rate limits, latency spikes
+- **Semantic Catalog** — natural language to SQL for agentic queries
+
+No separate embedding pipeline. Agent writes crawled content → pgai generates embeddings → vector search works immediately.
+
+### [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale)
+
+- pgvector: vector data type + HNSW search index
+- pgvectorscale: StreamingDiskANN index for billion-scale performance
+- Combined: semantic search, reranking, similarity matching at any scale
+
+### [100+ Hyperfunctions](https://docs.timescale.com/use-timescale/latest/hyperfunctions/)
+
+Time-series analysis built into SQL — percentiles, time buckets, interpolation, gap filling, statistical aggregates.
 
 ## Shared Cache
 
-[TimescaleDB](https://www.postgresql.org/) table with TTL:
+Hypertable with TTL, auto-cleaned by background job:
 
 ```sql
 CREATE TABLE cache (
@@ -68,54 +105,49 @@ CREATE TABLE cache (
     created TIMESTAMPTZ DEFAULT now()
 );
 
--- Auto-expire: periodic cleanup of expired rows
+-- Background job auto-deletes expired rows
 -- Reads: WHERE key = $1 AND ttl > now()
+-- Via TigerFS: cat /mnt/tigerfs/cache/.by/key/exchange-rate/.export/json
 ```
-
-Any form of cached data — strings, JSON, crawl results — stored as JSONB. TTL enforces freshness. Cross-user deduplication is just a cache hit.
 
 ## Shared Intelligence Layer
 
-Crawled content and embeddings using [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale):
+Crawled content with auto-generated embeddings via pgai:
 
 ```sql
 CREATE TABLE crawled_pages (
     url         TEXT PRIMARY KEY,
     content     TEXT,
-    embedding   vector(1536),
+    embedding   vector(1536),  -- auto-generated by pgai
     metadata    JSONB,
     crawled_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Vector search: semantic matching / reranking
--- Full-text search: TimescaleDB built-in FTS
--- Concurrent reads/writes: TimescaleDB handles natively
+-- pgai auto-generates embeddings when content is written
+-- Vector search: pgvectorscale DiskANN index
+-- Full-text search: TimescaleDB FTS
+-- Compression: older crawled data compressed 90%+
+-- Via TigerFS: cat /mnt/tigerfs/crawled/.by/url/example.com/.export/json
 ```
 
-- 50 users crawl overlapping websites → each URL stored once
-- Agent needs semantic search → pgvector similarity query
-- Agent needs full-text filter → TimescaleDB FTS
-- Millions of pages over time → pgvectorscale (DiskANN) for performance
+## What Changed With Full TimescaleDB + TigerFS
 
-## Host Layout
+| Before | After |
+|---|---|
+| Poll gateways for usage data | Continuous aggregates auto-compute |
+| Separate embedding pipeline | pgai auto-generates embeddings on write |
+| System cron for cache cleanup | Background jobs inside the database |
+| Usage aggregates go stale | Real-time aggregates — always fresh |
+| Session transcripts grow unbounded | Hypertable compression — 90%+ reduction |
+| Manual embedding regeneration | pgai Vectorizer — auto-syncs on data change |
+| Separate storage for time-series data | Hypertables — native time partitioning |
 
-```
-One Linux VM:
-  ├── Control plane          (1 Bun process)
-  ├── TimescaleDB            (1 system service)
-  ├── ClamAV daemon          (1 system service)
-  ├── Shared config dir      (/shared-config/, git-synced)
-  ├── User gateway processes  (N OpenClaw processes)
-  └── User workspace dirs    (/data/oc-<user>/, git-backed)
-```
-
-## Scaling TimescaleDB
-
-When the host can't handle the database load alongside gateways:
+## Scaling
 
 | Scale | Strategy |
 |---|---|
 | 0-500 users | TimescaleDB on same host |
 | 500+ users | Move TimescaleDB to dedicated host |
-| Large crawl data | pgvectorscale DiskANN index for performance |
+| Large crawl data | pgvectorscale DiskANN + compression |
 | Multi-host | All hosts connect to single TimescaleDB instance |
+| Massive scale | TimescaleDB Cloud with automatic scaling |
