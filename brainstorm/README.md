@@ -1,4 +1,4 @@
-# Agent-Native SaaS Framework — Built on OpenClaw
+# Uniclaw — Agent-Native SaaS Framework Built on OpenClaw
 
 ## Motivation
 
@@ -30,3 +30,6 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Maintenance**](maintenance.md) — OpenClaw updates, workspace cleanup, host ops
 - [**TigerFS**](tigerfs.md) — mount TimescaleDB as filesystem, unify all storage into one system
 - [**Stack Capabilities**](stack-capabilities.md) — exhaustive inventory of every feature in every tool we use
+- [**Scaling**](scaling.md) — multi-host orchestration with Nomad, 10K users target
+- [**Boundaries**](boundaries.md) — what uniclaw is and is NOT good for
+- [**Deployer Experience**](deployer-experience.md) — template repo, frontend hooks, what deployers configure vs what's pre-built
