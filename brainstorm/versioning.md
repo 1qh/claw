@@ -50,19 +50,7 @@ sequenceDiagram
     Note over GW: OpenClaw detects file change → hot-reload
 ```
 
-### Why This Is Optimal
-
-| Property | |
-|---|---|
-| **Write operations** | One (to the shared config directory) |
-| **Fan-out** | Zero (filesystem handles distribution) |
-| **Per-gateway work** | Zero (no sync, no pull, no webhook handler) |
-| **Latency** | Near-instant (filesystem write) |
-| **Polling** | None |
-| **Restart required** | No (OpenClaw hot-reloads on file change) |
-| **Version control** | Git history |
-| **Rollback** | Git revert → sync → all gateways rolled back |
-| **Scales with gateways** | Adding gateways just means another process reading the directory |
+Properties: zero fan-out, zero per-gateway work, no restart (hot-reload), rollback via git revert.
 
 ### Workspace Layout Per Gateway
 
@@ -82,7 +70,7 @@ sequenceDiagram
 
 ### Stopped Gateways
 
-Stopped gateway processes don't need updating — they're not running. When they start and read the shared config directory, they automatically get the latest version. No special handling.
+Get the latest version automatically when they start.
 
 ### Alternatives Considered and Rejected
 

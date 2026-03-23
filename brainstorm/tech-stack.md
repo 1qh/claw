@@ -20,10 +20,10 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 ## Auth & Billing
 
-| Choice | Role |
-|---|---|
-| [better-auth](https://www.better-auth.com/) | Authentication |
-| Stripe | Billing |
+| Choice |
+|---|
+| [better-auth](https://www.better-auth.com/) |
+| Stripe |
 
 ## Security
 

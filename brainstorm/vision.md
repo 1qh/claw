@@ -2,13 +2,9 @@
 
 ## The Core Insight
 
-Traditional SaaS forces users to **operate machines** — click buttons, fill forms, navigate dashboards, configure settings. But for a category of SaaS where users only care about **outcomes**, all that UI is friction, not value.
+For a category of SaaS where users only care about **outcomes**, all UI is friction. The product IS the agent.
 
-## The Vision
-
-A deployed product where **the product IS the agent**. No dashboards. No complex UIs. No learning curve.
-
-Users don't care about the process. They care about the output/outcome. They want to:
+Users want to:
 
 1. **Fire** — describe what they want
 2. **Forget** — walk away
@@ -16,51 +12,23 @@ Users don't care about the process. They care about the output/outcome. They wan
 4. **Receive** — get notified when the task is done
 5. **Review** — check the outcome, accept or request changes
 
-## Traditional SaaS vs Agent-Native SaaS
-
-```mermaid
-graph LR
-    subgraph Traditional SaaS
-        A[User] --> B[Login to Dashboard]
-        B --> C[Navigate Complex UI]
-        C --> D[Fill Forms / Configure]
-        D --> E[Click Run / Submit]
-        E --> F[Monitor Progress]
-        F --> G[Download/View Result]
-    end
-```
-
-```mermaid
-graph LR
-    subgraph Agent-Native SaaS
-        A[User] --> B[Send Message]
-        B --> C["Agent: Got it, working on it"]
-        C --> D[User walks away]
-        D --> E[Notification: Done]
-        E --> F[Review Outcome]
-    end
-```
-
-## The Entire UX Surface
+## UX Surfaces
 
 Four surfaces, all through the web app:
 
-| Surface | Purpose | Nature |
-|---------|---------|--------|
-| **Chat** | Submit tasks, receive results | Conversational interface |
-| **Live Feed** | Readonly logs/progress from agents | Security camera model — glanceable, not interactive |
-| **Notifications** | "Your task is done" | Alerts when tasks complete |
-| **Usage / History** | Token usage, cost, past tasks | Queryable via agent or UI |
+| Surface | Purpose |
+|---------|---------|
+| **Chat** | Submit tasks, receive results |
+| **Live Feed** | Readonly agent progress (security camera model) |
+| **Notifications** | Task completion alerts |
+| **Usage / History** | Token usage, cost, past tasks |
 
-No settings page. No onboarding wizard. No navigation. No learning curve.
+## Why the Live Feed Matters
 
-## Why This Works
-
-The "security camera" live feed model is critical for **trust calibration**:
-- First few times, users watch closely
-- Once they see consistent delivery, they stop watching
+The "security camera" model enables **trust calibration**:
+- Users watch closely at first, then stop once they see consistent delivery
 - The feed exists so users can **choose** to trust, not be **forced** to trust
-- Solves the "black box anxiety" of AI products ("Is it working? Did it understand? Is it stuck?")
+- Solves "black box anxiety" ("Is it working? Is it stuck?")
 
 ## Product Differentiation
 

@@ -1,8 +1,6 @@
 # Data Layer: [TimescaleDB](https://www.timescale.com/) + Workspace, No Overlap
 
-## Core Principle
-
-Every piece of data has exactly one source of truth. Nothing is stored in two places. Nothing can go stale.
+Every piece of data has exactly one source of truth. Nothing stored in two places.
 
 ## Two Storage Systems
 
@@ -26,13 +24,13 @@ graph TB
 
 ### What TimescaleDB Stores (Source of Truth)
 
-| Data | Why TimescaleDB | Stale? |
-|---|---|---|
-| Auth | [better-auth](https://www.better-auth.com/) manages it | No — it IS the source of truth |
-| User → gateway mapping | Control plane needs fast lookups | No — it IS the source of truth |
-| Billing/subscription | Stripe integration | No — it IS the source of truth |
-| Shared cache | Cross-user deduplication, TTL-based | No — expired rows self-invalidate |
-| Crawled content + embeddings | Concurrent access from all gateways, vector search | No — immutable once written |
+| Data | Why TimescaleDB |
+|---|---|
+| Auth | [better-auth](https://www.better-auth.com/) manages it |
+| User → gateway mapping | Control plane needs fast lookups |
+| Billing/subscription | Stripe integration |
+| Shared cache | Cross-user deduplication, TTL-based, self-expiring |
+| Crawled content + embeddings | Concurrent access from all gateways, vector search, immutable |
 
 ### What TimescaleDB Does NOT Store
 
@@ -54,7 +52,7 @@ graph LR
     GW["Gateway\n(live data)"] -->|WebSocket| CP["Control Plane"] -->|WebSocket| FE["Frontend"]
 ```
 
-No polling. No stored state. The [gateway event stream](https://docs.openclaw.ai/gateway/protocol) pipes through the control plane to the frontend in real-time. When the user closes the page, the stream stops. No stale data because there's no stored data.
+The [gateway event stream](https://docs.openclaw.ai/gateway/protocol) pipes through the control plane to the frontend in real-time. No polling, no stored state.
 
 ## Shared Cache
 
@@ -72,7 +70,7 @@ CREATE TABLE cache (
 -- Reads: WHERE key = $1 AND ttl > now()
 ```
 
-Any form of cached data — strings, JSON, crawl results — stored as JSONB. TTL enforces freshness. Cross-user deduplication is just a cache hit.
+JSONB values with TTL. Cross-user deduplication is just a cache hit.
 
 ## Shared Intelligence Layer
 
@@ -96,18 +94,6 @@ CREATE TABLE crawled_pages (
 - Agent needs semantic search → pgvector similarity query
 - Agent needs full-text filter → TimescaleDB FTS
 - Millions of pages over time → pgvectorscale (DiskANN) for performance
-
-## Host Layout
-
-```
-One Linux VM:
-  ├── Control plane          (1 Bun process)
-  ├── TimescaleDB            (1 system service)
-  ├── ClamAV daemon          (1 system service)
-  ├── Shared config dir      (/shared-config/, git-synced)
-  ├── User gateway processes  (N OpenClaw processes)
-  └── User workspace dirs    (/data/oc-<user>/, git-backed)
-```
 
 ## Scaling TimescaleDB
 

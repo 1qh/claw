@@ -10,15 +10,12 @@ email (primary key)
     → web app frontend (single channel, user interacts through the deployed instance)
 ```
 
-## What Email Gives Us for Free
+## Why Email
 
-| Benefit | Why |
-|---|---|
-| **Auth identity** | Google/Microsoft/GitHub OAuth all return email |
-| **Gateway routing** | Email maps deterministically to host, port, OS user |
-| **Fallback notifications** | Email itself is a delivery channel |
-| **Deterministic gateway naming** | Hash email → OS user + port, no lookup needed |
-| **Human readable** | Admin sees `alice@company.com` in logs, not a UUID |
+- OAuth providers all return it
+- Deterministic mapping: hash email → OS user + port
+- Fallback notification channel
+- Human readable in logs
 
 ## Control Plane Data Model
 
@@ -54,14 +51,11 @@ graph LR
     B -->|"agent builds on top over time"| B
 ```
 
-The two stay in sync naturally:
-- Control plane provisions gateway with email at creation
-- Agent builds the full user profile on top through conversation
-- No sync mechanism needed — email is set once, everything else grows organically
+Email is set once at provisioning; everything else grows organically through conversation.
 
-## Simplicity Constraints
+## Constraints
 
-- 1 email per user (no multi-email)
+- 1 email per user
 - No shared/team accounts (for now)
 - No org hierarchy (for now)
 

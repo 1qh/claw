@@ -2,7 +2,7 @@
 
 ## The Problem
 
-Multiple users = multiple concurrent LLM calls. A single API key per provider will hit rate limits fast. Deployers need multiple keys per provider, distributed across all gateways.
+A single API key per provider hits rate limits fast with multiple concurrent users.
 
 ## How OpenClaw Solves This Natively
 
@@ -33,7 +33,7 @@ graph TB
     AP -->|read by| GW1 & GW2 & GW3 & GW4
 ```
 
-All gateways read the same `auth-profiles.json` from the shared config directory. Each gateway independently selects and rotates keys. No coordination needed — OpenClaw handles it.
+All gateways read the same `auth-profiles.json`. Each independently selects and rotates keys.
 
 ## Deployer Setup
 
@@ -52,7 +52,7 @@ Add keys to one file in the shared config:
 }
 ```
 
-Push to the config repo → all gateways pick it up → done.
+Push to the config repo → all gateways pick it up.
 
 ## Cost Optimization: Coding Plans
 
@@ -70,11 +70,11 @@ Keys needed = peak concurrent requests per minute / provider rate limit per key 
 | Example: 30 req/min/key | 30 | 200 | 7 |
 | Example: 120 req/min/key | 120 | 200 | 2 |
 
-Deployer buys enough subscriptions to cover their user base. The framework distributes load automatically.
+The framework distributes load automatically.
 
 ## Multi-Provider Strategy
 
-Deployers can mix providers and OpenClaw handles failover:
+Mix providers with automatic failover:
 
 ```json
 {
@@ -92,4 +92,4 @@ Deployers can mix providers and OpenClaw handles failover:
 - Primary: cheap provider with coding plans (high volume)
 - Fallbacks: premium providers (better quality, used only when primary exhausted)
 
-All keys for all providers in one `auth-profiles.json`. OpenClaw rotates within a provider first, then falls back to the next provider. Zero custom code.
+OpenClaw rotates within a provider first, then falls back to the next provider.

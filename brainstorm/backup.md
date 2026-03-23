@@ -1,8 +1,6 @@
 # Backup & Disaster Recovery: Git-Based Workspace Backup
 
-## Core Principle
-
-Each user's workspace is a git repo. Auto-commit and push to GitHub daily. Free, version-controlled, rollbackable.
+Each user's workspace is a git repo. Auto-commit and push to GitHub daily.
 
 ## How It Works
 
@@ -36,11 +34,9 @@ graph LR
 
 ## Why GitHub
 
-- **Free** — unlimited private repos on free plan
-- **Version history** — full git log of every change, diffable
-- **Rollback** — restore to any point in time with `git checkout`
-- **Disaster recovery** — workspace lost? `git clone` and the workspace is back
-- **No extra infrastructure** — no snapshot service, no S3, no backup jobs to manage
+- Free unlimited private repos
+- Full version history, diffable, rollbackable
+- Disaster recovery: `git clone` restores everything
 
 ## Rate Limits (Not a Problem)
 
@@ -53,13 +49,11 @@ GitHub allows 500 content-generating requests per hour. Daily pushes:
 | 5,000 | 5,000 | ~208 | Yes |
 | 10,000 | 10,000 | ~417 | Yes |
 
-Even at 10,000 users with daily pushes, well within limits. Stagger push times across the day for safety.
+Even at 10,000 users with daily pushes, well within limits.
 
 ## Storage Limits
 
-GitHub recommends repos under 1GB, hard limit at 5GB. File uploads capped at 100MB per file.
-
-For workspace files (markdown, JSONL, small uploads), 1GB per user is plenty. The file validation gate enforces upload size limits, so this is controlled.
+GitHub: repos under 1GB recommended, 5GB hard limit, 100MB per file. Workspace files (markdown, JSONL, small uploads) fit easily.
 
 ## Recovery Flow
 
@@ -82,8 +76,7 @@ sequenceDiagram
 ## Worst Case Data Loss
 
 - Daily push at midnight → workspace lost at 11pm → lose ~23 hours of work
-- Acceptable tradeoff for early-stage deployments — free backup with no infrastructure
-- If needed later, increase push frequency (every 6h, every hour) while staying within rate limits
+- Increase push frequency later if needed (every 6h, every hour) while staying within rate limits
 
 ## Scaling Beyond GitHub
 

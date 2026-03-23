@@ -2,11 +2,9 @@
 
 ## Motivation
 
-Most SaaS products force users to operate machines — dashboards, forms, settings, navigation. But for a category of SaaS where users only care about outcomes, all that UI is friction.
+An **open source framework** for building agent-native SaaS where the product IS the agent. Users fire a task, walk away, get notified when done.
 
-This is an **open source framework** for building agent-native SaaS products where the product IS the agent. Users fire a task, walk away, and come back when notified. No dashboard to learn. No settings to configure. No process to follow. Just outcomes.
-
-[OpenClaw](https://openclaw.ai) provides the agent runtime, memory, scheduling, file handling, and usage tracking out of the box. The framework wraps it in a thin control plane that handles auth, routing, security, and billing — eliminating the need for traditional backend infrastructure (databases, queues, file storage, search, etc.). Deployers use this framework to build and ship their own agent-native SaaS for any domain.
+[OpenClaw](https://openclaw.ai) provides the agent runtime, memory, scheduling, file handling, and usage tracking. The framework wraps it in a thin control plane (auth, routing, security, billing) — eliminating traditional backend infrastructure. Deployers use this to ship agent-native SaaS for any domain.
 
 ## Table of Contents
 

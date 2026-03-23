@@ -1,8 +1,6 @@
 # Feedback: Ratings, Redo, and Agent Learning
 
-## Core Principle
-
-The conversation IS the feedback mechanism. The memory system IS the learning mechanism. Minimal UI, maximum signal.
+The conversation IS the feedback mechanism. The memory system IS the learning mechanism.
 
 ## UX When a Result Arrives
 
@@ -85,9 +83,7 @@ sequenceDiagram
     GW->>GW: Agent updates MEMORY.md:<br/>"User prefers chart-heavy reports"
 ```
 
-**Why not batch or defer?** The token cost of processing a rating (~500 tokens) is negligible compared to the task that produced the result (50,000+ tokens). It's a rounding error. Keep it simple — just send it.
-
-**Why positive ratings matter:** If the agent knows "user loved the chart format," it reinforces that behavior. Without the signal, the agent might change approach for no reason. OpenClaw's [memory](https://docs.openclaw.ai/concepts/memory) system is designed for this — writing durable facts like "user prefers chart-heavy reports (rated positively 3 times)."
+Rating cost (~500 tokens) is negligible vs the task (50,000+ tokens). Positive ratings reinforce behavior via OpenClaw's [memory](https://docs.openclaw.ai/concepts/memory) system.
 
 ## Multiple Redos
 
@@ -119,7 +115,6 @@ The agent is instructed (via `AGENTS.md`) to look for patterns across feedback:
 | User always redoes executive summaries | Update `MEMORY.md`: "Summaries need extra care for this user" |
 | User never uses Redo | No action — agent is performing well |
 
-No analytics system needed. The agent learns through its own memory, informed by direct feedback.
 
 ## What the Agent Notices (Summary)
 

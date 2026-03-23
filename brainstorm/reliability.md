@@ -1,8 +1,6 @@
 # Reliability: Auto-Recovery Without Formal SLA
 
-## Core Principle
-
-No formal SLA required at launch. No on-call rotation. No status page. Things auto-heal, and the deployer gets notified when they don't.
+Things auto-heal; the deployer gets notified when they don't.
 
 ## What Auto-Recovery Covers
 
@@ -25,10 +23,7 @@ graph LR
     PM -->|all checks| ALERT[Alert Operator on Repeated Failures]
 ```
 
-Each gateway exposes a health endpoint. The process manager pings it periodically:
-- Responds healthy → no action
-- No response within timeout → restart the process
-- Fails 3+ times in a row → alert the operator
+Health endpoint per gateway. No response within timeout → restart. 3+ consecutive failures → alert operator.
 
 ## What the Framework Doesn't Include (Yet)
 
@@ -40,4 +35,3 @@ Each gateway exposes a health endpoint. The process manager pings it periodicall
 | Multi-region redundancy | One host (or a few) is sufficient |
 | Automated failover across hosts | Add when multi-host becomes necessary |
 
-These are all "good problems to have" — they mean the deployed product is growing.
