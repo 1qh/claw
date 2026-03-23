@@ -28,7 +28,9 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | Choice | Role |
 |---|---|
 | [better-auth](https://www.better-auth.com/) | Authentication |
-| Stripe | Billing |
+| Stripe | Billing (deployer-integrated, see note below) |
+
+> **Note:** Stripe is in the stack for deployers to integrate. The framework exposes per-user usage data via continuous aggregates; billing implementation (Stripe setup, subscriptions, webhooks) is the deployer's responsibility, not part of the framework MVP.
 
 ## Security
 

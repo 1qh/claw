@@ -98,7 +98,8 @@ Define the core TimescaleDB schema via Drizzle with RLS policies.
 ```mermaid
 erDiagram
     users {
-        text email PK
+        uuid id PK
+        text email UNIQUE
         text name
         timestamptz created_at
         timestamptz last_active_at
@@ -115,7 +116,7 @@ erDiagram
     }
 
     user_gateway {
-        text email FK
+        uuid user_id FK
         text gateway_id FK
         text agent_id
         text workspace_path
@@ -180,7 +181,7 @@ graph LR
         HEALTH["/health"]
         WS["WebSocket /ws"]
         CORS["CORS middleware"]
-        HELMET["Helmet middleware"]
+        HELMET["Security Headers middleware"]
     end
 
     CLIENT["Browser / Test"] --> CORS --> HEALTH
@@ -190,7 +191,7 @@ graph LR
 ```
 
 1. Create Elysia server in `packages/control-plane/`
-2. Add plugins: CORS, Helmet
+2. Add plugins: CORS, security headers. Set security headers manually in Elysia middleware (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, X-XSS-Protection) or use a community plugin like `elysia-helmet` if available. Elysia does not have an official Helmet plugin
 3. Add `/health` endpoint returning server status
 4. Add WebSocket endpoint `/ws` — accept connections, echo messages (placeholder for gateway proxy)
 5. Export server type for Eden Treaty (frontend type safety)

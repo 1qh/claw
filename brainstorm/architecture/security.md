@@ -280,6 +280,8 @@ Deployers can relax these for their use case, but the defaults are secure.
 
 RLS only works if each gateway connects with a distinct PostgreSQL role. A single shared credential makes RLS meaningless — all gateways would see all rows. The control plane should create per-gateway roles and configure each gateway's TigerFS mount with its scoped role.
 
+Each gateway process starts TigerFS with a connection string using its gateway-specific PostgreSQL role. This means each gateway has its own TigerFS mount point (e.g., `/mnt/tigerfs/gw-{gateway_id}/`). The control plane provisions the role and mount at gateway creation time.
+
 ### FUSE Mount Bypasses RLS
 
 TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS only protects SQL-level access. If a process escapes OpenClaw's path boundary checks, it can read any file on the mount. Mitigation: restrict FUSE mount permissions to the gateway user group, and ensure exec is denied by default.

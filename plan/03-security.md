@@ -278,7 +278,7 @@ Prevent runaway LLM costs from a single user exhausting the deployer's budget.
 ### Steps
 1. Per-user token/cost quota per billing period. If a user exceeds their token budget, tasks are queued or rejected until the next period
 2. Default quota configurable by deployer
-3. Quota enforcement checks the `usage_events` continuous aggregates before forwarding a task to the gateway
+3. Quota enforcement uses in-memory counters per user, tracked by the control plane from WebSocket gateway events (token usage reported in `chat` final events). No database dependency — counters are maintained in the control plane process and reset each billing period. On control plane restart, counters reset to zero (conservative: users get a fresh allowance). In Phase 6, continuous aggregates over `usage_events` can replace in-memory counters for persistent, accurate tracking across restarts
 
 ### Verification Checklist
 - [ ] Per-user token quota enforced per billing period

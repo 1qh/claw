@@ -303,6 +303,8 @@ The two stay in sync naturally:
 
 Filesystem paths use email as the folder name: `/mnt/tigerfs/users/alice@company.com/`. Email is the universal key — consistent across auth, routing, and storage.
 
+Email addresses are URL-encoded when used in filesystem paths (e.g., `user+tag@domain.com` becomes `user%2Btag%40domain.com`). This avoids shell and filesystem issues with special characters.
+
 ## Simplicity Constraints
 
 - 1 email per user (no multi-email)

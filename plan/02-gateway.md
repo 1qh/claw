@@ -172,7 +172,7 @@ Allow the agent to request clarification from the user mid-task, using the exec 
    - The control plane intercepts this event and forwards a clarification prompt to the frontend via WebSocket
 2. Frontend displays the clarification prompt to the user (interactive prompt UI implemented in Phase 4)
 3. User's response is sent back through the WebSocket proxy to the gateway, which provides it as the tool result
-4. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the control plane recognizes `request_clarification` as a special case requiring user input rather than auto-approval
+4. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the control plane recognizes `request_clarification` as a special case requiring user input rather than auto-approval. The control plane inspects the tool name in the exec approval event. If the tool name is `request_clarification`, it routes to the frontend as a clarification prompt. All other exec approvals are handled normally (auto-approved or denied based on tool policy)
 5. Write tests: agent requests clarification, user responds, agent continues with the answer
 
 ### External References
@@ -320,7 +320,7 @@ sequenceDiagram
     CP->>BA: Create account
     BA->>DB: User record
     CP->>DB: Assign to gateway
-    CP->>GW: Create agent (agents.add)
+    CP->>GW: Create agent (agents.create)
 
     User->>CP: WebSocket connect (auth)
     CP->>GW: Proxy WebSocket
