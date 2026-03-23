@@ -234,7 +234,11 @@ Shell commands bypass OpenClaw's file boundary checks. A command like `cat /othe
 - Security gate blocks prompt injection before OpenClaw
 
 ### memory-timescaledb Plugin — Our responsibility
-Shared pgvector table in TimescaleDB. Every query MUST scope by agent_id. The RLS policy allows access to the agent's own rows AND rows with `agent_id = '__shared__'` (shared knowledge). Policy: `USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')`. The table schema enforces this:
+Shared pgvector table in TimescaleDB. Every query MUST scope by agent_id. The RLS policy allows access to the agent's own rows AND rows with `agent_id = '__shared__'` (shared knowledge).
+
+**How `app.agent_id` is set:** The `memory-timescaledb` plugin calls `SET LOCAL app.agent_id = '<agent_id>'` at the start of every transaction before issuing any query. `SET LOCAL` scopes the setting to the current transaction only, so it works correctly with connection pooling. The database must have a default: `ALTER DATABASE uniclaw SET app.agent_id = '__none__'` — this ensures unset sessions get no data (RLS blocks `__none__` since no rows have that agent_id).
+
+The table schema enforces this:
 
 ```sql
 CREATE TABLE memory_chunks (
@@ -283,11 +287,25 @@ Deployers can relax these for their use case, but the defaults are secure.
 
 RLS only works if each gateway connects with a distinct PostgreSQL role. A single shared credential makes RLS meaningless — all gateways would see all rows. The control plane should create per-gateway roles and configure each gateway's TigerFS mount with its scoped role.
 
-Each gateway process starts TigerFS with a connection string using its gateway-specific PostgreSQL role. This means each gateway has its own TigerFS mount point (e.g., `/mnt/tigerfs/gw-{gateway_id}/`). The control plane provisions the role and mount at gateway creation time.
+Each gateway process connects to TimescaleDB using its gateway-specific PostgreSQL role. There are two mount strategies:
+
+- **Single shared mount (simpler, default):** One TigerFS mount at `/mnt/tigerfs/` per host. All gateways on the host share it. RLS is enforced at the SQL level only (for `memory_chunks` and `usage_events`). FUSE-level file access relies on OpenClaw's path boundary enforcement for isolation. This is the strategy used throughout the architecture and plan docs.
+- **Per-gateway mounts (stronger isolation):** Each gateway gets its own TigerFS mount scoped to its PostgreSQL role. More secure but adds mount management complexity. Consider for high-security deployments.
+
+The default is the single shared mount — it matches the architecture described in all other docs and provides sufficient isolation via OpenClaw's path boundaries + RLS on SQL queries.
 
 ### FUSE Mount Bypasses RLS
 
-TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS only protects SQL-level access. If a process escapes OpenClaw's path boundary checks, it can read any file on the mount. Mitigation: restrict FUSE mount permissions to the gateway user group, and ensure exec is denied by default.
+TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS only protects SQL-level access. Two attack vectors:
+
+1. **Process escape:** If a process escapes OpenClaw's path boundary checks (e.g., via a `bunx`-executed CLI that reads arbitrary paths), it can access other users' files on the mount.
+2. **Legitimate user request:** A user could ask their agent "read the file at /mnt/tigerfs/users/other@email.com/USER.md" — the security gate (Layer 4) would not catch this because it's a plausible in-scope file operation.
+
+**Mitigations (layered):**
+- **OpenClaw path boundaries** (`isPathInside()`) restrict read/write to the agent's own workspace. The agent's workspace root is set per-agent — requests for paths outside it are rejected at the tool level (verified in isolation audit above).
+- **Per-gateway TigerFS mounts** scope the FUSE mount to only the gateway's agents' data, so even a process escape can't see other gateways' users. However, users on the SAME gateway (10-20) share the mount — cross-agent isolation within a gateway depends entirely on OpenClaw's path boundary enforcement.
+- **`safeBins: ["bunx"]`** restricts exec to only `bunx`. The `bunx`-executed CLI runs as a child process inheriting the gateway's filesystem access. CLIs should NOT accept arbitrary file paths from the agent — deployers must design CLIs to read from their own data sources, not from workspace paths.
+- **Security gate Layer 4** can be configured to block requests mentioning other users' paths or identifiers. Deployers should include path-related restrictions in their domain scope classifier prompt.
 
 ### Output Validation
 
