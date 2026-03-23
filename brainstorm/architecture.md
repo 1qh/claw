@@ -53,7 +53,7 @@ graph TB
     ROUTER --> PM
     PM --> GW1 & GW2 & GW3
     METER -.->|reads usage from disk| WS1 & WS2 & WS3
-    SHARED -.->|mounted read-only| GW1 & GW2 & GW3
+    SHARED -.->|read by| GW1 & GW2 & GW3
 ```
 
 ## How OpenClaw Supports This Natively
@@ -178,7 +178,7 @@ When a host fills up, add another VM and assign new users to it. The routing log
 ```mermaid
 graph TB
     subgraph "Control Plane State (minimal)"
-        DB["Lookup Table<br/>email → host, port, OS user,<br/>status, created_at, last_active_at"]
+        DB["Lookup Table<br/>email → host, port, OS user,<br/>workspace_dir, status, created_at, last_active_at"]
     end
 
     subgraph "Shared Config (read-only, all gateways)"

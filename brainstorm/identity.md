@@ -30,7 +30,7 @@ email (PK) → {
     port            // gateway process port
     os_user         // dedicated OS user (e.g., oc-<hash>)
     workspace_dir   // workspace directory path
-    status          // active | stopped | provisioning
+    status          // active | idle | stopped | provisioning
     created_at
     last_active_at
 }
