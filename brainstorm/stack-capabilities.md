@@ -275,6 +275,7 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 | Core (HTTP + WebSocket) | Control plane server — routing, validation, WebSocket proxy to gateways |
 | [Eden Treaty](https://elysiajs.com/eden/overview) | Type-safe frontend client — types inferred from server, no API contracts, no codegen, 2KB |
 | CORS plugin | Frontend-to-control-plane communication |
+| Helmet plugin | HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) |
 
 ---
 
