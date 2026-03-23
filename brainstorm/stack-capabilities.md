@@ -273,21 +273,14 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 ### Runtime APIs
 | API | What |
 |---|---|
-| `Bun.serve()` | HTTP/WebSocket server with routing, TLS, cookies, CSRF |
-| `Bun.s3()` | Native S3-compatible object storage bindings (if needed later) |
+| `Bun.serve()` | HTTP/WebSocket server with routing, TLS, cookies |
 | `Bun.shell()` | Shell scripting API — run commands programmatically |
 | `Bun.spawn()` / `Bun.spawnSync()` | Child process management with IPC |
 | `Bun.file()` / `Bun.write()` | File I/O with MIME detection |
-| `Bun.glob()` | Native fast file globbing |
 | `Bun.tar()` / `Bun.untarStream()` | Archive creation/extraction |
-| `Bun.cron()` | Built-in cron scheduling |
-| `Bun.dns()` | DNS resolution |
-| `Bun.generateCSRFToken()` | CSRF protection |
 | `Bun.gzip()` / `Bun.deflate()` | Compression/decompression |
 | `HTMLRewriter` | Transform HTML with CSS selectors (web crawling) |
-| Native SQLite | Built-in high-performance SQLite3 |
 | JSONL parser | Streaming newline-delimited JSON |
-| Secrets API | Secure credential storage |
 | Workers API | Multi-threaded JavaScript |
 
 ### Data Format Support (Built-in imports)
@@ -412,7 +405,7 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Read replicas | Drizzle built-in |
 | LLM call debugging | AI SDK DevTools |
 | Reranking search results | AI SDK `rerank()` |
-| Embedding generation | AI SDK `embed()` / pgai |
+| Embedding generation | pgai (auto-generates inside database) |
 | Structured LLM output | AI SDK `generateObject()` + Zod |
 | Observability upgrade path | AI SDK OpenTelemetry |
 | MCP client | AI SDK `createMCPClient()` |
@@ -424,9 +417,7 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Version history | TigerFS `.history/` |
 | Backup | `pg_dump` |
 | HTTP/WebSocket server | `Bun.serve()` |
-| Cron scheduling (control plane) | `Bun.cron()` |
 | Process management | `Bun.spawn()` + `Bun.shell()` |
-| File globbing | `Bun.glob()` |
 | JSONL parsing (session transcripts) | Bun native JSONL |
 | HTML transformation (crawling) | `HTMLRewriter` |
 | Archive creation (data export) | `Bun.tar()` |
