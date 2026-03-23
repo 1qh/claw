@@ -274,9 +274,7 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 | API | What |
 |---|---|
 | `Bun.serve()` | HTTP/WebSocket server with routing, TLS, cookies, CSRF |
-| `Bun.sql()` | Native PostgreSQL/MySQL/SQLite client (Promise-based) |
-| `Bun.s3()` | Native S3-compatible object storage bindings |
-| `Bun.redis()` | Native Redis client |
+| `Bun.s3()` | Native S3-compatible object storage bindings (if needed later) |
 | `Bun.shell()` | Shell scripting API — run commands programmatically |
 | `Bun.spawn()` / `Bun.spawnSync()` | Child process management with IPC |
 | `Bun.file()` / `Bun.write()` | File I/O with MIME detection |
@@ -427,7 +425,6 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Version history | TigerFS `.history/` |
 | Backup | `pg_dump` |
 | HTTP/WebSocket server | `Bun.serve()` |
-| PostgreSQL client | `Bun.sql()` |
 | Cron scheduling (control plane) | `Bun.cron()` |
 | Process management | `Bun.spawn()` + `Bun.shell()` |
 | Password hashing | `Bun.password.hash()` |
