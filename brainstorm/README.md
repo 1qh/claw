@@ -23,3 +23,4 @@ This project explores building a SaaS where the product IS the agent. Users fire
 - [**Backup**](backup.md) — git-based daily workspace backup to GitHub
 - [**Feedback**](feedback.md) — ratings, redo mechanism, and agent learning
 - [**Reliability**](reliability.md) — auto-recovery, health checks, no formal SLA at launch
+- [**Agent-Native Paradigm**](agent-native.md) — CLIs as backend, knowledge as files, instructions as markdown, bun as runtime
