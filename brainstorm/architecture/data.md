@@ -221,7 +221,6 @@ Everything else is in TimescaleDB.
 
 Auto-partitioned by time. Used for:
 - Session transcripts (time-series append-only logs)
-- Cached data with TTL (auto-partition by `created` timestamp)
 - Crawled pages (partitioned by `crawled_at`)
 - Usage events (if we ever store them)
 
@@ -273,7 +272,7 @@ Time-series analysis built into SQL — percentiles, time buckets, interpolation
 
 ## Shared Cache
 
-Hypertable with TTL, auto-cleaned by background job:
+Regular table with TTL, auto-cleaned by background job. Cache lookups are by key (not time-range queries), so hypertable partitioning adds no benefit — a regular table with a TTL background job is sufficient:
 
 ```sql
 CREATE TABLE cache (

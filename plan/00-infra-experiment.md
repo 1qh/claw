@@ -37,6 +37,9 @@ All environment variables needed across the system. Set these before Phase 1.
 | `GITHUB_CLIENT_SECRET` | OAuth provider client secret | (from GitHub) |
 | `CLAMAV_URL` | ClamAV REST API endpoint | `http://localhost:3310` |
 | `TIGERFS_MOUNT_PATH` | TigerFS mount point | `/mnt/tigerfs` |
+| `OPENCLAW_VERSION` | OpenClaw version to install (pin for stability) | `2026.3.22` |
+| `EMBEDDING_MODEL` | Embedding model for memory-timescaledb plugin | `text-embedding-3-small` |
+| `EMBEDDING_API_KEY` | API key for embedding provider | `sk-...` |
 
 ---
 

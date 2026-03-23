@@ -290,6 +290,8 @@ TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS onl
 
 The 7-layer gate only validates INPUT. Agent responses should be scanned for PII/secrets before delivery to the user. This can use the same hai-guardrails library on the output path — run the PII Guard and Secret Guard on agent output before forwarding to the frontend.
 
+Output validation covers WebSocket text responses. For agent-generated files (reports, exports written to workspace), the deployer should configure the agent's instructions to avoid writing sensitive data. File-level output scanning is deferred post-MVP — deployers handling sensitive data should implement file scanning in their CLIs.
+
 ### `bunx @latest` Supply Chain Risk
 
 `bunx @package@latest` executes arbitrary code from npm. Deployers should pin versions in production, use `bun audit`, and maintain an allowlist of permitted CLI packages in tool policy. Unpinned `@latest` tags are acceptable for development but a supply chain risk in production.
