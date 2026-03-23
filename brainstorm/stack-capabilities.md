@@ -273,15 +273,8 @@ See [data-layer.md](data-layer.md) and [tigerfs.md](tigerfs.md) for full details
 ### Runtime APIs
 | API | What |
 |---|---|
-| `Bun.serve()` | HTTP/WebSocket server with routing, TLS, cookies |
-| `Bun.shell()` | Shell scripting API — run commands programmatically |
-| `Bun.spawn()` / `Bun.spawnSync()` | Child process management with IPC |
-| `Bun.file()` / `Bun.write()` | File I/O with MIME detection |
-| `Bun.tar()` / `Bun.untarStream()` | Archive creation/extraction |
-| `Bun.gzip()` / `Bun.deflate()` | Compression/decompression |
-| `HTMLRewriter` | Transform HTML with CSS selectors (web crawling) |
-| JSONL parser | Streaming newline-delimited JSON |
-| Workers API | Multi-threaded JavaScript |
+| `Bun.serve()` | HTTP/WebSocket server for control plane |
+| `Bun.shell()` / `Bun.spawn()` | Gateway process management |
 
 ### Data Format Support (Built-in imports)
 JSON5, TOML, YAML, Markdown (GFM), JSX/TSX — all importable directly.
@@ -414,9 +407,6 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Backup | `pg_dump` |
 | HTTP/WebSocket server | `Bun.serve()` |
 | Process management | `Bun.spawn()` + `Bun.shell()` |
-| JSONL parsing (session transcripts) | Bun native JSONL |
-| HTML transformation (crawling) | `HTMLRewriter` |
-| Archive creation (data export) | `Bun.tar()` |
 | Deterministic workflows | OpenClaw Lobster |
 | Scheduled tasks | OpenClaw cron |
 | Webhook ingress | OpenClaw `/hooks/agent` |
