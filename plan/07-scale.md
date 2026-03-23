@@ -59,7 +59,10 @@ graph TB
 ```
 
 1. Provision a VM (Ubuntu, 16-32GB RAM, 4-8 vCPU)
-2. Install TimescaleDB, TigerFS, ClamAV, Bun, OpenClaw
+2. Install TimescaleDB, TigerFS, ClamAV, Bun, OpenClaw, **PgBouncer**
+   - **Connection pooling is critical:** PostgreSQL default `max_connections` is 100. At 500+ gateways (each with its own DB connection for TigerFS + memory-timescaledb), connections will be exhausted without a pooler
+   - Configure PgBouncer in transaction pooling mode between gateways and TimescaleDB
+   - All gateway `DATABASE_URL` values should point to PgBouncer, not directly to TimescaleDB
 3. Set up TigerFS mount pointing to local TimescaleDB
 4. Deploy control plane as systemd service
 5. Set up Caddy as reverse proxy (automatic HTTPS)
@@ -77,6 +80,8 @@ graph TB
 - [ ] Frontend loads in browser via HTTPS
 - [ ] User signup → task → result works end-to-end on the VM
 - [ ] Multiple gateways running, each hosting test users
+- [ ] PgBouncer running and proxying connections to TimescaleDB
+- [ ] Gateways connect via PgBouncer (not directly to TimescaleDB)
 - [ ] Resource usage acceptable (< 80% RAM, < 50% CPU at idle)
 - [ ] System survives a reboot (all services start automatically)
 

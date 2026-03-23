@@ -30,7 +30,7 @@ graph TB
     FL1 & FL2 & FL3 -->|fail| BLOCK
 ```
 
-**Parallelizable:** Stage 3.1 (message gate) and Stage 3.2 (file gate) can be built in parallel.
+**Parallelizable:** Stage 3.1 (message gate) and Stage 3.2 (file gate) can be built in parallel. Stage 3.3 (rate limiting) can be built alongside 3.1/3.2.
 
 ---
 
@@ -211,7 +211,78 @@ sequenceDiagram
 
 ---
 
-## Stage 3.3: Gate Integration Test
+## Stage 3.3: Rate Limiting
+
+### Goal
+Per-user rate limiting to prevent abuse and resource exhaustion.
+
+### Dependencies
+- Phase 1 complete (control plane with auth)
+
+### Steps
+
+1. Implement per-user rate limits using Elysia middleware:
+   - **Task submissions:** max concurrent tasks per user (default: 3), max tasks per minute (default: 10)
+   - **File uploads:** max uploads per minute (default: 20), max total upload size per hour (default: 100MB)
+   - **WebSocket messages:** max messages per second (default: 5) to prevent flooding
+2. Store rate limit counters in the TimescaleDB cache table (or in-memory with periodic sync)
+3. Return structured `429 Too Many Requests` responses with `Retry-After` header
+4. Make all limits configurable per deployer (via shared config)
+5. Admin override: deployers can set per-user limit overrides for premium users
+6. Write tests: exceed each limit, verify rejection; stay under limits, verify pass-through
+
+### External References
+- [Elysia rate limiting patterns](https://elysiajs.com/plugins/overview)
+- [better-auth rate limiting](https://www.better-auth.com/docs/concepts/rate-limit)
+
+### Verification Checklist
+- [ ] Exceeding max concurrent tasks returns 429 with structured reason
+- [ ] Exceeding max tasks/minute returns 429 with `Retry-After` header
+- [ ] Exceeding file upload rate returns 429
+- [ ] Exceeding WebSocket message rate: messages are dropped with notification
+- [ ] Within limits: no interference with normal operation
+- [ ] Rate limit counters are per-user (User A's limits don't affect User B)
+- [ ] Admin can override limits for specific users
+- [ ] All tests pass
+
+---
+
+## Stage 3.4: Output Validation Gate
+
+### Goal
+Scan agent responses for PII, secrets, and sensitive data before delivery to the user. This mirrors the input gate (Stage 3.1) but on the output side.
+
+### Dependencies
+- Stage 3.1 complete (message security gate — reuses the same hai-guardrails infrastructure)
+- Phase 2 complete (gateway integration — need agent responses to scan)
+
+### Steps
+
+1. Intercept agent response events in the WebSocket proxy before forwarding to the frontend
+2. Run hai-guardrails in heuristic mode on agent output:
+   - **PII Guard** — detect if the agent is leaking user PII from other users or from its own training data
+   - **Secret Guard** — detect if the agent is outputting API keys, database credentials, or tokens
+   - **Leakage Guard** — detect if the agent is leaking system prompt content or internal configuration
+3. On detection:
+   - Redact the sensitive content (replace with `[REDACTED]`) and deliver the sanitized response
+   - Log the incident (agent ID, guard that triggered, redacted content hash)
+   - Do NOT block the entire response — redact and deliver
+4. Make output guards configurable (deployer can enable/disable, set thresholds)
+5. Write tests: agent response with embedded API key is redacted, clean responses pass through unmodified
+
+### Verification Checklist
+- [ ] Agent response containing an API key pattern is redacted before reaching the user
+- [ ] Agent response containing PII (SSN, phone, email of other users) is redacted
+- [ ] Agent response leaking system prompt content is redacted
+- [ ] Clean agent responses pass through without modification or added latency
+- [ ] Redacted responses still make sense to the user (only sensitive parts removed)
+- [ ] All redaction events logged with agent ID and guard type
+- [ ] Output gate adds < 10ms latency for heuristic-only scanning
+- [ ] All tests pass
+
+---
+
+## Stage 3.5: Gate Integration Test
 
 ### Goal
 Verify the complete security gate works end-to-end with the gateway proxy.

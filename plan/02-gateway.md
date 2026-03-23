@@ -59,6 +59,7 @@ stateDiagram-v2
    - `agents.defaults.workspace` pointing to TigerFS
    - Unique port assignment
    - Gateway auth token for control plane connection
+   - **Explicitly set `tools.exec.security: "deny"` in the shared config** — the default is `allowlist`, NOT `deny`. This prevents agents from executing arbitrary shell commands on the gateway host
 2. Control plane waits for gateway to be ready (poll `/health` or wait for WebSocket handshake)
 3. Control plane connects to gateway via WebSocket (device identity + token auth)
 4. Implement health check loop — periodic ping, restart on failure
@@ -79,6 +80,7 @@ stateDiagram-v2
 - [ ] Health check detects crashed gateway and restarts it
 - [ ] Graceful shutdown waits for active task then stops
 - [ ] Gateway reads workspace from TigerFS (validates Phase 0 findings)
+- [ ] `tools.exec.security` is set to `"deny"` in shared config (verified via gateway config dump)
 - [ ] All tests pass
 
 ---
@@ -130,7 +132,7 @@ sequenceDiagram
    - `agent` events → live feed
    - `chat` events with `state: "delta"` → live feed
    - `chat` events with `state: "final"` → task complete notification
-   - `clarification.requested` → interactive prompt (future, placeholder)
+   - Clarification requests → interactive prompt (see Stage 2.5)
 6. Write tests: full message round-trip, event forwarding, disconnect handling
 
 ### External References
@@ -150,10 +152,45 @@ sequenceDiagram
 
 ---
 
+## Stage 2.5: Clarification Mechanism
+
+### Goal
+Allow the agent to request clarification from the user mid-task, using the exec approval pattern — no new event types needed.
+
+### Dependencies
+- Stage 2.2 complete (WebSocket proxy)
+
+### Steps
+
+1. Implement `request_clarification` as a custom tool registered on the gateway:
+   - Tool accepts `{ question: string, options?: string[] }` as input
+   - When the agent calls this tool, the gateway emits an exec approval event (the same pattern used for tool execution approval)
+   - The control plane intercepts this event and forwards a clarification prompt to the frontend via WebSocket
+2. Frontend displays the clarification prompt to the user (interactive prompt UI implemented in Phase 4)
+3. User's response is sent back through the WebSocket proxy to the gateway, which provides it as the tool result
+4. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the control plane recognizes `request_clarification` as a special case requiring user input rather than auto-approval
+5. Write tests: agent requests clarification, user responds, agent continues with the answer
+
+### External References
+- [OpenClaw tool approval](https://docs.openclaw.ai/gateway/configuration#exec-approval)
+- [OpenClaw custom tools](https://docs.openclaw.ai/tools/plugin)
+
+### Verification Checklist
+- [ ] `request_clarification` tool registered on gateway
+- [ ] Agent calling the tool triggers exec approval event (not a custom event type)
+- [ ] Control plane intercepts and forwards clarification to frontend
+- [ ] User response flows back to agent as tool result
+- [ ] Agent continues task with clarification answer
+- [ ] Timeout: if user doesn't respond within configurable window, agent proceeds with a default
+- [ ] This stage must be complete before Phase 4 frontend can show interactive prompts
+- [ ] All tests pass
+
+---
+
 ## Stage 2.3: memory-timescaledb Plugin
 
 ### Goal
-Build an OpenClaw memory plugin that stores vector embeddings in TimescaleDB via pgvector, replacing the default SQLite-based memory.
+Build an OpenClaw memory plugin that stores vector embeddings in TimescaleDB via pgvector, replacing the default file-based memory (`memory-core`) and LanceDB-based vector memory (`memory-lancedb`). Note: `memory-core` is file-based (not SQLite), and `memory-lancedb` uses LanceDB (not SQLite). `memory-timescaledb` replaces both by providing pgvector-backed vector search.
 
 ### Dependencies
 - Stage 2.1 complete
@@ -193,7 +230,7 @@ graph TB
    - `delete(agentId, filter)` — delete by agent_id + filter
    - `count(agentId)` — count chunks for agent
 4. Implement embedding generation (reuse OpenAI embeddings provider or make configurable)
-5. Register tools: `memory_recall`, `memory_store`, `memory_forget`
+5. Register tools: `memory_recall`, `memory_store`, `memory_forget` (matching `memory-lancedb`'s tool names — NOT `memory_search`/`memory_get` from `memory-core`)
 6. Register hooks: `before_agent_start` (auto-recall), `agent_end` (auto-capture)
 7. Register CLI commands: `ltm list`, `ltm search`, `ltm stats`
 8. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
@@ -218,6 +255,44 @@ graph TB
 - [ ] CLI commands work: `ltm list`, `ltm search`, `ltm stats`
 - [ ] Performance: search latency < 100ms for 10K chunks
 - [ ] Gateway with memory-timescaledb has no SQLite files on disk
+- [ ] All tests pass
+
+---
+
+## Stage 2.6: LLM Key Pool Configuration
+
+### Goal
+Configure multiple LLM API keys with fallback strategy to avoid rate limits and single-key failures.
+
+### Dependencies
+- Stage 2.1 complete (single gateway running)
+
+### Steps
+
+1. Configure `auth-profiles.json` with multiple auth profiles:
+   - Multiple Anthropic API keys (for load distribution)
+   - Multi-provider fallback: Anthropic → OpenAI → other providers
+2. Implement key rotation strategy:
+   - Round-robin across keys within a provider
+   - On rate limit (429): automatically fall back to next key or next provider
+   - Track per-key usage to distribute load evenly
+3. Test under rate limit conditions:
+   - Simulate rate limit on primary key, verify fallback to secondary
+   - Simulate all keys for a provider exhausted, verify fallback to next provider
+4. Store key pool configuration on TigerFS so all gateways share the same pool
+5. Monitor key health: track error rates per key, auto-disable keys that consistently fail
+
+### External References
+- [OpenClaw auth profiles](https://docs.openclaw.ai/gateway/configuration#auth-profiles)
+- [OpenClaw multi-provider](https://docs.openclaw.ai/concepts/models)
+
+### Verification Checklist
+- [ ] Multiple auth profiles configured in `auth-profiles.json`
+- [ ] Round-robin distributes requests across keys
+- [ ] Rate limit on one key triggers automatic fallback to next key
+- [ ] All keys for a provider exhausted: falls back to next provider
+- [ ] Key pool config shared across gateways via TigerFS
+- [ ] Unhealthy key auto-disabled after N consecutive failures
 - [ ] All tests pass
 
 ---

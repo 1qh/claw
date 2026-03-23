@@ -69,7 +69,7 @@ gantt
 
 | Phase | Name | Goal | Key Risk |
 |---|---|---|---|
-| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance | TigerFS is new, untested with OpenClaw |
+| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance | First integration of TigerFS with OpenClaw |
 | [1](01-foundation.md) | Foundation | Monorepo, control plane skeleton, auth, database schema | None — proven tools |
 | [2](02-gateway.md) | Gateway Integration | Connect control plane to OpenClaw, WebSocket proxy, memory plugin | memory-timescaledb plugin is custom code |
 | [3](03-security.md) | Security Gate | 7-layer input validation before OpenClaw | Integration between hai-guardrails + AI SDK |
@@ -90,4 +90,4 @@ graph LR
     E --> F["Release\n(Phase 8)"]
 ```
 
-The critical path runs through TigerFS validation → gateway integration → multi-agent → scaling. If TigerFS validation fails in Phase 0, we fall back to hybrid storage (see [brainstorm architecture](../brainstorm/architecture/overview.md)).
+The critical path runs through TigerFS validation → gateway integration → multi-agent → scaling.

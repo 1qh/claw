@@ -19,7 +19,7 @@ These are reliability problems, not error handling. They must be solved at the i
 | **Tool execution errors** | OpenClaw retries tools internally |
 | **Agent loops** | OpenClaw has built-in [loop detection](https://docs.openclaw.ai/tools/loop-detection) |
 | **Task timeout** | Configure max task duration |
-| **Control plane down** | Multiple replicas, load balanced |
+| **Control plane down** | Process manager auto-restarts (single process initially, replicas when scaling) |
 | **Host failure** | Nomad reschedules gateways to other hosts — fully stateless, zero data loss |
 | **Storage failure** | TigerFS `.history/` + `pg_dump` recovery |
 

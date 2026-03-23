@@ -34,6 +34,13 @@ graph TB
 ### Goal
 Control plane can create and delete agents on a running gateway without restart.
 
+### Prerequisites
+- **Stateless gateway config:** For stateless gateways, the config file must reside on TigerFS. Set `OPENCLAW_CONFIG_PATH` to a TigerFS path so that `agents.create` writes are visible to any gateway instance.
+- **Path distinction:** `OPENCLAW_STATE_DIR` and `agents.defaults.workspace` control DIFFERENT data:
+  - `OPENCLAW_STATE_DIR` → config, credentials, sessions (gateway state)
+  - `agents.defaults.workspace` → agent files (SOUL.md, USER.md, MEMORY.md, etc.)
+  Both must point to TigerFS for multi-host setups.
+
 ### Dependencies
 - Phase 2 complete (single gateway integration)
 
@@ -51,38 +58,38 @@ sequenceDiagram
     CP->>DB: Find gateway with capacity
     CP->>TFS: Create workspace directory
     CP->>TFS: Write initial USER.md with email
-    CP->>GW: config.patch — add agent to agents.list
-    Note over GW: Config hot-reload, new agent available
+    CP->>GW: agents.create — provision workspace, write config, create identity (atomic)
+    Note over GW: New agent available immediately
     CP->>DB: Store user → gateway mapping
 
     Note over CP: User deletes account
 
-    CP->>GW: config.patch — remove agent from agents.list
-    Note over GW: Config hot-reload, agent removed
+    CP->>GW: agents.delete — remove agent, clean up identity
+    Note over GW: Agent removed immediately
     CP->>TFS: Archive or delete workspace
     CP->>DB: Remove user → gateway mapping
 ```
 
-1. Implement agent creation via gateway `config.patch` API:
-   - Add entry to `agents.list[]` with unique agent ID, workspace path, and agent dir path
+1. Implement agent creation via gateway `agents.create` method:
+   - `agents.create` handles workspace provisioning, config writing, and identity files atomically
    - All paths point to TigerFS
-   - Verify gateway hot-reloads and new agent is available
-2. Implement workspace provisioning:
-   - Create directory structure on TigerFS: `users/{email}/workspace/`, `users/{email}/agent/`
-   - Write initial `USER.md` with user's email
+   - New agent is available immediately (no restart, no hot-reload needed)
+2. Configure workspace defaults:
+   - Directory structure on TigerFS: `users/{email}/workspace/`, `users/{email}/agent/`
+   - Initial `USER.md` with user's email (written by `agents.create`)
    - Shared config (SOUL.md, AGENTS.md) read from shared TigerFS path
-3. Implement agent deletion:
-   - Remove from `agents.list[]` via `config.patch`
+3. Implement agent deletion via `agents.delete`:
+   - Removes agent from gateway, cleans up identity files
    - Archive workspace data (don't delete immediately — retention period)
 4. Write tests: create agent, verify it responds, delete agent, verify it's gone
 
 ### External References
 - [OpenClaw multi-agent](https://docs.openclaw.ai/concepts/multi-agent)
 - [OpenClaw agents CLI](https://docs.openclaw.ai/cli/agents)
-- [OpenClaw config.patch](https://docs.openclaw.ai/gateway/configuration)
+- [OpenClaw gateway configuration](https://docs.openclaw.ai/gateway/configuration)
 
 ### Verification Checklist
-- [ ] Agent created via config.patch appears in gateway agent list
+- [ ] Agent created via `agents.create` appears in gateway agent list
 - [ ] New agent responds to messages immediately after creation (no restart)
 - [ ] New agent's workspace is on TigerFS (verify via SQL)
 - [ ] Agent deletion removes it from gateway (no restart)

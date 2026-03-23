@@ -19,7 +19,7 @@ OpenClaw's [auth profile rotation](https://docs.openclaw.ai/concepts/model-failo
 
 ```mermaid
 graph TB
-    subgraph "Shared Config (/shared-config/)"
+    subgraph "Shared Config (/mnt/tigerfs/config/)"
         AP["auth-profiles.json\n(all keys, all providers)"]
     end
 
@@ -95,3 +95,7 @@ Deployers can mix providers and OpenClaw handles failover:
 - Fallbacks: premium providers (better quality, used only when primary exhausted)
 
 All keys for all providers in one `auth-profiles.json`. OpenClaw rotates within a provider first, then falls back to the next provider. Zero custom code.
+
+## Security Note: Plaintext API Keys
+
+`auth-profiles.json` stores API keys in plaintext on TigerFS. For production, deployers should use a secrets manager (Vault, SOPS) or inject keys via environment variables. The framework should support both file-based and env-var-based credential sources.

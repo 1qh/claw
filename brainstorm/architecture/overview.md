@@ -139,7 +139,7 @@ Three approaches were evaluated:
 | **Infrastructure** | 500-1000 gateways for 10K users | 10K processes, 50 hosts | Docker/Kubernetes required |
 | **Cold start** | ~100-500ms (start agent) | ~1-2s (start process) | ~2-5s (boot container) |
 | **Resource overhead** | Lowest — shared processes | Medium — one process per user | Highest — container runtime per user |
-| **Cost (10K users)** | ~$200-400/mo (10-20 VMs) | ~$2-5K/mo (50 VMs) | ~$5-10K/mo (K8s + containers) |
+| **Cost (10K users)** | ~$600-1200/mo (10-20 VMs) | ~$2-5K/mo (50 VMs) | ~$5-10K/mo (K8s + containers) |
 | **Complexity** | Low | Medium (process management at scale) | High (K8s, images, networking) |
 | **Statefulness** | Fully stateless (TigerFS) | Local disk dependency | Persistent volumes needed |
 | **Native OpenClaw support** | Yes — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) | Yes — built-in profiles | Deployer configures it |
@@ -296,6 +296,10 @@ The two stay in sync naturally:
 - Control plane provisions gateway with email at creation
 - Agent builds the full user profile on top through conversation
 - No sync mechanism needed — email is set once, everything else grows organically
+
+## PII Note: Email in Filesystem Paths
+
+Using email directly in filesystem paths (e.g., `/mnt/tigerfs/users/alice@co.com/`) exposes PII. Consider using an opaque user ID (UUID) for internal paths and mapping email→UUID at the auth layer. This also avoids filesystem issues with special characters in email addresses (e.g., `+`, `@`).
 
 ## Simplicity Constraints
 

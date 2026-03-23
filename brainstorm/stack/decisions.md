@@ -19,7 +19,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | [TimescaleDB](https://www.timescale.com/) | PostgreSQL + hypertables + compression + continuous aggregates + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) + [pgai](https://github.com/timescale/pgai) + background jobs |
 | [TigerFS](https://tigerfs.io/) | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest |
 | [Drizzle](https://orm.drizzle.team/) | ORM for control plane (auth, billing, routing) |
-| memory-timescaledb | Custom OpenClaw memory plugin (~800 LOC) — replaces SQLite, stores all memory/sessions in TimescaleDB |
+| memory-timescaledb | Custom OpenClaw memory plugin (~800 LOC) — replaces memory-core and memory-lancedb with pgvector-backed storage in TimescaleDB |
 
 ## Auth & Billing
 

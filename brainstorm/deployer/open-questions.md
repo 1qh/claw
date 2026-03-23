@@ -21,18 +21,18 @@ sequenceDiagram
     BA->>FE: Auth success
     FE->>CP: First task or onboarding
     CP->>DB: Find gateway with capacity (<20 agents)
-    CP->>GW: Add agent via gateway API (agents.add)
-    GW->>GW: Config hot-reload, agent created
-    Note over GW: Workspace provisioned in TigerFS<br/>USER.md initialized with email
+    CP->>GW: Create agent via gateway API (agents.create)
+    GW->>GW: Workspace provisioned, config written, identity files created atomically
+    Note over GW: agents.create handles provisioning atomically<br/>USER.md initialized with email
     CP->>DB: Store email → gateway_id mapping
     CP->>GW: Forward user's first message
     GW->>GW: Agent starts onboarding conversation
 ```
 
 OpenClaw supports this via:
-- `agents.add` [gateway API method](https://docs.openclaw.ai/cli/agents) for programmatic agent creation
+- `agents.create` [gateway API method](https://docs.openclaw.ai/cli/agents) — handles workspace provisioning, config writing, and identity files atomically
 - Config hot-reload — new agent available immediately, no restart
-- `agents.delete` for account deletion
+- `agents.delete` for account deletion (corresponding deletion method)
 
 ## CLI Environment Access
 

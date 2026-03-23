@@ -155,7 +155,7 @@ graph TB
 - [ ] Admin API returns all users' usage
 - [ ] Frontend usage surface shows data from API
 - [ ] Aggregates refresh within 60s of new data
-- [ ] Billing: per-user cost in USD available for Stripe
+- [ ] Per-user cost in USD queryable (deployer uses this for their own billing)
 
 ---
 

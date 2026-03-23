@@ -229,7 +229,7 @@ API keys are process-global but belong to the deployer, not individual users. Al
 Shell commands bypass OpenClaw's file boundary checks. A command like `cat /other-user/file` could theoretically succeed.
 
 **Framework must enforce:**
-- `tools.exec.security: "deny"` as default (already OpenClaw's default)
+- `tools.exec.security: "deny"` explicitly in shared config — OpenClaw's default depends on exec host: `sandbox` → `deny`, `gateway` → `allowlist`. Since uniclaw doesn't use Docker sandboxes, exec runs on gateway host where the default is `allowlist`, NOT `deny`. The framework MUST set this explicitly.
 - Deployer configures `safeBins` for allowed commands
 - Security gate blocks prompt injection before OpenClaw
 
@@ -254,13 +254,13 @@ This is enforced in code AND at the database level via RLS. Both must be impleme
 
 ## Framework Security Defaults
 
-The framework ships with these non-negotiable defaults:
+The framework ships with these non-negotiable defaults in shared config:
 
 ```json5
 {
   tools: {
     exec: {
-      security: "deny",     // block exec unless allowlisted
+      security: "deny",     // MUST be set explicitly — OpenClaw's default for gateway host is "allowlist", not "deny"
       safeBins: []           // deployer explicitly allows what's needed
     },
     deny: ["browser"]        // deny browser by default
@@ -268,4 +268,30 @@ The framework ships with these non-negotiable defaults:
 }
 ```
 
+**⚠ Critical:** The `security: "deny"` setting is NOT automatic. OpenClaw's default depends on exec host: `sandbox` → `deny`, `gateway` → `allowlist`. Since this architecture runs exec on the gateway host (no Docker sandboxes), the default would be `allowlist` — permitting any binary. The framework MUST explicitly set `security: "deny"` in the shared config that all gateways read.
+
 Deployers can relax these for their use case, but the defaults are secure.
+
+---
+
+## Additional Security Notes
+
+### RLS Requires Per-Gateway Database Roles
+
+RLS only works if each gateway connects with a distinct PostgreSQL role. A single shared credential makes RLS meaningless — all gateways would see all rows. The control plane should create per-gateway roles and configure each gateway's TigerFS mount with its scoped role.
+
+### FUSE Mount Bypasses RLS
+
+TigerFS FUSE mount presents all data as regular files regardless of RLS. RLS only protects SQL-level access. If a process escapes OpenClaw's path boundary checks, it can read any file on the mount. Mitigation: restrict FUSE mount permissions to the gateway user group, and ensure exec is denied by default.
+
+### Output Validation
+
+The 7-layer gate only validates INPUT. Agent responses should be scanned for PII/secrets before delivery to the user. This can use the same hai-guardrails library on the output path — run the PII Guard and Secret Guard on agent output before forwarding to the frontend.
+
+### `bunx @latest` Supply Chain Risk
+
+`bunx @package@latest` executes arbitrary code from npm. Deployers should pin versions in production, use `bun audit`, and maintain an allowlist of permitted CLI packages in tool policy. Unpinned `@latest` tags are acceptable for development but a supply chain risk in production.
+
+### Gateway HTTP API Protection
+
+OpenClaw gateways expose HTTP APIs (`/v1/chat/completions`, `/tools/invoke`, etc.) on their bound port. These must be: (a) bound to localhost only, (b) protected with gateway auth tokens, (c) firewall-restricted. The control plane is the ONLY authorized client.

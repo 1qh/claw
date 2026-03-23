@@ -29,6 +29,40 @@ graph TB
 
 ---
 
+## Stage 8.0: CI/CD Pipeline
+
+### Goal
+Set up GitHub Actions for automated quality checks. Should be configured early (Phase 1) but formalized here for release readiness.
+
+### Dependencies
+- Phase 1 complete (monorepo with lint, format, test, build scripts)
+
+### Steps
+
+1. Create `.github/workflows/ci.yml` with the following jobs:
+   - **Lint:** `bun run lint` (Oxlint)
+   - **Format:** `bun run format --check` (Oxfmt — verify, don't auto-fix)
+   - **Type check:** `bun run typecheck` (TypeScript strict)
+   - **Test:** `bun run test` (Vitest)
+   - **Build:** `bun run build` (verify production build succeeds)
+2. Run CI on: pull requests to `main`, pushes to `main`
+3. Add branch protection: require CI pass before merge
+4. Add a separate workflow for release: tag-triggered, runs full CI + publishes npm packages (Stage 8.2)
+5. Cache `node_modules` and Bun cache for faster CI runs
+
+### Verification Checklist
+- [ ] CI runs on every pull request
+- [ ] CI runs on every push to main
+- [ ] Lint failure blocks merge
+- [ ] Format failure blocks merge
+- [ ] Type check failure blocks merge
+- [ ] Test failure blocks merge
+- [ ] Build failure blocks merge
+- [ ] CI completes in < 5 minutes
+- [ ] Release workflow publishes to npm on tag push
+
+---
+
 ## Stage 8.1: Template Repo
 
 ### Goal

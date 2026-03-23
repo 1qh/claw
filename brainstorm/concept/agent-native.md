@@ -157,7 +157,7 @@ For private npm packages, the host needs a `.npmrc` with an auth token. One-time
 The framework provides a directory where deployers place their domain knowledge. The agent searches it when needed.
 
 ```
-/shared-knowledge/
+/mnt/tigerfs/knowledge/
   product-catalog.md
   compliance-rules.md
   procedures/
@@ -179,7 +179,7 @@ The deployer just drops files in the directory. The framework indexes them. The 
 | Content | Location | Who Writes It |
 |---|---|---|
 | How the agent behaves | `SOUL.md` / `AGENTS.md` (shared config) | Deployer |
-| What the agent knows (shared) | `/shared-knowledge/` | Deployer |
+| What the agent knows (shared) | `/mnt/tigerfs/knowledge/` | Deployer |
 | What the agent knows (per user) | `MEMORY.md` / `memory/` (workspace) | Agent |
 | User profile and preferences | `USER.md` (workspace) | Agent |
 

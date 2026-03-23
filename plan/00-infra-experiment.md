@@ -20,6 +20,26 @@ graph TB
 
 ---
 
+## Environment Variables Inventory
+
+All environment variables needed across the system. Set these before Phase 1.
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `DATABASE_URL` | TimescaleDB connection string (or PgBouncer in production) | `postgresql://user:pass@localhost:5432/uniclaw` |
+| `OPENCLAW_STATE_DIR` | Gateway state directory (config, credentials, sessions) | `/mnt/tigerfs/state/` |
+| `OPENCLAW_CONFIG_PATH` | Path to gateway config file (must be on TigerFS for stateless gateways) | `/mnt/tigerfs/config/openclaw.json` |
+| `ANTHROPIC_API_KEY` | Primary LLM API key | `sk-ant-...` |
+| `OPENAI_API_KEY` | Fallback LLM API key (optional) | `sk-...` |
+| `GATEWAY_AUTH_TOKEN` | Token for control plane ↔ gateway auth | (generated) |
+| `BETTER_AUTH_SECRET` | better-auth session signing secret | (generated) |
+| `GITHUB_CLIENT_ID` | OAuth provider client ID | (from GitHub) |
+| `GITHUB_CLIENT_SECRET` | OAuth provider client secret | (from GitHub) |
+| `CLAMAV_URL` | ClamAV REST API endpoint | `http://localhost:3310` |
+| `TIGERFS_MOUNT_PATH` | TigerFS mount point | `/mnt/tigerfs` |
+
+---
+
 ## Stage 0.1: TimescaleDB Local Setup
 
 ### Goal
@@ -214,17 +234,9 @@ graph TB
 - [ ] No data corruption under concurrent load
 - [ ] All benchmark results documented with exact numbers
 
-### Decision Gate
+### Optimization Gate
 
-```mermaid
-graph TD
-    BENCH[Benchmark Results] --> PASS{All pass?}
-    PASS -->|Yes| PROCEED["Proceed with TigerFS architecture\n(Phase 1)"]
-    PASS -->|No| ASSESS{Which failed?}
-    ASSESS -->|Append latency| HYBRID["Hybrid: sessions local,\nworkspace on TigerFS"]
-    ASSESS -->|Watch latency| POLL["Accept polling latency\nor add explicit refresh"]
-    ASSESS -->|Multi-agent| REDUCE["Reduce agents per gateway\n(5-10 instead of 20)"]
-    ASSESS -->|Multiple| RETHINK["Revisit architecture\n(see brainstorm)"]
-```
-
-If benchmarks fail, we don't abandon — we adjust. The fallback paths are documented in [brainstorm architecture](../brainstorm/architecture/overview.md).
+Benchmark results inform tuning, not architecture decisions. If any benchmark underperforms:
+- **Append latency high** → tune TigerFS config or TimescaleDB WAL settings
+- **Watch latency high** → accept polling interval or add explicit refresh on config writes
+- **Multi-agent degradation** → reduce agents per gateway (tune `max_agents` default)
