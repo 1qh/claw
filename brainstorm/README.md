@@ -33,3 +33,4 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Scaling**](scaling.md) — multi-host orchestration with Nomad, 10K users target
 - [**Boundaries**](boundaries.md) — what uniclaw is and is NOT good for
 - [**Deployer Experience**](deployer-experience.md) — template repo, frontend hooks, what deployers configure vs what's pre-built
+- [**Isolation Audit**](isolation-audit.md) — code-level verification of multi-tenant data isolation
