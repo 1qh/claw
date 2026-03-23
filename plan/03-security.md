@@ -192,7 +192,7 @@ File uploads use multipart form upload (`multipart/form-data`) via a standard HT
 
 #### Integration
 1. Wire as Elysia route: `POST /upload` with auth middleware
-2. After all layers pass, write file to user's workspace on TigerFS: `/mnt/tigerfs/users/{email}/uploads/{filename}`
+2. After all layers pass, write file to user's workspace on TigerFS: `/mnt/tigerfs/users/{user_id}/uploads/{filename}`
 3. Return success response with file path (relative to workspace)
 
 ### External References
