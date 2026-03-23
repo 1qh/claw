@@ -1,15 +1,15 @@
-# Architecture: 1 User = 1 Gateway = 1 Container
+# Architecture: 1 User = 1 Gateway Process
 
 ## Core Principle
 
-Every user gets their own dedicated OpenClaw gateway running in an isolated container with a persistent volume. Maximum isolation, maximum scalability.
+Every user gets their own dedicated OpenClaw gateway process on a shared host. Process-level isolation via OS user separation, without the overhead of containers or orchestrators.
 
 ## Identity Model
 
 Dead simple:
 
 ```
-1 email = 1 user = 1 gateway = 1 container = 1 persistent volume
+1 email = 1 user = 1 OS user = 1 gateway process = 1 workspace directory
 ```
 
 No multi-email. No shared accounts. No teams (for now). Just one email per user.
@@ -18,131 +18,183 @@ No multi-email. No shared accounts. No teams (for now). Just one email per user.
 
 ```mermaid
 graph TB
-    subgraph "Messaging Channels"
-        WA[WhatsApp]
-        TG[Telegram]
-        SL[Slack]
-        DC[Discord]
+    subgraph "Web App"
+        FE[Frontend<br/>Chat + Live Feed + Notifications]
     end
 
-    subgraph "Control Plane (lightweight, always-on)"
+    subgraph "Control Plane (single Node.js process, always-on)"
         AUTH[Auth Service<br/>OAuth / Magic Link]
-        ROUTER[Message Router]
-        ORCH[Container Orchestrator]
+        ROUTER[WebSocket Router]
+        PM[Process Manager]
         METER[Billing / Metering]
     end
 
-    subgraph "User Containers (1 per user)"
+    subgraph "Host Machine"
         subgraph "alice@company.com"
-            GW1[OpenClaw Gateway]
-            VOL1[(Persistent Volume<br/>USER.md, MEMORY.md,<br/>sessions/, memory/)]
+            GW1["OpenClaw Gateway :18789<br/>OS user: oc-alice"]
+            WS1["/data/oc-alice/<br/>USER.md, MEMORY.md,<br/>sessions/, memory/"]
         end
         subgraph "bob@gmail.com"
-            GW2[OpenClaw Gateway]
-            VOL2[(Persistent Volume<br/>USER.md, MEMORY.md,<br/>sessions/, memory/)]
+            GW2["OpenClaw Gateway :18809<br/>OS user: oc-bob"]
+            WS2["/data/oc-bob/<br/>USER.md, MEMORY.md,<br/>sessions/, memory/"]
         end
         subgraph "carol@startup.io"
-            GW3[OpenClaw Gateway]
-            VOL3[(Persistent Volume<br/>USER.md, MEMORY.md,<br/>sessions/, memory/)]
+            GW3["OpenClaw Gateway :18829<br/>OS user: oc-carol"]
+            WS3["/data/oc-carol/<br/>USER.md, MEMORY.md,<br/>sessions/, memory/"]
         end
+
+        SHARED["/shared-config/ (read-only)<br/>SOUL.md, AGENTS.md"]
+        CLAM[ClamAV Daemon<br/>shared service]
     end
 
-    WA & TG & SL & DC --> ROUTER
+    FE --> ROUTER
     ROUTER --> AUTH
     AUTH --> ROUTER
-    ROUTER --> ORCH
-    ORCH --> GW1 & GW2 & GW3
-    METER -.->|tracks usage| ORCH
+    ROUTER --> PM
+    PM --> GW1 & GW2 & GW3
+    METER -.->|reads usage from disk| WS1 & WS2 & WS3
+    SHARED -.->|mounted read-only| GW1 & GW2 & GW3
 ```
 
-## Container Lifecycle
+## How OpenClaw Supports This Natively
+
+OpenClaw's `--profile` flag provides built-in multi-gateway support on a single host:
+
+```bash
+openclaw --profile alice gateway --port 18789
+openclaw --profile bob gateway --port 18809
+openclaw --profile carol gateway --port 18829
+```
+
+Each profile gets fully isolated: config, state dir, workspace, sessions, memory, auth. OpenClaw handles all the path scoping — no custom code needed.
+
+## Isolation Model
+
+Three layers of isolation without containers:
+
+```mermaid
+graph TB
+    subgraph "Layer 1: OS User Separation"
+        A["Each gateway runs as a separate OS user<br/>oc-alice cannot read oc-bob's files<br/>Standard Unix filesystem permissions"]
+    end
+
+    subgraph "Layer 2: OpenClaw Profile Isolation"
+        B["Each gateway has its own:<br/>OPENCLAW_CONFIG_PATH<br/>OPENCLAW_STATE_DIR<br/>agents.defaults.workspace<br/>gateway.port"]
+    end
+
+    subgraph "Layer 3: OpenClaw Tool Policy"
+        C["Per-gateway tool restrictions<br/>tools.allow / tools.deny<br/>tools.exec.security<br/>Sandbox configuration"]
+    end
+
+    A --> B --> C
+```
+
+## Gateway Lifecycle
 
 ```mermaid
 stateDiagram-v2
     [*] --> Provisioning: User signs up
-    Provisioning --> Active: Container + volume created
+    Provisioning --> Active: OS user + workspace created, gateway started
     Active --> Idle: No tasks for N minutes
-    Idle --> Suspended: Idle timeout exceeded
-    Suspended --> Active: New task arrives
+    Idle --> Stopped: Idle timeout exceeded, process killed
+    Stopped --> Active: New task arrives, process started
     Active --> Active: Task running
     Idle --> Active: New task arrives
 ```
+
+Starting a gateway process is fast (~1-2s) — much faster than booting a container.
 
 ## Task Flow
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant Channel as WhatsApp/Telegram/etc.
+    participant FE as Web App
     participant CP as Control Plane
-    participant Container as User's Gateway Container
+    participant GW as User's Gateway Process
 
-    User->>Channel: "Generate my weekly report"
-    Channel->>CP: Inbound message
+    User->>FE: "Generate my weekly report"
+    FE->>CP: WebSocket message
     CP->>CP: Auth: identify user (email)
-    CP->>CP: Lookup: email → container
+    CP->>CP: Lookup: email → host:port
 
-    alt Container suspended
-        CP->>Container: Boot from persistent volume
-        Note over Container: ~2-5s cold start
+    alt Gateway stopped
+        CP->>GW: Start process (~1-2s)
     end
 
-    CP->>Container: Forward task
-    Container->>Container: Agent works autonomously
-    Note over Container: User can watch readonly live feed
+    CP->>GW: Forward task via WebSocket
+    GW->>GW: Agent works autonomously
+    Note over GW: Events stream back via WebSocket
 
-    Container->>CP: Task complete + result
-    CP->>Channel: Deliver result
-    Channel->>User: "Here's your weekly report"
+    GW->>CP: Task complete + result
+    CP->>FE: Deliver result
+    FE->>User: Notification + result
 ```
 
-## Why 1:1 (Not Multi-Agent Packing)
+## Why Multiple Gateways Per Host (Not Containers)
 
-We evaluated packing multiple user-agents onto shared gateways. OpenClaw's multi-agent feature does provide true isolation (separate workspaces, memory, sessions, auth, tool policies). However:
+We evaluated three approaches:
 
-| | 1:1 Container | Multi-Agent Packed |
+| | Multi-Gateway Per Host | Containers (1:1) | Multi-Agent Packed |
+|---|---|---|---|
+| **Isolation** | OS user + process level | OS-level (cgroups) | Shared Node.js process |
+| **Failure blast radius** | 1 user | 1 user | N users |
+| **Security boundary** | Filesystem permissions | Container sandbox | Trust the app code |
+| **Infrastructure** | One VM, no orchestrator | Docker/Kubernetes required | One gateway, custom routing |
+| **Cold start** | ~1-2s (start process) | ~2-5s (boot container) | Instant |
+| **Resource overhead** | Low — just Node.js processes | Higher — container runtime per user | Lowest — shared process |
+| **Cost (100 users)** | ~$100-150/mo (one VM) | ~$300-500/mo (K8s + containers) | ~$100-150/mo (one VM) |
+| **Complexity** | Low | High (K8s, images, networking) | Medium (custom routing) |
+| **Scaling** | Add more VMs | Orchestrator handles it | Rebalance agents |
+| **Native OpenClaw support** | Yes — built-in profiles | You configure it | Yes — multi-agent |
+
+**Verdict:** Multi-gateway per host wins for startup stage. Same isolation guarantees as containers (via OS users), dramatically simpler and cheaper. Migrate to containers later only if needed.
+
+## Cost Projection
+
+Most gateways will be idle most of the time (fire-and-forget = bursts, not constant load). Each active gateway uses ~50-100MB RAM.
+
+| Users | Infrastructure | Est. Monthly Cost |
 |---|---|---|
-| **Isolation** | Complete (OS-level) | Shared Node.js process |
-| **Failure blast radius** | 1 user | N users |
-| **Resource fairness** | Guaranteed per container | Best-effort, shared event loop |
-| **Security** | Container boundary | Trust the app code |
-| **Scaling** | Add containers | Rebalance agents across gateways |
-| **Complexity** | Simple — vanilla OpenClaw | Custom routing, affinity, rebalancing |
-| **Cold start** | ~2-5s (acceptable for fire-and-forget) | Instant |
+| 0-200 | 1 large VM (32GB RAM, 8 vCPU) | ~$100-150 |
+| 200-500 | 2-3 VMs | ~$300-450 |
+| 500-1000 | 5 VMs | ~$500-750 |
+| 1000+ | Consider containers or keep adding VMs | Depends |
 
-**Verdict:** 1:1 wins for maximum scalability and isolation. The cold start penalty is negligible for the fire-and-forget use case.
+## Scaling: Adding Hosts
 
-## Cost Optimization
+No load balancer needed. The control plane has a lookup table:
 
-Most containers will be idle most of the time (fire-and-forget = bursts, not constant load).
+```
+alice@co.com  → host-1:18789
+bob@gmail.com → host-1:18809
+carol@io.com  → host-2:18789
+```
 
-| Strategy | How |
-|---|---|
-| **Scale to zero** | Suspend containers after idle timeout (Fly.io Machines, Knative, AWS Fargate) |
-| **Persistent volumes** | Workspace survives container restarts; memory never lost |
-| **Cold start optimization** | Pre-warmed container images, workspace on fast SSD |
-| **Tiered infra** | Active users → dedicated containers; inactive users → fully suspended |
-| **Resource limits** | Free tier gets less CPU/RAM, premium gets more |
+When a host fills up, add another VM and assign new users to it. The routing logic doesn't change — it's still email → host:port.
 
 ## What Lives Where
 
 ```mermaid
 graph TB
-    subgraph "Control Plane (the only shared state)"
-        DB["Minimal Store (basically 1 table)<br/>email → container_id, volume_id,<br/>status, channels, created_at, last_active_at"]
+    subgraph "Control Plane State (minimal)"
+        DB["Lookup Table<br/>email → host, port, OS user,<br/>status, created_at, last_active_at"]
     end
 
-    subgraph "User's Persistent Volume (source of truth)"
+    subgraph "Shared Config (read-only, all gateways)"
+        SC["SOUL.md — product agent personality<br/>AGENTS.md — product operating instructions<br/>tool-policies.json — product tool restrictions"]
+    end
+
+    subgraph "User Workspace (per user, isolated)"
         UM["USER.md — profile, preferences"]
-        SM["SOUL.md — agent personality (shared template)"]
-        AM["AGENTS.md — operating instructions (shared template)"]
         MM["MEMORY.md — long-term learned knowledge"]
         DM["memory/YYYY-MM-DD.md — daily logs"]
         SS["sessions/ — full task history (JSONL)"]
-        WF["workspace files — anything agent creates"]
+        UF["uploads/ — user uploaded files"]
     end
 
-    DB -->|"provisions & routes to"| UM
+    DB -->|"routes to"| UM
+    SC -->|"read by all gateways"| UM
 ```
 
 ## No Traditional Backend
@@ -154,16 +206,24 @@ The gateway IS the database. No Postgres, no Redis, no migrations, no ORM.
 - No migration hell — workspace files evolve naturally
 - No sync problems — one source of truth (the workspace)
 - No API layer for CRUD — agent reads/writes its own workspace
-- No backup complexity — back up the volume, you've backed up everything
+- No backup complexity — daily git push to GitHub
 
-**What the backend actually does:**
+**What the control plane actually does:**
 1. Auth — verify identity (OAuth, magic link)
-2. User → Container mapping — route traffic
-3. Container lifecycle — boot, suspend, health check
-4. Message relay — channels ↔ correct container
-5. Billing/metering — track usage
+2. User → Gateway mapping — route WebSocket traffic
+3. Process lifecycle — start, stop, health check
+4. Message relay — frontend ↔ correct gateway
+5. Billing/metering — read usage data from disk
 
-**Risks to monitor:**
-- Volume durability — need reliable backups, volume loss = user loses everything
-- Cross-user analytics — can't SQL across workspaces; solve with lightweight telemetry at control plane
-- GDPR/compliance — actually simpler: delete volume = delete everything
+## The Complete Stack On One Host
+
+```
+One Linux VM:
+  ├── Control plane          (1 Node.js process)
+  ├── ClamAV daemon          (1 system service, shared)
+  ├── Shared config dir      (/shared-config/, git-synced)
+  ├── User gateway processes  (N OpenClaw processes)
+  └── User workspace dirs    (/data/oc-<user>/, git-backed)
+```
+
+No Docker. No Kubernetes. No container registry. No orchestrator. No network volumes. Just processes on a Linux box.
