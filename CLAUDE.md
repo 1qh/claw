@@ -1,3 +1,12 @@
+## Dependencies & Scripts
+
+- All deps use `latest` tag in package.json — no pinned versions during development
+- `bun clean` — removes node_modules, lockfile, dist, .cache, .next — like a fresh clone
+- `bun install` after clean always resolves latest upstream
+- `q` wrapper for all scripts — silent on success, verbose on failure
+
+---
+
 ## Code Style
 
 - Only `bun` — yarn/npm/npx/pnpm forbidden
