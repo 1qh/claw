@@ -59,7 +59,7 @@ stateDiagram-v2
    - `agents.defaults.workspace` pointing to TigerFS
    - Unique port assignment
    - Gateway auth token for control plane connection
-   - **Explicitly set `tools.exec.security: "deny"` in the shared config** — the default is `allowlist`, NOT `deny`. This prevents agents from executing arbitrary shell commands on the gateway host
+   - **Explicitly set `tools.exec.security: "allowlist"` with `safeBins: ["bunx"]` in the shared config** — this permits ONLY `bunx` (the CLI execution mechanism) while blocking all other shell commands. Setting `"deny"` would break the agent-native CLI paradigm entirely
    - **TigerFS mount permissions:** TigerFS mount should use restricted permissions (only accessible to the gateway process user group). Combined with exec deny default, this prevents FUSE-level bypass of RLS
 2. Control plane waits for gateway to be ready (poll `/health` or wait for WebSocket handshake)
 3. Control plane connects to gateway via WebSocket (device identity + token auth)
@@ -82,7 +82,7 @@ stateDiagram-v2
 - [ ] Health check detects crashed gateway and restarts it
 - [ ] Graceful shutdown waits for active task then stops
 - [ ] Gateway reads workspace from TigerFS (validates Phase 0 findings)
-- [ ] `tools.exec.security` is set to `"deny"` in shared config (verified via gateway config dump)
+- [ ] `tools.exec.security` is set to `"allowlist"` with `safeBins: ["bunx"]` in shared config (verified via gateway config dump)
 - [ ] All tests pass
 
 ---

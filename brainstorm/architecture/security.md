@@ -260,15 +260,17 @@ The framework ships with these non-negotiable defaults in shared config:
 {
   tools: {
     exec: {
-      security: "deny",     // MUST be set explicitly — OpenClaw's default for gateway host is "allowlist", not "deny"
-      safeBins: []           // deployer explicitly allows what's needed
+      security: "allowlist",  // allowlist mode — only safeBins are permitted
+      safeBins: ["bunx"]      // ONLY bunx allowed — the core CLI execution mechanism
     },
-    deny: ["browser"]        // deny browser by default
+    deny: ["browser"]         // deny browser by default
   }
 }
 ```
 
-**⚠ Critical:** The `security: "deny"` setting is NOT automatic. OpenClaw's default depends on exec host: `sandbox` → `deny`, `gateway` → `allowlist`. Since this architecture runs exec on the gateway host (no Docker sandboxes), the default would be `allowlist` — permitting any binary. The framework MUST explicitly set `security: "deny"` in the shared config that all gateways read.
+**⚠ Critical: exec security and `bunx` interaction.** The agent-native paradigm requires `bunx` for CLI execution. Setting `security: "deny"` blocks ALL exec including `bunx`, breaking the core backend model. The correct setting is `security: "allowlist"` with `safeBins: ["bunx"]` — this permits ONLY `bunx` execution while blocking all other shell commands. Deployers can add additional safe binaries as needed.
+
+OpenClaw's default for gateway host is `allowlist` with no safeBins restriction (all binaries allowed). The framework MUST explicitly set `safeBins: ["bunx"]` to restrict execution to only the CLI runner.
 
 Deployers can relax these for their use case, but the defaults are secure.
 

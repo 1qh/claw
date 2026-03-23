@@ -176,6 +176,8 @@ OpenClaw's built-in [memory search](https://docs.openclaw.ai/concepts/memory) pr
 
 The deployer just drops files in the directory. The framework indexes them. The agent finds what it needs.
 
+**Shared knowledge and per-agent isolation:** The `memory-timescaledb` plugin scopes queries by `agent_id`. Shared knowledge files are indexed under a special `__shared__` agent_id that all agents can query. The plugin's search method checks both the agent's own embeddings AND the shared pool: `WHERE agent_id IN ($1, '__shared__')`. This preserves RLS isolation (agents can't see each other's memories) while allowing access to common knowledge.
+
 ### What Goes Where
 
 | Content | Location | Who Writes It |

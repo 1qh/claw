@@ -131,8 +131,22 @@ erDiagram
         timestamptz created_at
     }
 
+    usage_events {
+        timestamptz time PK
+        uuid user_id FK
+        text gateway_id FK
+        text model
+        text provider
+        int input_tokens
+        int output_tokens
+        numeric cost_usd
+        int latency_ms
+        text task_type
+    }
+
     users ||--o{ user_gateway : "assigned to"
     gateways ||--o{ user_gateway : "hosts"
+    users ||--o{ usage_events : "generates"
 ```
 
 1. Install Drizzle ORM + drizzle-kit as dependencies
@@ -141,6 +155,7 @@ erDiagram
    - `gateways` — id, host, port, status, agent_count, max_agents
    - `user_gateway` — email → gateway mapping with agent_id and workspace_path
    - `cache` — shared key-value store with TTL. Used by deployer CLIs and the shared intelligence layer for cross-user data deduplication (e.g., caching API responses, crawled content). The framework provides the table; deployers decide what to cache.
+   - `usage_events` — TimescaleDB hypertable (partitioned by time) for usage tracking. Control plane writes token counts, cost, model, latency from gateway WebSocket events. Continuous aggregates in Phase 6 query this table for billing and analytics.
 3. Define RLS policies:
    - Each gateway connection can only access its own agents' data
    - Control plane has full access
