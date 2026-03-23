@@ -408,7 +408,6 @@ See [architecture.md](architecture.md) for core usage. Below are capabilities be
 | Embedding generation | pgai (auto-generates inside database) |
 | Structured LLM output | AI SDK `generateObject()` + Zod |
 | Observability upgrade path | AI SDK OpenTelemetry |
-| MCP client | AI SDK `createMCPClient()` |
 | Input validation (prompt injection, PII, etc.) | hai-guardrails |
 | Usage analytics (cross-user) | TimescaleDB continuous aggregates |
 | Auto-embedding sync | pgai Vectorizer |
