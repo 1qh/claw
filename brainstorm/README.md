@@ -26,3 +26,4 @@ This is an **open source framework** for building agent-native SaaS products whe
 - [**Agent-Native Paradigm**](agent-native.md) — CLIs as backend, knowledge as files, instructions as markdown, bun as runtime
 - [**Data Layer**](data-layer.md) — PostgreSQL + workspace, no overlap, no stale data, real-time streaming
 - [**Key Pool**](key-pool.md) — LLM API key rotation, coding plans, multi-provider failover
+- [**Tech Stack**](tech-stack.md) — opinionated choices: Bun, TypeScript, Drizzle, PostgreSQL, and what's excluded
