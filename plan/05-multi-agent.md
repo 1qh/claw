@@ -43,7 +43,7 @@ Control plane can create and delete agents on a running gateway without restart.
 
 ### Dependencies
 - Phase 2 complete (single gateway integration)
-- **Phase 3 (Security Gate) should be active before multi-agent goes live.** Multi-agent means multiple users share a gateway process. Without the security gate, a cross-tenant prompt injection could manipulate one user's agent to affect the shared gateway. The security gate (especially Layers 1-4) blocks injection attempts before they reach any agent.
+- **Phase 3 complete (Security Gate) — HARD REQUIREMENT.** Multi-agent means multiple users share a gateway process. Without the security gate, a cross-tenant prompt injection could manipulate one user's agent to affect the shared gateway. The security gate (especially Layers 1-4) blocks injection attempts before they reach any agent. Do NOT start Phase 5 without Phase 3.
 
 ### Steps
 

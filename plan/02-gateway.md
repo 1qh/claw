@@ -54,11 +54,13 @@ stateDiagram-v2
     Stopped --> [*]
 ```
 
-1. Control plane spawns OpenClaw gateway via `Bun.spawn()` with:
+1. **Create a per-gateway PostgreSQL role** for this gateway (even for the first single gateway in Phase 2). The role is scoped via RLS policies to only see its own agents' data. Configure the gateway's database connection and TigerFS mount to use this role. This ensures RLS is tested from Phase 2 onward, not deferred to Phase 5.
+2. Control plane spawns OpenClaw gateway via `Bun.spawn()` with:
    - `OPENCLAW_STATE_DIR` pointing to TigerFS
    - `agents.defaults.workspace` pointing to TigerFS
    - Unique port assignment
    - Gateway auth token for control plane connection
+   - Database connection string using the per-gateway PostgreSQL role (not superuser)
    - **Explicitly set `tools.exec.security: "allowlist"` with `safeBins: ["bunx"]` in the shared config** — this permits ONLY `bunx` (the CLI execution mechanism) while blocking all other shell commands. Setting `"deny"` would break the agent-native CLI paradigm entirely
    - **TigerFS mount permissions:** TigerFS mount should use restricted permissions (only accessible to the gateway process user group). Combined with exec deny default, this prevents FUSE-level bypass of RLS
 2. Control plane waits for gateway to be ready (poll `/health` or wait for WebSocket handshake)

@@ -74,6 +74,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 - [ ] pgai extension status documented (available locally or Cloud-only)
 - [ ] Hypertable creation succeeds on a test table
 - [ ] Compression policy can be applied to hypertable
+- [ ] PgBouncer (transaction pooling mode): install, verify `SET LOCAL app.agent_id` persists within a transaction, verify `SET ROLE` works per-transaction, verify RLS policy using `current_setting('app.agent_id')` returns correct rows through PgBouncer. This validates the RLS model before Phase 7 depends on it.
 
 ---
 
