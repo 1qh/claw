@@ -9,7 +9,6 @@ services:
       POSTGRES_PASSWORD: uniclaw
     volumes:
       - tsdb_data:/home/postgres/pgdata/data
-
   tigerfs:
     build:
       context: .
@@ -24,11 +23,9 @@ services:
       - postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw
       - /mnt/tigerfs
       - --foreground
-
   clamav:
     image: clamav/clamav:stable
     ports:
       - '3310:3310'
-
 volumes:
   tsdb_data:
