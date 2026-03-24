@@ -9,7 +9,6 @@ services:
       POSTGRES_PASSWORD: uniclaw
     volumes:
       - tsdb_data:/home/postgres/pgdata/data
-
   gateway:
     image: ghcr.io/openclaw/openclaw:latest
     depends_on:
@@ -27,12 +26,10 @@ services:
       - gateway_state:/root/.openclaw
       - ./gateway-init.sh:/gateway-init.sh:ro
     entrypoint: ['/bin/bash', '/gateway-init.sh']
-
   clamav:
     image: clamav/clamav:stable
     ports:
       - '3310:3310'
-
 volumes:
   tsdb_data:
   gateway_state:
