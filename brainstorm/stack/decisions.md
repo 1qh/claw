@@ -116,21 +116,22 @@ See [limitations.md](../limitations.md) for all upstream constraints (OpenClaw t
 
 **Decision:** Use WebSocket `chat.send` for all chat, not HTTP `/v1/chat/completions`.
 
-| Aspect                   | HTTP `/v1/chat/completions`                               | WebSocket `chat.send`                             |
-| ------------------------ | --------------------------------------------------------- | ------------------------------------------------- |
-| **Session state**        | Stateless — client sends full history each request        | Server-side — gateway maintains session context   |
-| **Transcript storage**   | Assistant responses only — user messages never stored     | Complete transcripts — both user and assistant    |
-| **Session persistence**  | Requires separate storage for user messages (duplication) | Single source of truth — JSONL has everything     |
-| **Agent logs**           | Separate SSE connection needed                            | Same WS connection carries chat + events          |
-| **Device pairing**       | N/A (Bearer token auth)                                   | Not needed — operator+password auth skips pairing |
-| **AI SDK compatibility** | Works with `TextStreamChatTransport`                      | Requires custom transport or direct WS handling   |
+| Aspect                   | HTTP `/v1/chat/completions`                        | WebSocket `chat.send`                               |
+| ------------------------ | -------------------------------------------------- | --------------------------------------------------- |
+| **Session state**        | Stateless — client sends full history each request | Server-side — gateway maintains session context     |
+| **Transcript storage**   | Assistant responses only in JSONL                  | Assistant responses only in JSONL (same limitation) |
+| **Session persistence**  | Requires separate storage for user messages        | Same — own `chat_messages` table needed             |
+| **Agent logs**           | Separate SSE connection needed                     | Same WS connection carries chat + events            |
+| **Device pairing**       | N/A (Bearer token auth)                            | Not needed — operator+password auth skips pairing   |
+| **AI SDK compatibility** | Works with `TextStreamChatTransport`               | Requires custom transport or direct WS handling     |
 
 **Why WS wins:**
 
-- Single source of truth: complete transcripts in TigerFS JSONL (no duplicate user message storage)
+- Server-side context: gateway manages session history (multi-turn without sending full history each request)
 - Single connection: chat + agent events on one WS (no separate SSE)
-- Server-side context: gateway manages session history (no need to send full history each request)
-- Session persistence: switch between sessions by reading JSONL transcripts that contain all messages
+- No device identity needed: `dangerouslyDisableDeviceAuth` + Control UI client ID bypasses pairing
+
+**Note:** JSONL transcripts store only assistant messages regardless of transport. For session persistence (sidebar, switching), a Drizzle-managed `chat_messages` table stores both user and assistant messages. This is NOT duplication — user messages don’t exist anywhere in OpenClaw’s storage. See [limitations.md](../limitations.md).
 
 **Transport architecture:**
 
@@ -143,7 +144,7 @@ The frontend never opens a WebSocket directly. All WS connections are server-sid
 
 **What changes:**
 
-- `/api/chat` route: opens WS to gateway, sends `chat.send`, streams `chat` delta events back as HTTP text stream, closes WS on completion
+- `/api/chat` route: opens WS to gateway, sends `chat.send`, streams `chat` delta events back as HTTP text stream, stores both user and assistant messages in `chat_messages` table, closes WS on completion
 - `/api/events` route: opens WS to gateway, forwards `agent` events as SSE
 - AI SDK’s `TextStreamChatTransport` + `createTextStreamResponse` are no longer used — `/api/chat` returns a plain text stream that the frontend consumes via `useChat` with a custom transport or direct fetch
 - `packages/control-plane/connect.ts`: simplified — no device identity, just operator+password
@@ -152,8 +153,8 @@ The frontend never opens a WebSocket directly. All WS connections are server-sid
 
 - Auth: still better-auth via `/api/auth/[...all]`
 - Frontend: still uses `useChat` from AI SDK (with custom transport) or direct WS
-- Session list: still reads `sessions.json` from TigerFS via Drizzle
-- Session messages: reads JSONL transcripts from TigerFS — now contains both user and assistant messages
+- Session list: reads from `chat_messages` table (grouped by session key, ordered by most recent)
+- Session messages: reads from `chat_messages` table (both user and assistant messages)
 
 ---
 

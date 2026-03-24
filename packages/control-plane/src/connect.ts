@@ -13,7 +13,7 @@ const connectToGateway = async ({
   password: string
   port?: number
 }): Promise<GatewayConnection> => {
-  const ws = new WebSocket(`ws://${host}:${String(port)}`)
+  const ws = new WebSocket(`ws://${host}:${String(port)}`, { headers: { origin: `http://${host}:${String(port)}` } })
   await new Promise<void>(resolve => {
     ws.addEventListener('message', () => resolve(), { once: true })
   })
@@ -24,7 +24,7 @@ const connectToGateway = async ({
       params: {
         auth: { password },
         caps: ['tool-events'],
-        client: { id: 'gateway-client', mode: 'backend', platform: process.platform, version: '0.0.1' },
+        client: { id: 'openclaw-control-ui', mode: 'backend', platform: process.platform, version: '0.0.1' },
         commands: [],
         locale: 'en-US',
         maxProtocol: 3,

@@ -32,17 +32,17 @@ WebSocket connections with `role: "operator"` and password auth (`sharedAuthOk`)
 
 Previously we sent Ed25519 device identity in the WS handshake, which triggered the pairing flow. Since our Next.js app connects from Docker host (non-loopback), auto-approve didn’t work. **Fix:** Don’t send device identity at all — operator+password is sufficient. Eliminates the entire pairing problem.
 
-### HTTP `/v1/chat/completions` is stateless — no user messages in transcripts
+### JSONL transcripts contain only assistant messages (both HTTP and WS)
 
-The HTTP chat endpoint follows the OpenAI API pattern: **stateless per request**. The client sends the full conversation history in `messages[]` each time. The gateway only stores the **assistant response** in the session JSONL transcript — user messages are never persisted.
+OpenClaw’s session JSONL transcripts store ONLY assistant responses — user messages are NOT persisted to disk. This applies to BOTH HTTP (`/v1/chat/completions`) and WebSocket (`chat.send`). User messages exist in the session context (in-memory) but are never written as JSONL lines.
 
 This means:
 
-- JSONL transcripts contain only assistant messages (no user messages)
-- Session switching requires the client to reconstruct the full conversation
-- The `user` field or `x-openclaw-session-key` header controls session routing for storage/maintenance, but does NOT inject previous messages into the context
+- JSONL transcripts cannot be used as the sole source of conversation history
+- Session switching (loading past conversations) requires user messages stored elsewhere
+- The `sessions.json` index contains session metadata (keys, timestamps) but not message content
 
-**Decision:** Use WebSocket `chat.send` instead. The WS protocol stores complete transcripts (user + assistant) and maintains server-side session context. See [decisions.md](stack/decisions.md) for the full rationale.
+**Decision:** Use WS `chat.send` for chat (server-side context, agent events on same connection) AND store both user and assistant messages in a Drizzle-managed `chat_messages` table. This is NOT duplication — user messages don’t exist anywhere in OpenClaw’s storage, and having assistant messages in both the JSONL and our table is acceptable since JSONL is OpenClaw’s internal format while our table is the UI’s source of truth. See [decisions.md](stack/decisions.md).
 
 ### TigerFS rejects dot-prefixed entries
 

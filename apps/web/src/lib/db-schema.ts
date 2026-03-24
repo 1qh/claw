@@ -40,6 +40,16 @@ const gateways = pgTable('gateways', {
     time: timestamp({ withTimezone: true }).notNull().defaultNow(),
     userId: text().references(() => user.id)
   }),
+  chatMessages = pgTable('chat_messages', {
+    content: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    id: uuid().primaryKey().defaultRandom(),
+    role: text().notNull(),
+    sessionKey: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id)
+  }),
   tigerfsState = pgTable('_state', {
     body: text(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -50,5 +60,5 @@ const gateways = pgTable('gateways', {
     id: uuid().primaryKey().defaultRandom(),
     modifiedAt: timestamp('modified_at', { withTimezone: true }).notNull().defaultNow()
   })
-export { cache, gateways, tigerfsState, usageEvents, userGateway }
+export { cache, chatMessages, gateways, tigerfsState, usageEvents, userGateway }
 export { account, session, user, verification } from './auth-schema'

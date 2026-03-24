@@ -1,5 +1,7 @@
+/** biome-ignore-all lint/suspicious/useAwait: lintmax adds async to then callbacks */
+/** biome-ignore-all lint/nursery/noNestedPromises: streaming pump pattern */
 /* eslint-disable @typescript-eslint/no-deprecated, @typescript-eslint/strict-void-return, @eslint-react/web-api/no-leaked-event-listener, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* oxlint-disable promise/prefer-await-to-then */
+/* oxlint-disable promise/prefer-await-to-then, promise/always-return, promise/no-nesting */
 'use client'
 import type { UIMessage } from 'ai'
 import {
@@ -31,30 +33,26 @@ import {
   SidebarProvider,
   SidebarTrigger
 } from '@a/ui/sidebar'
-import { useChat } from '@ai-sdk/react'
-import { TextStreamChatTransport } from 'ai'
 import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
 interface SessionEntry {
   firstMessage: string
-  key: string
-  sessionId: string
-  updatedAt: number
+  sessionKey: string
+  updatedAt: string
 }
-const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credentials: 'include' }),
-  emptyStateIcon = <SparklesIcon className='size-8' />,
-  textOf = (m: UIMessage) => {
-    let t = ''
-    for (const p of m.parts) if (p.type === 'text') t += p.text
-    return t
-  },
+const emptyStateIcon = <SparklesIcon className='size-8' />,
   toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
     data.map((m, i) => ({
       id: `${prefix}-${String(i)}`,
       parts: [{ text: m.content, type: 'text' as const }],
       role: m.role as 'assistant' | 'user'
     })),
+  textOf = (m: UIMessage) => {
+    let t = ''
+    for (const p of m.parts) if (p.type === 'text') t += p.text
+    return t
+  },
   signInGoogle = async () => {
     await authClient.signIn.social({ callbackURL: '/', provider: 'google' })
   },
@@ -157,49 +155,96 @@ const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credential
     const [logOutput, setLogOutput] = useState(''),
       [showLogs, setShowLogs] = useState(true),
       [sessions, setSessions] = useState<SessionEntry[]>([]),
-      [activeSessionId, setActiveSessionId] = useState<null | string>(null),
-      [sessionKey, setSessionKey] = useState(() => `agent:main:${userId}-${Date.now()}`),
-      { sendMessage, messages, status, stop, setMessages } = useChat({ transport: chatTransport }),
-      isBusy = status === 'streaming' || status === 'submitted',
+      [sessionKey, setSessionKey] = useState(() => {
+        const params = new URLSearchParams(globalThis.location.search)
+        return params.get('s') ?? `agent:main:${userId}-${Date.now()}`
+      }),
+      [messages, setMessages] = useState<UIMessage[]>([]),
+      [isBusy, setIsBusy] = useState(false),
       loadSessions = useCallback(() => {
         fetch('/api/sessions', { credentials: 'include' })
           .then(async res => res.json() as Promise<SessionEntry[]>)
           .then(setSessions)
           .catch(() => undefined)
       }, []),
+      loadMessages = useCallback((key: string) => {
+        fetch(`/api/sessions/${encodeURIComponent(key)}/messages`, { credentials: 'include' })
+          .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
+          .then(data => setMessages(toUiMessages(data, key)))
+          .catch(() => setMessages([]))
+      }, []),
       switchSession = useCallback(
         (entry: SessionEntry) => {
-          setSessionKey(entry.key)
-          setActiveSessionId(entry.sessionId)
-          globalThis.history.pushState(null, '', `/?s=${entry.sessionId}`)
-          fetch(`/api/sessions/${entry.sessionId}/messages`, { credentials: 'include' })
-            .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
-            .then(data => setMessages(toUiMessages(data, entry.sessionId)))
-            .catch(() => setMessages([]))
+          setSessionKey(entry.sessionKey)
+          globalThis.history.pushState(null, '', `/?s=${encodeURIComponent(entry.sessionKey)}`)
+          loadMessages(entry.sessionKey)
         },
-        [setMessages]
+        [loadMessages]
       ),
       newChat = useCallback(() => {
-        setSessionKey(`agent:main:${userId}-${Date.now()}`)
-        setActiveSessionId(null)
+        const key = `agent:main:${userId}-${Date.now()}`
+        setSessionKey(key)
         setMessages([])
         globalThis.history.pushState(null, '', '/')
-      }, [setMessages, userId])
+      }, [userId]),
+      sendChat = useCallback(
+        (text: string) => {
+          if (!text.trim() || isBusy) return
+          setIsBusy(true)
+          const userMsg: UIMessage = {
+            id: `user-${Date.now()}`,
+            parts: [{ text, type: 'text' }],
+            role: 'user'
+          }
+          setMessages(prev => [...prev, userMsg])
+          const assistantId = `assistant-${Date.now()}`
+          setMessages(prev => [
+            ...prev,
+            { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
+          ])
+          fetch('/api/chat', {
+            body: JSON.stringify({
+              messages: [{ parts: [{ text, type: 'text' }], role: 'user' }],
+              sessionKey
+            }),
+            credentials: 'include',
+            headers: { 'content-type': 'application/json' },
+            method: 'POST'
+          })
+            .then(async res => {
+              if (!res.body) throw new Error('No response body')
+              const reader = res.body.getReader(),
+                decoder = new TextDecoder()
+              let accumulated = ''
+              const pump = async (): Promise<void> =>
+                reader.read().then(async ({ done, value }) => {
+                  if (done) {
+                    setIsBusy(false)
+                    loadSessions()
+                    return
+                  }
+                  accumulated += decoder.decode(value, { stream: true })
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantId ? { ...m, parts: [{ text: accumulated, type: 'text' as const }] } : m
+                    )
+                  )
+                  return pump()
+                })
+              return pump()
+            })
+            .catch(() => {
+              setIsBusy(false)
+            })
+        },
+        [isBusy, sessionKey, loadSessions]
+      )
     useEffect(() => {
       loadSessions()
       const params = new URLSearchParams(globalThis.location.search),
-        sid = params.get('s')
-      if (sid) {
-        setActiveSessionId(sid)
-        fetch(`/api/sessions/${sid}/messages`, { credentials: 'include' })
-          .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
-          .then(data => setMessages(toUiMessages(data, sid)))
-          .catch(() => undefined)
-      }
-    }, [loadSessions, setMessages])
-    useEffect(() => {
-      if (status === 'ready' && messages.length > 0) loadSessions()
-    }, [status, messages.length, loadSessions])
+        s = params.get('s')
+      if (s) loadMessages(s)
+    }, [loadSessions, loadMessages])
     useEffect(() => {
       const es = new EventSource('/api/events')
       es.addEventListener('message', e => {
@@ -210,14 +255,6 @@ const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credential
         es.close()
       }
     }, [])
-    const handleSubmit = ({ text }: { text: string }) => {
-      if (!text.trim() || isBusy) return
-      sendMessage({
-        body: { sessionKey },
-        parts: [{ text, type: 'text' }],
-        role: 'user'
-      })
-    }
     return (
       <SidebarProvider>
         <Sidebar collapsible='icon' side='left'>
@@ -234,8 +271,8 @@ const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credential
           <SidebarContent className='overflow-y-auto px-2'>
             <SidebarMenu>
               {sessions.map(s => (
-                <SidebarMenuItem key={s.sessionId}>
-                  <SidebarMenuButton isActive={s.sessionId === activeSessionId} onClick={() => switchSession(s)}>
+                <SidebarMenuItem key={s.sessionKey}>
+                  <SidebarMenuButton isActive={s.sessionKey === sessionKey} onClick={() => switchSession(s)}>
                     <span className='truncate text-xs'>{s.firstMessage}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -299,11 +336,11 @@ const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credential
                   </ConversationContent>
                   <ConversationScrollButton />
                 </Conversation>
-                <PromptInput className='mx-auto max-w-3xl p-4' onSubmit={handleSubmit}>
+                <PromptInput className='mx-auto max-w-3xl p-4' onSubmit={({ text }) => sendChat(text)}>
                   <PromptInputTextarea disabled={isBusy} placeholder='Ask anything...' />
                   <PromptInputFooter>
                     <div />
-                    <PromptInputSubmit onClick={isBusy ? stop : undefined} status={isBusy ? 'streaming' : 'ready'} />
+                    <PromptInputSubmit status={isBusy ? 'streaming' : 'ready'} />
                   </PromptInputFooter>
                 </PromptInput>
               </div>

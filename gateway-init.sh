@@ -58,7 +58,9 @@ cat > "$STATE_DIR/openclaw.json" << CONF
       "password": "${GATEWAY_PASSWORD:-uniclaw-dev}"
     },
     "controlUi": {
-      "dangerouslyAllowHostHeaderOriginFallback": true
+      "dangerouslyAllowHostHeaderOriginFallback": true,
+      "dangerouslyDisableDeviceAuth": true,
+      "allowedOrigins": ["http://localhost:3000", "http://localhost:18789"]
     },
     "http": {
       "endpoints": {

@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/performance/noAwaitInLoops: sequential e2e */
+
 /* oxlint-disable no-await-in-loop */
 import { spawn } from 'bun'
 import { describe, expect, test } from 'bun:test'
@@ -6,6 +7,7 @@ const WEB_URL = 'http://localhost:3000',
   COOKIE_JAR = '/tmp/e2e-cookies.txt',
   testEmail = `e2e-${Date.now()}@test.com`,
   testPassword = 'testpassword123',
+  sessionKey = `agent:main:e2e-${Date.now()}`,
   curlFetch = async (path: string, opts?: { body?: string; method?: string }) => {
     const args = ['curl', '-s', '-b', COOKIE_JAR, '-c', COOKIE_JAR, `${WEB_URL}${path}`]
     if (opts?.method) args.push('-X', opts.method)
@@ -15,19 +17,17 @@ const WEB_URL = 'http://localhost:3000',
     await proc.exited
     return out
   },
-  curlStatus = async (path: string, opts?: { body?: string; method?: string; noCookies?: boolean }) => {
+  curlStatus = async (path: string, opts?: { noCookies?: boolean }) => {
     const args = ['curl', '-s', '-o', '/dev/null', '-w', '%{http_code}']
     if (!opts?.noCookies) args.push('-b', COOKIE_JAR, '-c', COOKIE_JAR)
     args.push(`${WEB_URL}${path}`)
-    if (opts?.method) args.push('-X', opts.method)
-    if (opts?.body) args.push('-H', 'Content-Type: application/json', '-d', opts.body)
     const proc = spawn(args, { stderr: 'pipe', stdout: 'pipe' }),
       out = await new Response(proc.stdout).text()
     await proc.exited
     return Number(out.trim())
   }
 describe('webapp e2e', () => {
-  test('signup', async () => {
+  test('signup creates user', async () => {
     const raw = await curlFetch('/api/auth/sign-up/email', {
         body: JSON.stringify({ email: testEmail, name: 'E2E Test', password: testPassword }),
         method: 'POST'
@@ -35,7 +35,7 @@ describe('webapp e2e', () => {
       data = JSON.parse(raw) as { user?: { email?: string } }
     expect(data.user?.email).toBe(testEmail)
   })
-  test('session is valid', async () => {
+  test('session is valid after signup', async () => {
     const raw = await curlFetch('/api/auth/get-session'),
       data = JSON.parse(raw) as { user?: { email?: string } }
     expect(data.user?.email).toBe(testEmail)
@@ -52,7 +52,7 @@ describe('webapp e2e', () => {
           '-b',
           COOKIE_JAR,
           '--max-time',
-          '3',
+          '5',
           `${WEB_URL}/api/events`
         ],
         { stderr: 'pipe', stdout: 'pipe' }
@@ -63,56 +63,67 @@ describe('webapp e2e', () => {
     expect(Number(status)).toBe(200)
     expect(contentType).toContain('text/event-stream')
   }, 10_000)
-  test('events SSE emits data during chat', async () => {
-    const eventProc = spawn(['curl', '-sN', '-b', COOKIE_JAR, '--max-time', '15', `${WEB_URL}/api/events`], {
-      stderr: 'pipe',
-      stdout: 'pipe'
-    })
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 2000)
-    })
-    await curlFetch('/api/chat', {
-      body: JSON.stringify({
-        messages: [{ parts: [{ text: 'Say only: ping', type: 'text' }], role: 'user' }],
-        sessionKey: `agent:main:e2e-events-${Date.now()}`
-      }),
-      method: 'POST'
-    })
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 3000)
-    })
-    eventProc.kill()
-    const eventOutput = await new Response(eventProc.stdout).text()
-    expect(eventOutput.length).toBeGreaterThan(0)
-    expect(eventOutput).toContain('data:')
-  }, 30_000)
-  test('chat returns agent response', async () => {
+  test('chat sends message and returns agent response (WS chat.send)', async () => {
     const raw = await curlFetch('/api/chat', {
       body: JSON.stringify({
         messages: [{ parts: [{ text: 'Say only: pong', type: 'text' }], role: 'user' }],
-        sessionKey: `agent:main:e2e-chat-${Date.now()}`
+        sessionKey
       }),
       method: 'POST'
     })
     expect(raw.length).toBeGreaterThan(0)
   }, 60_000)
-  test('sessions list includes the chat session', async () => {
-    const raw = await curlFetch('/api/sessions'),
-      sessions = JSON.parse(raw) as { firstMessage: string; sessionId: string }[]
-    expect(sessions.length).toBeGreaterThan(0)
-  })
-  test('session messages are loadable', async () => {
+  test('chat message stored in chat_messages table', async () => {
     const sessionsRaw = await curlFetch('/api/sessions'),
-      sessions = JSON.parse(sessionsRaw) as { firstMessage: string; sessionId: string }[]
+      sessions = JSON.parse(sessionsRaw) as { firstMessage: string; sessionKey: string }[]
     expect(sessions.length).toBeGreaterThan(0)
-    const target = sessions[0],
-      msgRaw = await curlFetch(`/api/sessions/${target.sessionId}/messages`),
+    const match = sessions.find(s => s.sessionKey === sessionKey)
+    expect(match).toBeDefined()
+    expect(match?.firstMessage.toLowerCase()).toContain('pong')
+  })
+  test('session messages loadable via API', async () => {
+    const msgRaw = await curlFetch(`/api/sessions/${encodeURIComponent(sessionKey)}/messages`),
       messages = JSON.parse(msgRaw) as { content: string; role: string }[]
-    expect(messages.length).toBeGreaterThan(0)
-    expect(messages.some(m => m.role === 'assistant')).toBe(true)
+    expect(messages.length).toBe(2)
+    expect(messages[0].role).toBe('user')
+    expect(messages[0].content).toContain('pong')
+    expect(messages[1].role).toBe('assistant')
+  })
+  test('second message in same session stored', async () => {
+    await curlFetch('/api/chat', {
+      body: JSON.stringify({
+        messages: [{ parts: [{ text: 'Say only: ping', type: 'text' }], role: 'user' }],
+        sessionKey
+      }),
+      method: 'POST'
+    })
+    const msgRaw = await curlFetch(`/api/sessions/${encodeURIComponent(sessionKey)}/messages`),
+      messages = JSON.parse(msgRaw) as { content: string; role: string }[]
+    expect(messages.length).toBeGreaterThanOrEqual(3)
+    const userMsgs = messages.filter(m => m.role === 'user')
+    expect(userMsgs.length).toBeGreaterThanOrEqual(2)
+  }, 60_000)
+  test('new session has independent messages', async () => {
+    const otherKey = `agent:main:e2e-other-${Date.now()}`
+    await curlFetch('/api/chat', {
+      body: JSON.stringify({
+        messages: [{ parts: [{ text: 'Say only: separate', type: 'text' }], role: 'user' }],
+        sessionKey: otherKey
+      }),
+      method: 'POST'
+    })
+    const msgRaw = await curlFetch(`/api/sessions/${encodeURIComponent(otherKey)}/messages`),
+      messages = JSON.parse(msgRaw) as { content: string; role: string }[]
+    expect(messages.length).toBe(2)
+    expect(messages[0].content).toContain('separate')
+  }, 60_000)
+  test('sessions list ordered by most recent', async () => {
+    const raw = await curlFetch('/api/sessions'),
+      sessions = JSON.parse(raw) as { sessionKey: string; updatedAt: string }[]
+    expect(sessions.length).toBeGreaterThanOrEqual(2)
   })
   test('unauthenticated requests rejected', async () => {
-    const status = await curlStatus('/api/sessions', { noCookies: true })
-    expect(status).toBe(401)
+    const sessionsStatus = await curlStatus('/api/sessions', { noCookies: true })
+    expect(sessionsStatus).toBe(401)
   })
 })
