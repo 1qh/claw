@@ -10,12 +10,20 @@
     "build": "bun run --filter '*' build",
     "check": "lintmax check",
     "clean": "rm -rf node_modules bun.lock dist .cache .next .turbo packages/*/node_modules apps/*/node_modules packages/*/dist apps/*/dist apps/*/.next",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "dev": "bun run --filter '*' dev",
     "fix": "lintmax fix",
     "test": "bun test"
   },
+  "dependencies": {
+    "better-auth": "^1.5.6",
+    "drizzle-orm": "latest",
+    "postgres": "latest"
+  },
   "devDependencies": {
     "bun-types": "latest",
+    "drizzle-kit": "latest",
     "lintmax": "latest",
     "typescript": "latest"
   },
