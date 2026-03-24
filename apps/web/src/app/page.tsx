@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-deprecated, @typescript-eslint/strict-void-return, @eslint-react/web-api/no-leaked-event-listener */
+/* oxlint-disable promise/prefer-await-to-then */
 'use client'
 import type { UIMessage } from 'ai'
 import {
@@ -32,9 +33,15 @@ import {
 } from '@a/ui/sidebar'
 import { useChat } from '@ai-sdk/react'
 import { TextStreamChatTransport } from 'ai'
-import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageCircleIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
+const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credentials: 'include' })
+interface SessionEntry {
+  key: string
+  sessionId: string
+  updatedAt: number
+}
 const emptyStateIcon = <SparklesIcon className='size-8' />,
   textOf = (m: UIMessage) => {
     let t = ''
@@ -142,10 +149,47 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
   Chat = ({ userName }: { userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
       [showLogs, setShowLogs] = useState(true),
-      { sendMessage, messages, status, stop } = useChat({
-        transport: new TextStreamChatTransport({ api: '/api/chat', credentials: 'include' })
-      }),
-      isBusy = status === 'streaming' || status === 'submitted'
+      [sessions, setSessions] = useState<SessionEntry[]>([]),
+      [activeSessionKey, setActiveSessionKey] = useState(() => `agent:main:new-${Date.now()}`),
+      [activeSessionId, setActiveSessionId] = useState<null | string>(null),
+      { sendMessage, messages, status, stop, setMessages } = useChat({ transport: chatTransport }),
+      isBusy = status === 'streaming' || status === 'submitted',
+      loadSessions = useCallback(() => {
+        fetch('/api/sessions', { credentials: 'include' })
+          .then(async res => res.json() as Promise<SessionEntry[]>)
+          .then(setSessions)
+          .catch(() => undefined)
+      }, []),
+      switchSession = useCallback(
+        (entry: SessionEntry) => {
+          setActiveSessionKey(entry.key)
+          setActiveSessionId(entry.sessionId)
+          fetch(`/api/sessions/${entry.sessionId}/messages`, { credentials: 'include' })
+            .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
+            .then(data =>
+              setMessages(
+                data.map((m, i) => ({
+                  id: `${entry.sessionId}-${String(i)}`,
+                  parts: [{ text: m.content, type: 'text' as const }],
+                  role: m.role as 'assistant' | 'user'
+                }))
+              )
+            )
+            .catch(() => setMessages([]))
+        },
+        [setMessages]
+      ),
+      newChat = useCallback(() => {
+        setActiveSessionKey(`agent:main:new-${Date.now()}`)
+        setActiveSessionId(null)
+        setMessages([])
+      }, [setMessages])
+    useEffect(() => {
+      loadSessions()
+    }, [loadSessions])
+    useEffect(() => {
+      if (status === 'ready' && messages.length > 0) loadSessions()
+    }, [status, messages.length, loadSessions])
     useEffect(() => {
       const es = new EventSource('/api/events')
       es.addEventListener('message', e => {
@@ -158,7 +202,11 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     }, [])
     const handleSubmit = ({ text }: { text: string }) => {
       if (!text.trim() || isBusy) return
-      sendMessage({ parts: [{ text, type: 'text' }], role: 'user' })
+      sendMessage({
+        body: { sessionKey: activeSessionKey },
+        parts: [{ text, type: 'text' }],
+        role: 'user'
+      })
     }
     return (
       <SidebarProvider>
@@ -166,14 +214,27 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => globalThis.location.reload()}>
+                <SidebarMenuButton onClick={newChat}>
                   <MessageSquarePlusIcon className='size-4' />
                   <span>New Chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarHeader>
-          <SidebarContent />
+          <SidebarContent className='overflow-y-auto px-2'>
+            <SidebarMenu>
+              {sessions.map(s => (
+                <SidebarMenuItem key={s.key}>
+                  <SidebarMenuButton
+                    isActive={s.key === activeSessionKey || s.sessionId === activeSessionId}
+                    onClick={() => switchSession(s)}>
+                    <MessageCircleIcon className='size-4' />
+                    <span className='truncate text-xs'>{s.key.replace('agent:main:', '').slice(0, 20)}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>

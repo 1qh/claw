@@ -1,3 +1,9 @@
+## OpenClaw Fork
+
+Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/openclaw`). PR branch: `fix/workspace-state-no-dot-dir` (#53326). **Chore:** When reading OpenClaw code, pull upstream and rebase: `cd ~/openclaw-repo && git fetch origin && git merge origin/main --no-edit`. Rebase PR branch if needed.
+
+---
+
 ## Dependencies & Scripts
 
 - All deps use `latest` tag in package.json — no pinned versions during development
@@ -25,6 +31,8 @@
 - Prefer existing libraries over new dependencies
 - Scripts: silent on success, verbose on failure. Prefer `q ...` for noisy commands.
 - **Environment variables:** Never use `process.env` directly — import `env` from `@a/env` (or `~/lib/env` which re-exports it). Never use fallback defaults (`??`) for env vars in code. Single `.env` at project root. Schema in `packages/env/src/env.ts`. See `plan/01-foundation.md` for the env setup.
+- **Database queries:** Always use Drizzle — no raw SQL. This includes TigerFS-backed tables (`_state`, `_workspace`, `_state_history`) which have Drizzle schemas declared as read-only.
+- **Next.js 16 + React 19:** Use server components by default, `'use client'` only when needed (hooks, interactivity). Use server actions for mutations. Leverage `@a/ui` (shadcn + ai-elements) components everywhere applicable — don’t rebuild what’s already available.
 
 ### Must NOT do
 

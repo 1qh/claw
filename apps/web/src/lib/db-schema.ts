@@ -1,4 +1,4 @@
-import { integer, jsonb, numeric, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { integer, jsonb, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { user } from './auth-schema'
 const gateways = pgTable('gateways', {
     agentCount: integer().notNull().default(0),
@@ -39,6 +39,16 @@ const gateways = pgTable('gateways', {
     taskType: text(),
     time: timestamp({ withTimezone: true }).notNull().defaultNow(),
     userId: text().references(() => user.id)
+  }),
+  tigerfsState = pgTable('_state', {
+    body: text(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    encoding: text().notNull().default('utf8'),
+    filename: text().notNull(),
+    filetype: text().notNull().default('file'),
+    headers: jsonb().default({}),
+    id: uuid().primaryKey().defaultRandom(),
+    modifiedAt: timestamp('modified_at', { withTimezone: true }).notNull().defaultNow()
   })
-export { cache, gateways, usageEvents, userGateway }
+export { cache, gateways, tigerfsState, usageEvents, userGateway }
 export { account, session, user, verification } from './auth-schema'

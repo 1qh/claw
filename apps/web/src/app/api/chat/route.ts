@@ -11,20 +11,31 @@ const POST = async (request: Request) => {
   if (!session) return new Response('Unauthorized', { status: 401 })
   const body = (await request.json()) as {
       messages?: { parts?: { text?: string; type: string }[]; role: string }[]
+      sessionKey?: string
     },
-    lastMessage = body.messages?.at(-1),
-    text = lastMessage?.parts?.find(p => p.type === 'text')?.text
-  if (!text) return new Response('Missing message', { status: 400 })
+    allMessages = (body.messages ?? [])
+      .map(m => ({
+        content:
+          m.parts
+            ?.filter(p => p.type === 'text')
+            .map(p => p.text ?? '')
+            .join('') ?? '',
+        role: m.role
+      }))
+      .filter(m => m.content)
+  if (allMessages.length === 0) return new Response('Missing message', { status: 400 })
   const gatewayUrl = `http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}/v1/chat/completions`,
+    sessionKey = body.sessionKey ?? `agent:main:${session.user.id}-${Date.now()}`,
     upstream = await fetch(gatewayUrl, {
       body: JSON.stringify({
-        messages: [{ content: text, role: 'user' }],
+        messages: allMessages,
         model: env.OPENCLAW_MODEL,
         stream: true
       }),
       headers: {
         authorization: `Bearer ${env.GATEWAY_PASSWORD}`,
-        'content-type': 'application/json'
+        'content-type': 'application/json',
+        'x-openclaw-session-key': sessionKey
       },
       method: 'POST'
     })
