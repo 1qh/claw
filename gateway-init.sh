@@ -47,6 +47,10 @@ cat > /root/.openclaw/openclaw.json << CONF
     "port": $GATEWAY_PORT,
     "mode": "local",
     "bind": "lan",
+    "auth": {
+      "mode": "password",
+      "password": "${GATEWAY_PASSWORD:-uniclaw-dev}"
+    },
     "controlUi": {
       "dangerouslyAllowHostHeaderOriginFallback": true
     }
