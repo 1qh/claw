@@ -52,8 +52,8 @@ Set up the Next.js frontend with `lib/ui/` components and AI SDK v6 integration.
 3. `globals.css` imports `@a/ui/globals.css` directly — stock theme, no redefinition
 4. Install AI SDK v6 — note the new API: `useChat` returns `sendMessage`, `status`, `messages` (not `input`, `handleInputChange`, `handleSubmit`, `isLoading`)
 5. Messages use `parts` array: `{ id, role, parts: [{ type: 'text', text: '...' }] }` (not `content` string)
-6. Use `TextStreamChatTransport` for chat (works with `/api/chat` plain text stream)
-7. Create basic layout with chat + Terminal panel
+6. Chat transport: `/api/chat` route connects to gateway via WS `chat.send` and returns a streaming response. Frontend uses a custom chat transport or adapts the AI SDK `useChat` hook. See [decisions.md](../brainstorm/stack/decisions.md) for why WS over HTTP.
+7. Create basic layout with chat + Terminal panel + session sidebar
 
 ### External References
 
@@ -65,7 +65,7 @@ Set up the Next.js frontend with `lib/ui/` components and AI SDK v6 integration.
 - [ ] `bun dev` starts Next.js dev server with frontend
 - [ ] Tailwind styles render correctly
 - [ ] `lib/ui/` components import and render (Terminal, Conversation, Message, Card)
-- [ ] AI SDK `useChat` connects to `/api/chat` via TextStreamChatTransport
+- [ ] Chat connects to `/api/chat` which proxies to gateway via WS `chat.send`
 - [ ] Layout renders with chat and Terminal panels
 
 ---
@@ -105,7 +105,7 @@ stateDiagram-v2
 ### Verification Checklist
 
 - [ ] User can sign up with email/password
-- [ ] User can sign up with GitHub OAuth
+- [ ] User can sign up with Google OAuth
 - [ ] User can log in
 - [ ] Authenticated user sees dashboard
 - [ ] Unauthenticated user redirected to login
@@ -136,17 +136,17 @@ graph TB
         USAGE["Usage / History\n(separate page or tab)"]
     end
 
-    AISDK["AI SDK useChat\n(TextStreamChatTransport)"] --> CHAT
-    SSE["SSE /api/events"] --> FEED & NOTIF
+    WS["WS chat.send\n(via /api/chat)"] --> CHAT
+    SSE["SSE /api/events\n(from gateway WS)"] --> FEED & NOTIF
     API["REST API\n(/api/*)"] --> USAGE
 ```
 
 #### Surface 1: Chat
 
-1. Text input for submitting tasks via AI SDK `sendMessage`
+1. Text input for submitting tasks — POST to `/api/chat` which proxies to gateway via WS `chat.send`
 2. Message list using `lib/ui/` Conversation + Message components
-3. Agent responses use `parts` array: `[{ type: 'text', text: '...' }]`
-4. Chat response rendered with AI SDK `TextStreamChatTransport`
+3. Agent responses stream back as text deltas from gateway WS events
+4. **Session sidebar:** List of past sessions (read from `sessions.json` via Drizzle), each labeled with first user message. Click to switch — loads messages from JSONL transcript. New chat button creates fresh session. URL updates to `/?s={sessionId}` on switch.
 5. File upload button (triggers file gate from Phase 3)
 6. Support for markdown rendering in agent responses
 
@@ -175,16 +175,20 @@ graph TB
 
 ### Verification Checklist
 
-- [ ] Chat: user sends message, agent response appears
+- [ ] Chat: user sends message, agent response appears (via WS `chat.send`)
 - [ ] Chat: streaming response updates in real-time (not just final)
 - [ ] Chat: file upload works, agent can reference uploaded file
-- [ ] Live Feed: tool call events appear as they happen
+- [ ] Sessions: sidebar lists past sessions with first user message as label
+- [ ] Sessions: clicking a session loads its messages and updates URL to `/?s={sessionId}`
+- [ ] Sessions: new chat button creates fresh session, clears messages, resets URL
+- [ ] Sessions: after sending a message, new session appears at top of sidebar
+- [ ] Live Feed: verbose JSON agent logs appear during chat (tool calls, progress)
 - [ ] Live Feed: can be collapsed/expanded
 - [ ] Notifications: toast appears when task completes
 - [ ] Usage: token count shows for current session
 - [ ] Usage: past tasks listed with correct status
-- [ ] All four surfaces work simultaneously
-- [ ] WebSocket reconnects automatically on disconnect
+- [ ] All surfaces work simultaneously
+- [ ] WS reconnects automatically on disconnect
 
 ---
 

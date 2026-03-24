@@ -4,15 +4,15 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 ## Core
 
-| Choice                                                                      | Role                                                                                                           |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [Bun](https://bun.sh/)                                                      | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js                         |
-| ~~Elysia~~ (removed)                                                        | **Eliminated** — auth + chat + events all run as Next.js API routes. Single process, no separate server needed |
-| TypeScript + ESM                                                            | Language — same everywhere (framework, control plane, deployer CLIs)                                           |
-| [OpenClaw](https://openclaw.ai)                                             | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
-| `bunx cli@latest`                                                           | Tool execution — deployer’s backend as npm CLIs, always latest                                                 |
-| `bun test`                                                                  | Testing — Jest-compatible, built into Bun (not Vitest)                                                         |
-| [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Oxfmt](https://oxc.rs/) | Linting and formatting — Rust-based, fast, matches OpenClaw’s tooling                                          |
+| Choice                                                                                      | Role                                                                                                           |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [Bun](https://bun.sh/)                                                                      | Runtime — native TypeScript, `bunx` for CLI execution, 30-40% less memory than Node.js                         |
+| ~~Elysia~~ (removed)                                                                        | **Eliminated** — auth + chat + events all run as Next.js API routes. Single process, no separate server needed |
+| TypeScript + ESM                                                                            | Language — same everywhere (framework, control plane, deployer CLIs)                                           |
+| [OpenClaw](https://openclaw.ai)                                                             | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
+| `bunx cli@latest`                                                                           | Tool execution — deployer’s backend as npm CLIs, always latest                                                 |
+| `bun test`                                                                                  | Testing — Jest-compatible, built into Bun (not Vitest)                                                         |
+| [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Biome](https://biomejs.dev/) + Prettier | Linting and formatting via [lintmax](https://github.com/1qh/lintmax) orchestrator                              |
 
 ## Data
 
@@ -74,11 +74,11 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 Eliminated the Elysia control plane server entirely. Everything runs as Next.js API routes in a single process:
 
-| Route                | Role                                                                     |
-| -------------------- | ------------------------------------------------------------------------ |
-| `/api/auth/[...all]` | Auth via `toNextJsHandler` from `better-auth/next-js`                    |
-| `/api/chat`          | Chat via AI SDK’s `TextStreamChatTransport` + `createTextStreamResponse` |
-| `/api/events`        | Agent lifecycle logs via SSE                                             |
+| Route                | Role                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| `/api/auth/[...all]` | Auth via `toNextJsHandler` from `better-auth/next-js`              |
+| `/api/chat`          | Chat via WebSocket `chat.send` to gateway (operator+password auth) |
+| `/api/events`        | Agent lifecycle logs via SSE                                       |
 
 **Why this is better:**
 
@@ -89,7 +89,7 @@ Eliminated the Elysia control plane server entirely. Everything runs as Next.js 
 
 **What was removed:**
 
-- Elysia server (the `packages/control-plane/` package is kept as a gateway utility library exporting `connect.ts` and `device-identity.ts` for the events SSE route)
+- Elysia server (the `packages/control-plane/` package is kept as a gateway utility library exporting `connect.ts`)
 - Eden Treaty client (frontend type safety via server export)
 - WebSocket proxy (frontend ↔ control plane ↔ gateway)
 - Separate `bun run dev` for control plane
@@ -98,17 +98,78 @@ Eliminated the Elysia control plane server entirely. Everything runs as Next.js 
 
 ## AI SDK v6 API Changes (2026-03-24)
 
-| v5 (old)                                                                    | v6 (current)                                                                  |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `useChat` returns `input`, `handleInputChange`, `handleSubmit`, `isLoading` | `useChat` returns `sendMessage`, `status`, `messages`                         |
-| `messages[].content` (string)                                               | `messages[].parts` array: `[{ type: 'text', text: '...' }]`                   |
-| `DefaultChatTransport`                                                      | Strict schema validation — can’t hand-craft SSE events                        |
-| N/A                                                                         | `TextStreamChatTransport` + `createTextStreamResponse` for plain text streams |
-| `createUIMessageStream`                                                     | Writer format doesn’t match `DefaultChatTransport` wire format in v6          |
+| v5 (old)                                                                    | v6 (current)                                                                      |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `useChat` returns `input`, `handleInputChange`, `handleSubmit`, `isLoading` | `useChat` returns `sendMessage`, `status`, `messages`                             |
+| `messages[].content` (string)                                               | `messages[].parts` array: `[{ type: 'text', text: '...' }]`                       |
+| `DefaultChatTransport`                                                      | Strict schema validation — can’t hand-craft SSE events                            |
+| N/A                                                                         | `TextStreamChatTransport` (superseded — we use WS `chat.send` instead, see below) |
+| `createUIMessageStream`                                                     | Writer format doesn’t match `DefaultChatTransport` wire format in v6              |
 
 ---
 
 See [limitations.md](../limitations.md) for all upstream constraints (OpenClaw throttle, session keys, TigerFS, ClamAV, better-auth).
+
+---
+
+## Chat Transport: WebSocket `chat.send` over HTTP `/v1/chat/completions` (2026-03-25)
+
+**Decision:** Use WebSocket `chat.send` for all chat, not HTTP `/v1/chat/completions`.
+
+| Aspect                   | HTTP `/v1/chat/completions`                               | WebSocket `chat.send`                             |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------- |
+| **Session state**        | Stateless — client sends full history each request        | Server-side — gateway maintains session context   |
+| **Transcript storage**   | Assistant responses only — user messages never stored     | Complete transcripts — both user and assistant    |
+| **Session persistence**  | Requires separate storage for user messages (duplication) | Single source of truth — JSONL has everything     |
+| **Agent logs**           | Separate SSE connection needed                            | Same WS connection carries chat + events          |
+| **Device pairing**       | N/A (Bearer token auth)                                   | Not needed — operator+password auth skips pairing |
+| **AI SDK compatibility** | Works with `TextStreamChatTransport`                      | Requires custom transport or direct WS handling   |
+
+**Why WS wins:**
+
+- Single source of truth: complete transcripts in TigerFS JSONL (no duplicate user message storage)
+- Single connection: chat + agent events on one WS (no separate SSE)
+- Server-side context: gateway manages session history (no need to send full history each request)
+- Session persistence: switch between sessions by reading JSONL transcripts that contain all messages
+
+**Transport architecture:**
+
+```
+Browser → POST /api/chat (HTTP) → Next.js route handler → WS chat.send to gateway → stream deltas back as HTTP response
+Browser → GET /api/events (SSE)  → Next.js route handler → WS operator connection → forward agent events as SSE
+```
+
+The frontend never opens a WebSocket directly. All WS connections are server-side (Next.js → gateway). The frontend uses standard HTTP POST for chat and SSE for events. Each `/api/chat` request opens a short-lived WS connection to send the message and collect the response. Each `/api/events` SSE holds a long-lived WS connection for the session duration. Connection pooling is a future optimization.
+
+**What changes:**
+
+- `/api/chat` route: opens WS to gateway, sends `chat.send`, streams `chat` delta events back as HTTP text stream, closes WS on completion
+- `/api/events` route: opens WS to gateway, forwards `agent` events as SSE
+- AI SDK’s `TextStreamChatTransport` + `createTextStreamResponse` are no longer used — `/api/chat` returns a plain text stream that the frontend consumes via `useChat` with a custom transport or direct fetch
+- `packages/control-plane/connect.ts`: simplified — no device identity, just operator+password
+
+**What doesn’t change:**
+
+- Auth: still better-auth via `/api/auth/[...all]`
+- Frontend: still uses `useChat` from AI SDK (with custom transport) or direct WS
+- Session list: still reads `sessions.json` from TigerFS via Drizzle
+- Session messages: reads JSONL transcripts from TigerFS — now contains both user and assistant messages
+
+---
+
+## Device Identity Removed (2026-03-25)
+
+Ed25519 device identity was unnecessary for our use case. OpenClaw’s [`roleCanSkipDeviceIdentity`](https://github.com/openclaw/openclaw/blob/main/src/gateway/role-policy.ts) returns `true` when `role === "operator" && sharedAuthOk`. Since we connect with operator role + gateway password, device identity is not needed.
+
+**Removed:**
+
+- Device keypair generation and storage
+- Ed25519 signing in WS handshake
+- `DEVICE_IDENTITY_PATH` env var
+- `device` field in WS connect params
+- The entire pairing/approval problem
+
+**Cleaned up:** `device-identity.ts` file deleted.
 
 ---
 
@@ -134,13 +195,6 @@ See [limitations.md](../limitations.md) for all upstream constraints (OpenClaw t
 ## UI Stack (2026-03-24)
 
 - `lib/ui/` — read-only copy of shadcn + ai-elements from noboil, ignored by lintmax
-- Uses `@a/ui` package name (kept as-is since internal imports depend on it)
+- Uses `@a/ui` package name — a Bun workspace package at `lib/ui/` (not a path alias). Resolved via `"workspaces": ["lib/*"]` in root `package.json`
 - Components: Terminal (agent logs), Conversation + Message (chat), Card (auth)
 - `globals.css` imports `@a/ui/globals.css` directly — stock theme, no redefinition
-
----
-
-## Device Identity (2026-03-24)
-
-- `DEVICE_IDENTITY_PATH` env var needed since Next.js CWD may differ from repo root
-- Device re-approval needed after gateway restart (sometimes)

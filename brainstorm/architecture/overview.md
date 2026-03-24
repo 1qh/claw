@@ -24,7 +24,7 @@ graph TB
 
     subgraph "Next.js App (single process, stateless replicas)"
         AUTH["/api/auth/[...all]<br/>better-auth via toNextJsHandler"]
-        CHAT["/api/chat<br/>AI SDK TextStreamChatTransport"]
+        CHAT["/api/chat<br/>WS chat.send"]
         EVENTS["/api/events<br/>SSE agent lifecycle logs"]
         PM[Process Manager]
         METER[Billing / Metering]
@@ -117,15 +117,15 @@ sequenceDiagram
         API->>GW: Start process (~1-2s)
     end
 
-    API->>GW: POST /v1/chat/completions (Bearer token auth)
+    API->>GW: WS chat.send (operator+password auth, session key)
     GW->>GW: Agent works autonomously
     Note over GW: Response arrives as single delta (no per-token streaming)
 
-    GW->>API: Streamed HTTP response
-    API->>FE: TextStreamChatTransport response
-    FE->>User: Text appears (client-side trickle for visual streaming)
+    GW->>API: WS chat delta + agent events
+    API->>FE: Streaming response + SSE events
+    FE->>User: Text appears
 
-    Note over FE,API: Agent lifecycle events via SSE at /api/events
+    Note over FE,API: Chat and agent events both flow via WebSocket (no HTTP chat endpoint)
 ```
 
 ## Why Multi-Agent Gateways (Not 1:1)
@@ -170,7 +170,7 @@ Most agents will be idle most of the time (fire-and-forget = bursts, not constan
 | 1000-5000 | 50-500   | 5-10 VMs                | ~$300-600         |
 | 10,000    | 500-1000 | 10-20 VMs               | ~$600-1200        |
 
-> **Note:** Infrastructure costs above exclude LLM API costs, which dominate at scale. At 10K users × 5 tasks/day × 50K tokens/task = 2.5B tokens/month. With coding plan providers (~$1/1M tokens): ~~$2,500/month. With premium providers (~~$15/1M tokens): ~$37,500/month. Deployers should budget LLM costs separately. Security gate adds ~100K LLM calls/day for content classification.
+> **Note:** Infrastructure costs above exclude LLM API costs, which dominate at scale. At 10K users × 5 tasks/day × 50K tokens/task = 2.5B tokens/month. With coding plan providers (~$1/1M tokens): approx $2,500/month. With premium providers (approx $15/1M tokens): ~$37,500/month. Deployers should budget LLM costs separately. Security gate adds ~100K LLM calls/day for content classification.
 
 ## Scaling: Adding Hosts
 
@@ -208,15 +208,13 @@ graph TB
     SC -->|"read by all gateways"| UM
 ```
 
-## Gateway Device Identity Requirement
+## Gateway WebSocket Auth
 
-OpenClaw gateway requires Ed25519 device identity for WebSocket connections. The Next.js app generates a persistent device keypair (stored in `.cache/`), signs a challenge-response payload (v3 format: `deviceId|clientId|mode|role|scopes|signedAt|token|nonce|platform|deviceFamily`), and must be paired/approved on the gateway before messages can flow. Password auth mode (`gateway.auth.mode: "password"`) is used for non-local connections (Docker, remote).
-
-**Important:** `DEVICE_IDENTITY_PATH` env var is needed since Next.js CWD may differ from repo root. Device re-approval may be needed after gateway restart.
+WebSocket connections use operator+password auth. Device identity is NOT needed — OpenClaw’s `roleCanSkipDeviceIdentity` returns true for operators with shared secret auth. See [decisions.md](../stack/decisions.md) for details.
 
 ## No Traditional Backend
 
-TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, no ORM for user data.
+TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations for user data. Drizzle is used for querying (auth, routing, TigerFS tables) but agents manage their own data as files — no ORM-managed user data schema.
 
 **What the framework avoids:**
 
@@ -229,7 +227,7 @@ TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, 
 **What the Next.js app actually does:**
 
 1. Auth — verify identity (Google OAuth via better-auth at `/api/auth/[...all]`)
-2. Chat — relay messages to gateway via `/api/chat` (AI SDK TextStreamChatTransport)
+2. Chat — relay messages to gateway via `/api/chat` (WebSocket `chat.send`)
 3. Events — stream agent lifecycle logs via SSE at `/api/events`
 4. Gateway lifecycle — manage via Nomad (future) or direct process management
 5. Billing/metering — read usage data from TimescaleDB continuous aggregates

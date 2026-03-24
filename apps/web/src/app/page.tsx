@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-deprecated, @typescript-eslint/strict-void-return, @eslint-react/web-api/no-leaked-event-listener */
+/* eslint-disable @typescript-eslint/no-deprecated, @typescript-eslint/strict-void-return, @eslint-react/web-api/no-leaked-event-listener, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
 /* oxlint-disable promise/prefer-await-to-then */
 'use client'
 import type { UIMessage } from 'ai'
@@ -33,21 +33,28 @@ import {
 } from '@a/ui/sidebar'
 import { useChat } from '@ai-sdk/react'
 import { TextStreamChatTransport } from 'ai'
-import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageCircleIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
+import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
-const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credentials: 'include' })
 interface SessionEntry {
+  firstMessage: string
   key: string
   sessionId: string
   updatedAt: number
 }
-const emptyStateIcon = <SparklesIcon className='size-8' />,
+const chatTransport = new TextStreamChatTransport({ api: '/api/chat', credentials: 'include' }),
+  emptyStateIcon = <SparklesIcon className='size-8' />,
   textOf = (m: UIMessage) => {
     let t = ''
     for (const p of m.parts) if (p.type === 'text') t += p.text
     return t
   },
+  toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
+    data.map((m, i) => ({
+      id: `${prefix}-${String(i)}`,
+      parts: [{ text: m.content, type: 'text' as const }],
+      role: m.role as 'assistant' | 'user'
+    })),
   signInGoogle = async () => {
     await authClient.signIn.social({ callbackURL: '/', provider: 'google' })
   },
@@ -146,12 +153,12 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       </div>
     )
   },
-  Chat = ({ userName }: { userName: string }) => {
+  Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
       [showLogs, setShowLogs] = useState(true),
       [sessions, setSessions] = useState<SessionEntry[]>([]),
-      [activeSessionKey, setActiveSessionKey] = useState(() => `agent:main:new-${Date.now()}`),
       [activeSessionId, setActiveSessionId] = useState<null | string>(null),
+      [sessionKey, setSessionKey] = useState(() => `agent:main:${userId}-${Date.now()}`),
       { sendMessage, messages, status, stop, setMessages } = useChat({ transport: chatTransport }),
       isBusy = status === 'streaming' || status === 'submitted',
       loadSessions = useCallback(() => {
@@ -162,31 +169,34 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       }, []),
       switchSession = useCallback(
         (entry: SessionEntry) => {
-          setActiveSessionKey(entry.key)
+          setSessionKey(entry.key)
           setActiveSessionId(entry.sessionId)
+          globalThis.history.pushState(null, '', `/?s=${entry.sessionId}`)
           fetch(`/api/sessions/${entry.sessionId}/messages`, { credentials: 'include' })
             .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
-            .then(data =>
-              setMessages(
-                data.map((m, i) => ({
-                  id: `${entry.sessionId}-${String(i)}`,
-                  parts: [{ text: m.content, type: 'text' as const }],
-                  role: m.role as 'assistant' | 'user'
-                }))
-              )
-            )
+            .then(data => setMessages(toUiMessages(data, entry.sessionId)))
             .catch(() => setMessages([]))
         },
         [setMessages]
       ),
       newChat = useCallback(() => {
-        setActiveSessionKey(`agent:main:new-${Date.now()}`)
+        setSessionKey(`agent:main:${userId}-${Date.now()}`)
         setActiveSessionId(null)
         setMessages([])
-      }, [setMessages])
+        globalThis.history.pushState(null, '', '/')
+      }, [setMessages, userId])
     useEffect(() => {
       loadSessions()
-    }, [loadSessions])
+      const params = new URLSearchParams(globalThis.location.search),
+        sid = params.get('s')
+      if (sid) {
+        setActiveSessionId(sid)
+        fetch(`/api/sessions/${sid}/messages`, { credentials: 'include' })
+          .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
+          .then(data => setMessages(toUiMessages(data, sid)))
+          .catch(() => undefined)
+      }
+    }, [loadSessions, setMessages])
     useEffect(() => {
       if (status === 'ready' && messages.length > 0) loadSessions()
     }, [status, messages.length, loadSessions])
@@ -203,7 +213,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     const handleSubmit = ({ text }: { text: string }) => {
       if (!text.trim() || isBusy) return
       sendMessage({
-        body: { sessionKey: activeSessionKey },
+        body: { sessionKey },
         parts: [{ text, type: 'text' }],
         role: 'user'
       })
@@ -224,12 +234,9 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
           <SidebarContent className='overflow-y-auto px-2'>
             <SidebarMenu>
               {sessions.map(s => (
-                <SidebarMenuItem key={s.key}>
-                  <SidebarMenuButton
-                    isActive={s.key === activeSessionKey || s.sessionId === activeSessionId}
-                    onClick={() => switchSession(s)}>
-                    <MessageCircleIcon className='size-4' />
-                    <span className='truncate text-xs'>{s.key.replace('agent:main:', '').slice(0, 20)}</span>
+                <SidebarMenuItem key={s.sessionId}>
+                  <SidebarMenuButton isActive={s.sessionId === activeSessionId} onClick={() => switchSession(s)}>
+                    <span className='truncate text-xs'>{s.firstMessage}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -332,6 +339,6 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         </div>
       )
     if (!session) return <AuthForm />
-    return <Chat userName={session.user.name} />
+    return <Chat userId={session.user.id} userName={session.user.name} />
   }
 export default Page

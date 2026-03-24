@@ -1,3 +1,9 @@
+## Philosophy
+
+Nothing is locked in. Every library, pattern, and architecture choice is an experiment. If rebuilding from scratch produces a cleaner, more robust result — do it. Don’t preserve effort for its own sake. Always ask: “if we started fresh today, what’s the best way?” AI SDK, shadcn, even the Next.js structure — all replaceable if something better exists. The goal is the cleanest, most robust solution for the long run.
+
+---
+
 ## OpenClaw Fork
 
 Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/openclaw`). PR branch: `fix/workspace-state-no-dot-dir` (#53326). **Chore:** When reading OpenClaw code, pull upstream and rebase: `cd ~/openclaw-repo && git fetch origin && git merge origin/main --no-edit`. Rebase PR branch if needed.

@@ -26,9 +26,23 @@ Newer gateway versions reject `chat.send` without `idempotencyKey`. Not needed f
 
 [`src/infra/agent-events.ts:5`](https://github.com/openclaw/openclaw/blob/main/src/infra/agent-events.ts#L5): `AgentEventStream = "lifecycle" | "tool" | "assistant" | "error"` — no `reasoning` type. Reasoning output comes through `assistant` stream as part of the text.
 
-### Device identity pairing
+### Device identity not needed for operator+password auth
 
-WebSocket operator connections require Ed25519 device identity + gateway password. Device re-approval needed after gateway restart or metadata changes (e.g. new caps). Each WS connection attempt with changed metadata triggers a new pairing request — `docker exec claw-gateway-1 openclaw devices approve` must be run before WS-based tests. Auto-skip only works for loopback clients; Docker host connections (`172.18.0.1`) are non-local. `DEVICE_IDENTITY_PATH` env var needed since Next.js CWD may differ from repo root. HTTP endpoints use simpler Bearer token auth (gateway password) and don’t require pairing.
+WebSocket connections with `role: "operator"` and password auth (`sharedAuthOk`) skip device pairing entirely — confirmed in [`src/gateway/role-policy.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/role-policy.ts): `roleCanSkipDeviceIdentity(role, sharedAuthOk)` returns `true` for operators with shared secret auth.
+
+Previously we sent Ed25519 device identity in the WS handshake, which triggered the pairing flow. Since our Next.js app connects from Docker host (non-loopback), auto-approve didn’t work. **Fix:** Don’t send device identity at all — operator+password is sufficient. Eliminates the entire pairing problem.
+
+### HTTP `/v1/chat/completions` is stateless — no user messages in transcripts
+
+The HTTP chat endpoint follows the OpenAI API pattern: **stateless per request**. The client sends the full conversation history in `messages[]` each time. The gateway only stores the **assistant response** in the session JSONL transcript — user messages are never persisted.
+
+This means:
+
+- JSONL transcripts contain only assistant messages (no user messages)
+- Session switching requires the client to reconstruct the full conversation
+- The `user` field or `x-openclaw-session-key` header controls session routing for storage/maintenance, but does NOT inject previous messages into the context
+
+**Decision:** Use WebSocket `chat.send` instead. The WS protocol stores complete transcripts (user + assistant) and maintains server-side session context. See [decisions.md](stack/decisions.md) for the full rationale.
 
 ### TigerFS rejects dot-prefixed entries
 

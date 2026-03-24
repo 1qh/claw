@@ -2,12 +2,14 @@
 
 ## Goal
 
-Connect the Next.js app to an OpenClaw gateway. Relay chat messages via API routes and stream agent events via SSE. Build the memory-timescaledb plugin.
+Connect the Next.js app to an OpenClaw gateway. Relay chat messages and stream agent events. Build the memory-timescaledb plugin.
 
 **Architecture:**
 
-- Chat: HTTP (`/v1/chat/completions` with Bearer token auth)
-- Events/logs: WebSocket (operator connection) for real-time lifecycle events in Terminal panel
+- Chat + Events: WebSocket (`chat.send` with operator+password auth, no device identity) — single connection carries both chat and lifecycle events. See [decisions.md](../brainstorm/stack/decisions.md) for why WS over HTTP.
+- Session transcripts: JSONL on TigerFS — contains both user and assistant messages (single source of truth)
+- `/api/chat` route: forwards to gateway via WS `chat.send`, returns streaming response
+- `/api/events` route: SSE stream of agent lifecycle events from the same or dedicated WS connection
 
 ## Overview
 
@@ -18,7 +20,7 @@ graph TB
     end
 
     subgraph "Stage 2.2"
-        W1["WebSocket Proxy\nFrontend ↔ Gateway"]
+        W1["Chat + Events\nAPI Routes (WS)"]
     end
 
     subgraph "Stage 2.3"
@@ -32,6 +34,8 @@ graph TB
     G1 --> W1 --> E2E
     G1 --> M1 --> E2E
 ```
+
+**Stage ordering:** 2.1 → 2.2 (chat+events) and 2.3 (memory plugin) can run in parallel. 2.5 (clarification) and 2.6 (key pool) are independent additions that don’t block 2.4 (e2e validation). 2.4 requires 2.1 + 2.2 + 2.3.
 
 ---
 
@@ -71,12 +75,11 @@ stateDiagram-v2
    - **Explicitly set `tools.exec.security: "allowlist"` with `safeBins: ["bunx"]` in the shared config** — this permits ONLY `bunx` (the CLI execution mechanism) while blocking all other shell commands. Setting `"deny"` would break the agent-native CLI paradigm entirely
    - **TigerFS mount permissions:** TigerFS mount should use restricted permissions (only accessible to the gateway process user group). Combined with exec deny default, this prevents FUSE-level bypass of RLS
 3. Control plane waits for gateway to be ready (poll `/health` or wait for WebSocket handshake)
-4. Control plane connects to gateway via WebSocket (device identity + token auth)
+4. Control plane connects to gateway via WebSocket (operator+password auth, no device identity needed)
 5. Implement health check loop — periodic ping, restart on failure
 6. Implement graceful shutdown — wait for active tasks, then kill
 7. **Secrets management:** For production, deployers should use environment variables or a secrets manager for API keys, not plaintext files on TigerFS. The framework supports both `auth-profiles.json` (for development) and environment variable injection (for production).
 8. Write tests: start gateway, verify health, send message via gateway API, stop gateway, verify restart on crash
-9. **Gateway device identity:** Gateway WebSocket protocol requires device identity: generate Ed25519 keypair, persist to `.cache/`, implement v3 challenge-response handshake. Use `gateway.auth.mode: 'password'` for non-local connections (Docker, remote). New devices must be approved on the gateway before they can connect.
 
 ### External References
 
@@ -103,7 +106,7 @@ stateDiagram-v2
 
 ### Goal
 
-Relay chat messages from the frontend to the gateway via Next.js API routes. Stream agent lifecycle events via SSE.
+Relay chat messages from the frontend to the gateway via WebSocket `chat.send`. Stream agent lifecycle events via SSE. Both use operator+password auth (no device identity).
 
 ### Dependencies
 
@@ -116,56 +119,64 @@ sequenceDiagram
     actor User
     participant FE as Frontend (React)
     participant API as Next.js API Routes
-    participant GW as Gateway
+    participant GW as Gateway (WebSocket)
 
     User->>FE: “Generate my report”
-    FE->>API: POST /api/chat (AI SDK sendMessage)
+    FE->>API: POST /api/chat (session key + message)
     API->>API: Validate auth (better-auth session)
-    API->>API: Lookup user → gateway
-    API->>GW: POST /v1/chat/completions (Bearer token auth)
+    API->>GW: WS chat.send (session key + message + idempotencyKey)
 
-    GW->>API: Streamed HTTP response
-    API->>FE: TextStreamChatTransport response
+    GW->>API: chat delta events (streaming)
+    GW->>API: agent events (tool calls, progress)
+    GW->>API: chat final event (task complete)
+    API->>FE: Streaming response
     FE->>User: Text appears
 
-    Note over FE,API: Agent lifecycle events via GET /api/events (SSE)
+    Note over FE,API: Agent lifecycle events via GET /api/events (SSE from same WS)
 ```
 
 1. `/api/chat` route handler:
    - Authenticate via better-auth session
-   - Look up user’s gateway assignment
-   - Forward message to gateway via HTTP `POST /v1/chat/completions` with Bearer token auth
-   - Return response via `createTextStreamResponse` (AI SDK `TextStreamChatTransport`)
-   - Chat response rendered with AI SDK `TextStreamChatTransport`
+   - Connect to gateway via WS (operator+password, no device identity)
+   - Send `chat.send` with session key, message, and `idempotencyKey`
+   - Stream `chat` delta events back to the frontend as a text stream
+   - On `chat` final event: extract token counts, cost, model, latency → write to `usage_events`
+   - Gateway stores complete transcripts (user + assistant) in JSONL on TigerFS — single source of truth
 2. `/api/events` SSE route handler:
-   - Stream agent lifecycle events (tool calls, progress, errors) in real-time
-   - Events sourced from gateway `agent` events
-3. Classify gateway events:
+   - Connect to gateway via WS (same auth pattern)
+   - Stream `agent` lifecycle events (tool calls, progress, errors) as SSE to the frontend
+3. Classify gateway WS events:
    - `agent` events → SSE `/api/events` feed
    - `chat` events with `state: “delta”` → response stream
-   - `chat` events with `state: “final”` → task complete
-4. The API route intercepts `chat` events with `state: ‘final’` and extracts token counts, cost, model, and latency. Writes to `usage_events` hypertable.
-5. **Concurrent sessions per user:** When a user sends a second task while the first is running, use OpenClaw’s queue mode. Default: `collect` — new messages are batched and delivered after the current task completes.
-6. Write tests: full message round-trip, event streaming, auth rejection
+   - `chat` events with `state: “final”` → task complete + usage extraction
+4. **Concurrent sessions per user:** When a user sends a second task while the first is running, use OpenClaw’s queue mode. Default: `collect` — new messages are batched and delivered after the current task completes.
+5. **Session persistence:** Session list reads `sessions.json` from TigerFS via Drizzle. Session messages read JSONL transcripts — both user and assistant messages are present (WS protocol stores both).
+6. Write e2e tests: full message round-trip with real auth cookies, event streaming, session creation, session switching with message loading, multi-turn context preservation, auth rejection
 
 ### External References
 
 - [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol)
-- [AI SDK TextStreamChatTransport](https://ai-sdk.dev)
+- [OpenClaw HTTP API](https://docs.openclaw.ai/gateway/openai-http-api) (not used for chat — see [decisions.md](../brainstorm/stack/decisions.md) for why)
 - [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
 
 ### Verification Checklist
 
-- [ ] POST `/api/chat` relays message to gateway and returns streamed response
+- [ ] POST `/api/chat` relays message to gateway via WS `chat.send` and returns streamed response
 - [ ] GET `/api/events` streams agent lifecycle events via SSE
-- [ ] Unauthenticated requests to `/api/chat` are rejected
-- [ ] Message from frontend reaches gateway (verify in gateway logs)
-- [ ] Agent response flows back to frontend via TextStreamChatTransport
-- [ ] Tool call events visible in SSE event stream
-- [ ] Bearer token auth is used for HTTP `/v1/chat/completions`
+- [ ] Unauthenticated requests to `/api/chat` and `/api/events` are rejected
+- [ ] Message from frontend reaches gateway (verify in gateway logs / terminal panel)
+- [ ] Agent response streams back to frontend in real-time
+- [ ] Tool call events visible in SSE event stream (verbose JSON in terminal panel)
+- [ ] WS connection uses operator+password auth (no device identity, no pairing)
 - [ ] Multiple users can interact simultaneously
 - [ ] `usage_events` table has rows after a task completes
-- [ ] All tests pass
+- [ ] JSONL transcripts on TigerFS contain BOTH user and assistant messages
+- [ ] Session list API returns sessions with first user message as label
+- [ ] Session messages API returns full conversation (user + assistant)
+- [ ] Clicking a session in sidebar loads its messages and updates URL
+- [ ] New chat creates a fresh session, clears messages, updates URL
+- [ ] Multi-turn context preserved within a session
+- [ ] All e2e tests pass (with real auth cookies against dev server)
 
 ---
 
@@ -384,7 +395,7 @@ sequenceDiagram
     GW->>GW: Agent processes
     GW->>TFS: Session JSONL written
     GW->>API: Response
-    API->>FE: TextStreamChatTransport response
+    API->>FE: Streaming text response
     FE->>User: "4"
 
     Note over GW: Agent writes to MEMORY.md via TigerFS

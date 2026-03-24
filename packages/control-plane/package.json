@@ -4,7 +4,7 @@
   "type": "module",
   "exports": {
     "./connect": "./src/connect.ts",
-    "./device-identity": "./src/device-identity.ts"
+    "./connect-with-approval": "./src/connect-with-approval.ts"
   },
   "dependencies": {
     "@a/env": "workspace:*"

@@ -1,5 +1,9 @@
 # Uniclaw — Agent-Native SaaS Framework Built on OpenClaw
 
+## Philosophy
+
+Nothing is locked in. Every library, pattern, and architecture choice is an experiment until proven best. If rebuilding from scratch produces a cleaner result — do it. AI SDK, shadcn, the control plane structure — all replaceable. The goal is always the cleanest, most robust solution for the long run, not preserving past effort.
+
 ## Motivation
 
 Most SaaS products force users to operate machines — dashboards, forms, settings, navigation. But for a category of SaaS where users only care about outcomes, all that UI is friction.
