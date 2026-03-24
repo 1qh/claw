@@ -6,9 +6,12 @@ MOUNT_PATH="${TIGERFS_MOUNT_PATH:-/mnt/tigerfs}"
 GATEWAY_PORT="${GATEWAY_PORT:-18789}"
 MODEL="${OPENCLAW_MODEL:-qwen3.5:4b-q4_K_M}"
 
-apt-get update -qq && apt-get install -y -qq fuse3 curl > /dev/null 2>&1
+apt-get update -qq && apt-get install -y -qq fuse3 curl gcc > /dev/null 2>&1
 curl -fsSL https://install.tigerfs.io | HOME=/root sh > /dev/null 2>&1
 export PATH="/root/bin:$PATH"
+
+gcc -shared -fPIC -o /usr/local/lib/tigerfs-rename-shim.so /tigerfs-rename-shim.c -ldl
+export LD_PRELOAD=/usr/local/lib/tigerfs-rename-shim.so
 
 FILE="/app/dist/workspace-D4K6QX9X.js"
 if [ -f "$FILE" ]; then
@@ -21,9 +24,11 @@ tigerfs mount "$DB_URL" "$MOUNT_PATH" &
 sleep 3
 
 echo "markdown,history" > "$MOUNT_PATH/.build/workspace" 2>/dev/null || true
+echo "markdown,history" > "$MOUNT_PATH/.build/state" 2>/dev/null || true
 
-mkdir -p /root/.openclaw
-cat > /root/.openclaw/openclaw.json << CONF
+STATE_DIR="$MOUNT_PATH/state"
+export OPENCLAW_STATE_DIR="$STATE_DIR"
+cat > "$STATE_DIR/openclaw.json" << CONF
 {
   "agents": {
     "defaults": {

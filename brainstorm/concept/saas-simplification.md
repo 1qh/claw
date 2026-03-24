@@ -52,7 +52,7 @@ Typical SaaS components the deployer does NOT need to build:
 ### Search
 
 - **Traditional:** Elasticsearch, Algolia, search indexing, query API
-- **With OpenClaw:** Hybrid vector + BM25 search over memory. User asks “what was that report from last month?” Agent finds it.
+- **With OpenClaw:** Hybrid vector + BM25 search over memory (backed by TimescaleDB pgvector + pg_textsearch via memory-timescaledb plugin). User asks “what was that report from last month?” Agent finds it.
 
 ### File Storage
 

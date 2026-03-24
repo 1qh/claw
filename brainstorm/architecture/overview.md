@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw’s [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB. Gateway config (`.openclaw/`) uses a Docker volume in dev but TigerFS in production.
+Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw’s [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB. Gateway state (`OPENCLAW_STATE_DIR`) points to a non-dot path on TigerFS (`/mnt/tigerfs/state/`) in both dev and production — no Docker volumes, no dev/prod divergence.
 
 ## Identity Model
 

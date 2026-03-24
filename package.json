@@ -1,5 +1,5 @@
 {
-  "name": "uniclaw",
+  "name": "a",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -13,8 +13,8 @@
     "clean": "rm -rf node_modules bun.lock dist .cache .next .turbo packages/*/node_modules apps/*/node_modules lib/*/node_modules packages/*/dist apps/*/dist apps/*/.next",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "dev": "bun run --filter '@uniclaw/web' dev",
-    "fix": "lintmax fix",
+    "dev": "bun run --filter '@a/web' dev",
+    "fix": "lintmax fix && bun run build",
     "test": "bun test"
   },
   "dependencies": {

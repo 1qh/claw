@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/useExportsLast: Next.js route segment config requires inline export */
 /* oxlint-disable use-exports-last */
-import { connectToGateway } from '@uniclaw/control-plane/connect'
+import { connectToGateway } from '@a/control-plane/connect'
 import { inspect } from 'node:util'
 import { auth } from '~/lib/auth'
 import { env } from '~/lib/env'

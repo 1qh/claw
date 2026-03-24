@@ -183,8 +183,7 @@ No local disk dependency. No git sync. No OS users. No separate backup infra. Ga
 - **~~File watchers~~** — RESOLVED (Phase 0.4): chokidar detects changes with 5ms p50 latency (80% detection rate via polling). Acceptable for config hot-reload.
 - **~~OpenClaw multi-agent compatibility~~** — RESOLVED (Phase 0.3): OpenClaw workspace on TigerFS verified with runtime patch. Ollama integration working.
 - **TigerFS maturity** — “early, but core idea is stable” per their docs. Need to evaluate production readiness.
-- **Dot-prefix limitation** — TigerFS rejects ALL dot-prefixed entries — both files and directories. Dot prefixes are reserved for TigerFS built-in operations (.build/, .history/, .filter/, etc.). This means OpenClaw’s .openclaw/ workspace state directory cannot exist on TigerFS. PR #53326 submitted to move workspace-state.json to the workspace root. Until merged, a runtime patch is needed (sed in the gateway init script).
-- **Runtime patch for OpenClaw on TigerFS** — Until PR #53326 merges upstream, OpenClaw requires a runtime patch to work with TigerFS workspaces. The gateway-init.sh script patches the built JS to remove the .openclaw/ subdir creation. The official Docker image (ghcr.io/openclaw/openclaw:latest) is used with a custom entrypoint that installs TigerFS, applies the patch, mounts the filesystem, and starts the gateway.
+- **TigerFS limitations** — See [limitations.md](../limitations.md) for dot-prefix rejection, rename-over-existing EIO, and runtime patches.
 
 ---
 
@@ -315,7 +314,7 @@ CREATE TABLE crawled_pages (
 
 -- pgai auto-generates embeddings when content is written
 -- Vector search: pgvectorscale DiskANN index
--- Full-text search: TimescaleDB FTS
+-- Full-text search: pg_textsearch BM25 (pre-installed in timescaledb-ha)
 -- Compression: older crawled data compressed 90%+
 -- Via TigerFS: cat /mnt/tigerfs/crawled/.by/url/example.com/.export/json
 ```

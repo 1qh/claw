@@ -6,13 +6,7 @@ Set up the monorepo, control plane skeleton, authentication, and database schema
 
 ### Environment Variables
 
-Single source of truth: `apps/web/.env.local`. Validated at startup via `@t3-oss/env-nextjs` + Zod in `apps/web/src/lib/env.ts`. Missing required vars = immediate crash with clear error message.
-
-- Never use `process.env` directly in app code — import `env` from `~/lib/env`
-- Never use fallback defaults (`??`) for env vars in code
-- `env.ts` is the only file that reads `process.env`
-- To add a new env var: add to `env.ts` schema, add to `.env.local`, add to `docker-compose.yml` if gateway needs it
-- Model switching: change `OPENCLAW_MODEL` in `.env.local` + restart gateway
+Single `.env` at project root (symlinked to `apps/web/.env.local` for Next.js). Validated via `@a/env` package (`@t3-oss/env-core` + Zod) in `packages/env/src/env.ts`. To add a new var: add to the schema, add to `.env`, add to `docker-compose.yml` if gateway needs it. See CLAUDE.md for env rules.
 
 ## Overview
 

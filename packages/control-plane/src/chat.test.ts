@@ -1,16 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-/** biome-ignore-all lint/style/noProcessEnv: env config */
+import { env } from '@a/env'
 import { afterAll, describe, expect, it } from 'bun:test'
 import { connectWithApproval } from './connect-with-approval'
-const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD ?? 'uniclaw-dev',
-  GATEWAY_PORT = Number(process.env.GATEWAY_PORT ?? '18789')
 describe('gateway chat', () => {
   let conn: Awaited<ReturnType<typeof connectWithApproval>>
   afterAll(() => {
     conn?.close()
   })
   it('sends chat.send and receives agent response events', async () => {
-    conn = await connectWithApproval({ password: GATEWAY_PASSWORD, port: GATEWAY_PORT })
+    conn = await connectWithApproval({ password: env.GATEWAY_PASSWORD, port: Number(env.GATEWAY_PORT) })
     const events: Record<string, unknown>[] = [],
       done = new Promise<void>(resolve => {
         const unsub = conn.onEvent(event => {

@@ -1,9 +1,12 @@
 {
-  "name": "@uniclaw/control-plane",
+  "name": "@a/control-plane",
   "private": true,
   "type": "module",
   "exports": {
     "./connect": "./src/connect.ts",
     "./device-identity": "./src/device-identity.ts"
+  },
+  "dependencies": {
+    "@a/env": "workspace:*"
   }
 }

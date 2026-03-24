@@ -240,7 +240,7 @@ Shell commands bypass OpenClaw’s file boundary checks. A command like `cat /ot
 
 ### memory-timescaledb Plugin — Our responsibility
 
-Shared pgvector table in TimescaleDB. Every query MUST scope by agent_id. The RLS policy allows access to the agent’s own rows AND rows with `agent_id = '__shared__'` (shared knowledge).
+Shared pgvector + pg_textsearch (BM25) table in TimescaleDB. Hybrid search combines vector similarity with BM25 keyword relevance. Every query MUST scope by agent_id. The RLS policy allows access to the agent’s own rows AND rows with `agent_id = ‘__shared__’` (shared knowledge).
 
 **How `app.agent_id` is set:** The `memory-timescaledb` plugin calls `SET LOCAL app.agent_id = '<agent_id>'` at the start of every transaction before issuing any query. `SET LOCAL` scopes the setting to the current transaction only, so it works correctly with connection pooling. The database must have a default: `ALTER DATABASE uniclaw SET app.agent_id = '__none__'` — this ensures unset sessions get no data (RLS blocks `__none__` since no rows have that agent_id).
 
@@ -258,7 +258,8 @@ CREATE TABLE memory_chunks (
 -- SELECT RLS policy: each agent can see its own rows + shared knowledge
 -- USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')
 -- INSERT RLS policy: WITH CHECK (agent_id = current_setting('app.agent_id')) — agents can only write their own agent_id. The `__shared__` rows are inserted by the control plane's knowledge indexer using a separate privileged database role that bypasses RLS.
--- Every search query: WHERE agent_id IN ($1, '__shared__') AND embedding <=> $query_vector
+-- Hybrid search: vector similarity (embedding <=> $query_vector) + BM25 keyword (chunk <@> $query_text)
+-- Every search query: WHERE agent_id IN ($1, '__shared__')
 -- Every insert: agent_id set from runtime context, never from user input
 ```
 

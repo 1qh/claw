@@ -77,6 +77,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 - [x] `CREATE EXTENSION vectorscale` succeeds — vectorscale 0.9.0
 - [x] Insert + KNN query on vector column returns correct results
 - [x] pgai extension available on self-hosted TimescaleDB (timescale/timescaledb-ha:pg18) — not Cloud-only
+- [ ] `CREATE EXTENSION pg_textsearch` succeeds — pre-installed in timescaledb-ha:pg18. Verify BM25 index creation: `CREATE INDEX ON test_table USING bm25 (content)` and query: `SELECT * FROM test_table ORDER BY content <@> 'test query' LIMIT 5`
 - [x] Hypertable creation succeeds on a test table — timescaledb 2.25.2
 - [x] Compression policy can be applied to hypertable
 - [ ] PgBouncer (transaction pooling mode): install, verify `SET LOCAL app.agent_id` persists within a transaction, verify `SET ROLE` works per-transaction, verify RLS policy using `current_setting('app.agent_id')` returns correct rows through PgBouncer. This validates the RLS model before Phase 7 depends on it.
@@ -125,6 +126,8 @@ TigerFS uses FUSE on Linux and NFS on macOS. Benchmark results may differ betwee
 - [x] Pipeline queries return correct filtered results
 - [x] `.import/.append/csv` ingests data correctly
 - [x] Two concurrent writes from different terminals don’t corrupt data
+- [x] Rename to new target works on TigerFS FUSE
+- [x] Rename over existing target fails with EIO on TigerFS FUSE — fixed via LD_PRELOAD shim (`tigerfs-rename-shim.c`)
 - [x] File delete removes the row from TimescaleDB
 - [x] Directory creation and listing work as expected
 

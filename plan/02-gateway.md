@@ -215,7 +215,7 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 
 ### Goal
 
-Build an OpenClaw memory plugin that stores vector embeddings in TimescaleDB via pgvector, replacing the default file-based memory (`memory-core`) and LanceDB-based vector memory (`memory-lancedb`). Note: `memory-core` is file-based (not SQLite), and `memory-lancedb` uses LanceDB (not SQLite). `memory-timescaledb` replaces both by providing pgvector-backed vector search.
+Build an OpenClaw memory plugin that stores vector embeddings and full-text search in TimescaleDB via pgvector + pg_textsearch (BM25), replacing the default file-based memory (`memory-core`) and LanceDB-based vector memory (`memory-lancedb`). Note: `memory-core` is file-based (not SQLite), and `memory-lancedb` uses LanceDB (not SQLite). `memory-timescaledb` replaces both by providing **hybrid search** (semantic vector + BM25 keyword) in a single database — matching OpenClaw’s built-in hybrid search capabilities but backed by TimescaleDB instead of SQLite/LanceDB.
 
 ### Dependencies
 
@@ -236,13 +236,18 @@ graph TB
     subgraph "TimescaleDB Backend"
         TABLE["memory_chunks table\n(agent_id, chunk, embedding,\nsource_file, created_at)"]
         RLS["RLS policy:\nagent_id scoping"]
-        IDX["pgvectorscale index:\nStreamingDiskANN"]
+        VIDX["pgvectorscale index:\nStreamingDiskANN"]
+        BIDX["pg_textsearch index:\nBM25 on chunk"]
+        HYBRID["Hybrid search:\nvector similarity + BM25 keyword"]
     end
 
     REG --> TOOLS --> HOOKS --> CLI
     TOOLS --> TABLE
     TABLE --> RLS
-    TABLE --> IDX
+    TABLE --> VIDX
+    TABLE --> BIDX
+    VIDX --> HYBRID
+    BIDX --> HYBRID
 ```
 
 1. Study the existing `memory-lancedb` plugin structure:
@@ -250,20 +255,34 @@ graph TB
    - `extensions/memory-lancedb/config.ts` (180 LOC reference)
 2. Create `extensions/memory-timescaledb/` following the same pattern
 3. Implement `TimescaleMemoryDB` class:
-   - `init()` — create table if not exists, with RLS policy
-   - `store(agentId, chunks[])` — insert with embeddings
-   - `search(agentId, query, limit)` — pgvector similarity search with `WHERE agent_id = $1`
+   - `init()` — create table if not exists, with RLS policy. Enable extensions: `CREATE EXTENSION IF NOT EXISTS vector`, `CREATE EXTENSION IF NOT EXISTS vectorscale`, `CREATE EXTENSION IF NOT EXISTS pg_textsearch`
+   - `store(agentId, chunks[])` — insert with embeddings (BM25 index auto-updates on insert)
+   - `search(agentId, query, limit)` — **hybrid search** combining pgvector similarity + pg_textsearch BM25:
+     - Vector: top `limit * 4` candidates by cosine similarity (`embedding <=> $queryVector`)
+     - BM25: top `limit * 4` candidates by keyword relevance (`chunk <@> $queryText`)
+     - Merge: `finalScore = vectorWeight * vectorScore + textWeight * textScore` (default 0.7/0.3)
+     - Union candidates by chunk id, sort by final score, return top `limit`
+     - Fallback: if BM25 index unavailable, vector-only; if embeddings fail, BM25-only
    - `delete(agentId, filter)` — delete by agent_id + filter
    - `count(agentId)` — count chunks for agent
 4. Implement embedding generation (reuse OpenAI embeddings provider or make configurable). The embedding provider is configurable via env var `EMBEDDING_MODEL` (default: `text-embedding-3-small` at 1536 dimensions). The `vector(1536)` column dimension must match the model. If switching models, re-index is required. Add `EMBEDDING_MODEL` and `EMBEDDING_API_KEY` to the env var inventory.
-5. Register tools: `memory_recall`, `memory_store`, `memory_forget` (matching `memory-lancedb`’s tool names — NOT `memory_search`/`memory_get` from `memory-core`)
-6. Register hooks: `before_agent_start` (auto-recall), `agent_end` (auto-capture)
-7. Register CLI commands: `ltm list`, `ltm search`, `ltm stats`
-8. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
-9. **Critical: every query MUST scope by agent_id. RLS policy allows own rows + `__shared__` rows.** Policy: `USING (agent_id = current_setting('app.agent_id') OR agent_id = '__shared__')` — enforce in code AND via RLS
-   > **Note:** The `memory-timescaledb` plugin generates embeddings in application code (not via pgai). If pgai is available locally, it can be used for auto-vectorizing the shared intelligence layer (crawled_pages) in a future phase, but the memory plugin does not depend on it.
-10. **Implement a shared knowledge indexer:** On startup and on file change (via chokidar), read all files from the shared knowledge directory (`/mnt/tigerfs/knowledge/`), chunk them, generate embeddings, and insert/update rows in `memory_chunks` with `agent_id = '__shared__'`. The control plane runs this indexer (not individual gateways) to avoid duplicate indexing.
-11. Write comprehensive tests: store/search/delete, agent isolation, concurrent access
+   > **Why hybrid search:** Vector search finds semantic matches ("deployment issues" ↔ “server problems”) but misses exact tokens (error codes, env var names, file paths). BM25 is the opposite. Combined, both signals cover natural language queries AND needle-in-a-haystack lookups. This matches OpenClaw’s built-in hybrid search (SQLite FTS5 + vector) but runs entirely in TimescaleDB.
+5. Create indexes on `memory_chunks`:
+   - `CREATE INDEX ON memory_chunks USING hnsw (embedding vector_cosine_ops)` — pgvectorscale StreamingDiskANN for vector search
+   - `CREATE INDEX ON memory_chunks USING bm25 (chunk)` — pg_textsearch BM25 for keyword search
+   - Standard btree on `agent_id` for RLS filtering
+6. Register tools: `memory_recall`, `memory_store`, `memory_forget` (matching `memory-lancedb`’s tool names — NOT `memory_search`/`memory_get` from `memory-core`)
+7. Register hooks: `before_agent_start` (auto-recall), `agent_end` (auto-capture)
+8. Register CLI commands: `ltm list`, `ltm search`, `ltm stats`
+9. Configure as exclusive memory slot: `plugins.slots.memory: "memory-timescaledb"`
+10. **Critical: every query MUST scope by agent_id. RLS policy allows own rows + `__shared__` rows.** Policy: `USING (agent_id = current_setting(‘app.agent_id’) OR agent_id = ‘__shared__’)` — enforce in code AND via RLS
+    > **Note:** The `memory-timescaledb` plugin generates embeddings in application code (not via pgai). If pgai is available locally, it can be used for auto-vectorizing the shared intelligence layer (crawled_pages) in a future phase, but the memory plugin does not depend on it.
+11. **Implement a shared knowledge indexer:** On startup and on file change (via chokidar), read all files from the shared knowledge directory (`/mnt/tigerfs/knowledge/`), chunk them, generate embeddings, and insert/update rows in `memory_chunks` with `agent_id = ‘__shared__’`. The control plane runs this indexer (not individual gateways) to avoid duplicate indexing. BM25 index auto-updates — no separate keyword indexing step needed.
+12. **Optional post-processing (match OpenClaw’s built-in features):**
+    - **MMR re-ranking** — reduce redundant results by penalizing similarity to already-selected results (lambda 0.7 default)
+    - **Temporal decay** — exponential recency boost on dated memory files (`score × e^(-λ × ageDays)`, half-life 30 days default). Evergreen files (MEMORY.md, non-dated) are never decayed.
+    - Both are off by default, configurable per-agent
+13. Write comprehensive tests: store/search/delete, agent isolation, concurrent access, hybrid search (verify BM25 finds exact tokens that vector search misses, and vice versa)
 
 ### External References
 
@@ -271,6 +290,7 @@ graph TB
 - [OpenClaw memory concepts](https://docs.openclaw.ai/concepts/memory)
 - [pgvector usage](https://github.com/pgvector/pgvector#usage)
 - [pgvectorscale DiskANN](https://github.com/timescale/pgvectorscale)
+- [pg_textsearch BM25](https://github.com/timescale/pg_textsearch) — pre-installed in timescaledb-ha:pg18, provides `USING bm25` index and `<@>` operator for BM25-ranked full-text search
 
 ### Verification Checklist
 
@@ -283,9 +303,13 @@ graph TB
 - [ ] **Agent A cannot search Agent B’s memories** (RLS enforced)
 - [ ] **Every SQL query includes `WHERE agent_id`** (code review)
 - [ ] CLI commands work: `ltm list`, `ltm search`, `ltm stats`
-- [ ] Performance: search latency < 100ms for 10K chunks
+- [ ] Performance: hybrid search latency < 100ms for 10K chunks
 - [ ] Gateway with memory-timescaledb has no SQLite files on disk
 - [ ] Files dropped in knowledge/ directory are searchable by any agent via memory_recall
+- [ ] **Hybrid search: BM25 finds exact token matches** (e.g., env var name `DATABASE_URL` found by keyword when vector search ranks it low)
+- [ ] **Hybrid search: vector finds semantic matches** (e.g., “database connection” finds chunks about `DATABASE_URL` when BM25 misses due to different wording)
+- [ ] **pg_textsearch extension enabled** (`CREATE EXTENSION pg_textsearch` succeeds — pre-installed in timescaledb-ha:pg18)
+- [ ] BM25 index created on `memory_chunks.chunk` column
 - [ ] All tests pass
 
 ---

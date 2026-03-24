@@ -24,8 +24,8 @@ services:
       GATEWAY_PORT: '18789'
       OPENCLAW_MODEL: ${OPENCLAW_MODEL:-qwen3.5:4b-q4_K_M}
     volumes:
-      - gateway_state:/root/.openclaw
       - ./gateway-init.sh:/gateway-init.sh:ro
+      - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
     entrypoint: ['/bin/bash', '/gateway-init.sh']
   clamav:
     image: clamav/clamav-debian:latest
@@ -33,4 +33,3 @@ services:
       - '3310:3310'
 volumes:
   tsdb_data:
-  gateway_state:

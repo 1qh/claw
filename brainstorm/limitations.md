@@ -32,7 +32,7 @@ WebSocket operator connections require Ed25519 device identity + gateway passwor
 
 ### TigerFS rejects dot-prefixed entries
 
-Files AND directories starting with `.` are rejected by TigerFS. OpenClaw’s `.openclaw/` workspace dir requires a runtime patch (`sed` in `gateway-init.sh`). PR #53326 submitted upstream.
+Files AND directories starting with `.` are rejected by TigerFS. Workaround: `OPENCLAW_STATE_DIR` set to non-dot path (`/mnt/tigerfs/state/`) — avoids `.openclaw/` entirely. Workspace-state.json still needs a runtime patch (`sed` in `gateway-init.sh`) because it creates a `.openclaw/` subdir inside the workspace. PR #53326 submitted upstream.
 
 ## better-auth
 
@@ -45,6 +45,14 @@ Files AND directories starting with `.` are rejected by TigerFS. OpenClaw’s `.
 ### Hardcoded workspace JS filename
 
 `gateway-init.sh` patches a specific built JS filename (`workspace-D4K6QX9X.js`). This is version-dependent and breaks on OpenClaw updates. Must be updated whenever the OpenClaw Docker image is upgraded.
+
+### FUSE rename over existing file returns EIO
+
+TigerFS FUSE does not support POSIX `rename(2)` when the target file already exists — returns `EIO` instead of atomically replacing the target. OpenClaw uses atomic rename patterns (`write tmp → rename over existing`) extensively for `sessions.json`, `models.json`, `openclaw.json`, and other state files. Without a fix, only the first write succeeds; all subsequent updates fail.
+
+**Fix:** LD_PRELOAD shim (`tigerfs-rename-shim.c`) intercepts `rename()` at the libc level. If rename fails with `EIO` and the target exists, it does `unlink(target) + rename(src, target)`. Version-independent — works across all OpenClaw releases without patching built JS files.
+
+**Upstream:** Should be reported to TigerFS — `rename(2)` atomically replacing an existing target is POSIX-required behavior.
 
 ### FUSE mount bypasses RLS
 

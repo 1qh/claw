@@ -275,6 +275,7 @@ See [data layer](../architecture/data.md) for full details.
 - Real-time aggregates (continuous + latest raw data)
 - Background jobs (built-in scheduler)
 - [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) (vector search at scale)
+- [pg_textsearch](https://github.com/timescale/pg_textsearch) (BM25-ranked full-text search — `CREATE INDEX USING bm25`, `ORDER BY chunk <@> 'query'`. Pre-installed in timescaledb-ha:pg18. Combined with pgvector for hybrid search: semantic + keyword)
 - [pgai](https://github.com/timescale/pgai) (auto-embed, semantic catalog, natural language to SQL)
 - 100+ hyperfunctions (time-series analysis)
 - Full PostgreSQL compatibility (FTS, JSONB, RLS, etc.)

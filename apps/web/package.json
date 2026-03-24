@@ -1,5 +1,5 @@
 {
-  "name": "@uniclaw/web",
+  "name": "@a/web",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,18 +7,19 @@
     "dev": "next dev --port 3000"
   },
   "dependencies": {
+    "@a/control-plane": "workspace:*",
+    "@a/env": "workspace:*",
     "@a/ui": "workspace:*",
     "@ai-sdk/react": "latest",
-    "@t3-oss/env-core": "latest",
-    "@t3-oss/env-nextjs": "latest",
-    "@uniclaw/control-plane": "workspace:*",
     "ai": "latest",
+    "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
     "zod": "latest"
   },
   "devDependencies": {
+    "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest"
   }

@@ -129,6 +129,8 @@ Publish reusable packages to npm under the `uniclaw` scope.
 
 ### Steps
 
+During development, packages use `@a/*` scope (e.g., `@a/env`, `@a/control-plane`). At release time, rename to `@uniclaw/*` for npm publishing.
+
 Packages to publish:
 
 ```mermaid
