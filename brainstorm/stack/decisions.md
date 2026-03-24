@@ -11,7 +11,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | TypeScript + ESM                                                            | Language — same everywhere (framework, control plane, deployer CLIs)                                           |
 | [OpenClaw](https://openclaw.ai)                                             | Agent runtime — [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) with isolated workspaces per user |
 | `bunx cli@latest`                                                           | Tool execution — deployer’s backend as npm CLIs, always latest                                                 |
-| [Vitest](https://vitest.dev/)                                               | Testing — fast Vite-native test runner, compatible with Bun                                                    |
+| `bun test`                                                                  | Testing — Jest-compatible, built into Bun (not Vitest)                                                         |
 | [Oxlint](https://oxc.rs/docs/guide/usage/linter) + [Oxfmt](https://oxc.rs/) | Linting and formatting — Rust-based, fast, matches OpenClaw’s tooling                                          |
 
 ## Data
@@ -20,7 +20,7 @@ This framework is opinionated. Deployers adopt these choices as-is.
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [TimescaleDB](https://www.timescale.com/) | PostgreSQL + hypertables + compression + continuous aggregates + [pgvector](https://github.com/pgvector/pgvector) + [pgvectorscale](https://github.com/timescale/pgvectorscale) + [pgai](https://github.com/timescale/pgai) + background jobs |
 | [TigerFS](https://tigerfs.io/)            | Mount TimescaleDB as filesystem — agents read/write files, database handles the rest                                                                                                                                                          |
-| [Drizzle](https://orm.drizzle.team/)      | ORM for control plane (auth, billing, routing)                                                                                                                                                                                                |
+| [Drizzle](https://orm.drizzle.team/)      | ORM for control plane (auth, billing, routing). Uses `casing: 'snake_case'` — no explicit column name strings needed in schema                                                                                                                |
 | memory-timescaledb                        | Custom OpenClaw memory plugin (~800 LOC) — replaces memory-core and memory-lancedb with pgvector-backed storage in TimescaleDB                                                                                                                |
 
 ## Auth & Billing

@@ -71,6 +71,7 @@ stateDiagram-v2
 6. Implement graceful shutdown — wait for active tasks, then kill
 7. **Secrets management:** For production, deployers should use environment variables or a secrets manager for API keys, not plaintext files on TigerFS. The framework supports both `auth-profiles.json` (for development) and environment variable injection (for production).
 8. Write tests: start gateway, verify health, send message via gateway API, stop gateway, verify restart on crash
+9. **Gateway device identity:** Gateway WebSocket protocol requires device identity: generate Ed25519 keypair, persist to `.cache/`, implement v3 challenge-response handshake. Use `gateway.auth.mode: 'password'` for non-local connections (Docker, remote). New devices must be approved on the gateway before they can connect.
 
 ### External References
 

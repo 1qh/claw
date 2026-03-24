@@ -207,6 +207,10 @@ graph TB
     SC -->|"read by all gateways"| UM
 ```
 
+## Gateway Device Identity Requirement
+
+OpenClaw gateway requires Ed25519 device identity for WebSocket connections. The control plane generates a persistent device keypair (stored in `.cache/`), signs a challenge-response payload (v3 format: `deviceId|clientId|mode|role|scopes|signedAt|token|nonce|platform|deviceFamily`), and must be paired/approved on the gateway before messages can flow. Password auth mode (`gateway.auth.mode: "password"`) is used for non-local connections.
+
 ## No Traditional Backend
 
 TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, no ORM for user data.
