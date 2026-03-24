@@ -240,6 +240,8 @@ One Linux VM:
 
 No per-user directories. No git sync. No separate backup infra. Just processes on a Linux box with [TigerFS](data.md) unifying all storage.
 
+**Deployment note:** Local dev and Phase 0 use Docker (official OpenClaw image + TigerFS in a privileged container). Production deployment may use Nomad with raw_exec or Docker, depending on the host OS and TigerFS requirements (FUSE needs privileged mode in Docker).
+
 ---
 
 # Identity: Email as the Universal Key

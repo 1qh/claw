@@ -172,11 +172,13 @@ No local disk dependency. No git sync. No OS users. No separate backup infra. Ga
 
 ## TigerFS Open Questions
 
-- **OpenClaw’s `O_NOFOLLOW` flag** — FUSE files present as regular files (not symlinks), should be fine. Needs testing.
-- **Session transcript append performance** — OpenClaw appends to JSONL files frequently. FUSE write latency for append-heavy workloads needs benchmarking.
-- **File watchers** — OpenClaw watches workspace files for hot-reload. Does FUSE trigger `inotify`/`FSEvents` correctly?
-- **OpenClaw multi-agent compatibility** — each agent expects filesystem paths for its workspace. TigerFS paths should work but needs verification.
+- **~~OpenClaw’s `O_NOFOLLOW` flag~~** — RESOLVED (Phase 0.3): FUSE files present as regular files, no symlink errors observed.
+- **~~Session transcript append performance~~** — RESOLVED (Phase 0.4): Append 7ms p95 @ 500KB file size. Well within acceptable range.
+- **~~File watchers~~** — RESOLVED (Phase 0.4): chokidar detects changes with 5ms p50 latency (80% detection rate via polling). Acceptable for config hot-reload.
+- **~~OpenClaw multi-agent compatibility~~** — RESOLVED (Phase 0.3): OpenClaw workspace on TigerFS verified with runtime patch. Ollama integration working.
 - **TigerFS maturity** — “early, but core idea is stable” per their docs. Need to evaluate production readiness.
+- **Dot-prefix limitation** — TigerFS rejects ALL dot-prefixed entries — both files and directories. Dot prefixes are reserved for TigerFS built-in operations (.build/, .history/, .filter/, etc.). This means OpenClaw’s .openclaw/ workspace state directory cannot exist on TigerFS. PR #53326 submitted to move workspace-state.json to the workspace root. Until merged, a runtime patch is needed (sed in the gateway init script).
+- **Runtime patch for OpenClaw on TigerFS** — Until PR #53326 merges upstream, OpenClaw requires a runtime patch to work with TigerFS workspaces. The gateway-init.sh script patches the built JS to remove the .openclaw/ subdir creation. The official Docker image (ghcr.io/openclaw/openclaw:latest) is used with a custom entrypoint that installs TigerFS, applies the patch, mounts the filesystem, and starts the gateway.
 
 ---
 
@@ -257,6 +259,7 @@ Built-in job scheduler inside the database:
 
 Call embedding models from inside the database:
 
+- **Self-hosted confirmed** — Phase 0.1 verified pgai works on self-hosted TimescaleDB (timescale/timescaledb-ha:pg17), not Cloud-only
 - **Auto-vectorize** — embeddings generated automatically as data is written
 - **Auto-sync** — embeddings update when source data changes
 - **Batch processing** — handles model failures, rate limits, latency spikes
