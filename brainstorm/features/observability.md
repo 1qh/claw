@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Leverage OpenClaw’s native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). With [TigerFS](../architecture/data.md), session data lives in TimescaleDB — enabling continuous aggregates for cross-user analytics without polling. Real-time data streams via WebSocket.
+Leverage OpenClaw’s native [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking). With [TigerFS](../architecture/data.md), session data lives in TimescaleDB — enabling continuous aggregates for cross-user analytics without polling. Real-time data streams via SSE.
 
 ## What OpenClaw Tracks Out of the Box (Per Gateway)
 
@@ -65,7 +65,7 @@ OpenClaw already provides comprehensive per-message and per-session usage data:
 ```mermaid
 graph TB
     subgraph "Real-Time (live monitoring)"
-        GW["Gateway"] -->|WebSocket stream| CP["Control Plane"] -->|WebSocket| FE["Frontend"]
+        GW["Gateway"] -->|events| CP["Control Plane"] -->|SSE| FE["Frontend"]
     end
 
     subgraph "Historical (analytics, billing)"
@@ -80,7 +80,7 @@ graph TB
 
 ### Real-Time Path
 
-Live progress, token counts, task status → [WebSocket stream](https://docs.openclaw.ai/gateway/protocol) from gateway → control plane → frontend. No storage, no polling.
+Live progress, token counts, task status → events from gateway → control plane → SSE to frontend. No storage, no polling.
 
 ### Historical Path
 

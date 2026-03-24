@@ -20,9 +20,14 @@ This is an **open source framework** for building agent-native SaaS products whe
 ### Architecture
 
 - [**Overview**](architecture/overview.md) — multi-agent per gateway, fully stateless via TigerFS, isolation model, identity as email
+
 - [**Data Layer**](architecture/data.md) — TimescaleDB + TigerFS, no overlap, no stale data, real-time streaming, unified storage
+
 - [**Security**](architecture/security.md) — 7-layer defense in depth, blocking threats before they reach OpenClaw, isolation audit
+
 - [**Scaling**](architecture/scaling.md) — multi-host orchestration with Nomad, 10K users target
+
+- [**Limitations**](limitations.md) — upstream constraints (OpenClaw throttle, TigerFS dot-prefix, ClamAV ARM64, better-auth)
 
 ### Stack
 

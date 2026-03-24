@@ -31,7 +31,7 @@ my-saas/
 
 Three layers:
 
-1. **React hooks** — core primitives (`useChat`, `useTaskFeed`, `useNotifications`, `useUsage`, etc.) connecting to control plane via [Eden Treaty](https://elysiajs.com/eden/overview). Deployers build any UI.
+1. **React hooks** — core primitives (`useChat`, `useTaskFeed`, `useNotifications`, `useUsage`, etc.) connecting to control plane via HTTP and SSE. Deployers build any UI.
 2. **Reference Next.js app** — fully functional, uses all hooks, [shadcn](https://ui.shadcn.com/) + [Tailwind v4](https://tailwindcss.com/). Use as-is or customize.
 3. **shadcn components** — pre-built components for the 4 surfaces (chat, live feed, notifications, usage). Copy/paste and customize.
 
@@ -51,15 +51,15 @@ Hooks and components extracted after the first MVP is built.
 
 ## What the Deployer Does NOT Configure
 
-| What                   | Why                               |
-| ---------------------- | --------------------------------- |
-| Database schema        | TigerFS + TimescaleDB handles it  |
-| API endpoints          | Elysia control plane is pre-built |
-| Auth flow              | better-auth handles it            |
-| Session management     | OpenClaw handles it               |
-| Memory/personalization | OpenClaw workspace handles it     |
-| Backup                 | TigerFS `.history/` + `pg_dump`   |
-| Process management     | Nomad handles it                  |
+| What                   | Why                              |
+| ---------------------- | -------------------------------- |
+| Database schema        | TigerFS + TimescaleDB handles it |
+| API endpoints          | Next.js API routes are pre-built |
+| Auth flow              | better-auth handles it           |
+| Session management     | OpenClaw handles it              |
+| Memory/personalization | OpenClaw workspace handles it    |
+| Backup                 | TigerFS `.history/` + `pg_dump`  |
+| Process management     | Nomad handles it                 |
 
 ## Licensing
 

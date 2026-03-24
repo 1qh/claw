@@ -2,12 +2,8 @@
   "name": "@uniclaw/control-plane",
   "private": true,
   "type": "module",
-  "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "dev": "bun --watch src/index.ts"
-  },
-  "dependencies": {
-    "@elysiajs/cors": "latest",
-    "elysia": "latest"
+  "exports": {
+    "./connect": "./src/connect.ts",
+    "./device-identity": "./src/device-identity.ts"
   }
 }

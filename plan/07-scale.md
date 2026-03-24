@@ -44,7 +44,7 @@ Deploy the complete stack to a single cloud VM. Validate everything works outsid
 ```mermaid
 graph TB
     subgraph "Single VM"
-        CP["Control Plane\n(Bun/Elysia)"]
+        CP["Next.js App\n(Bun, stateless replicas)"]
         TSDB["TimescaleDB"]
         TFS["TigerFS mount"]
         CLAM["ClamAV"]
@@ -250,7 +250,7 @@ graph TB
    - Gateway memory and CPU per host
    - TimescaleDB query latency and connections
    - TigerFS performance under load
-   - Control plane latency (WebSocket proxy overhead)
+   - Control plane latency (API route overhead)
    - Error rate
 5. Identify bottlenecks and optimize
 6. Document capacity planning numbers

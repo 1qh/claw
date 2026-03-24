@@ -4,6 +4,16 @@
 
 Set up the monorepo, control plane skeleton, authentication, and database schema. Everything needed before integrating OpenClaw.
 
+### Environment Variables
+
+Single source of truth: `apps/web/.env.local`. Validated at startup via `@t3-oss/env-nextjs` + Zod in `apps/web/src/lib/env.ts`. Missing required vars = immediate crash with clear error message.
+
+- Never use `process.env` directly in app code — import `env` from `~/lib/env`
+- Never use fallback defaults (`??`) for env vars in code
+- `env.ts` is the only file that reads `process.env`
+- To add a new env var: add to `env.ts` schema, add to `.env.local`, add to `docker-compose.yml` if gateway needs it
+- Model switching: change `OPENCLAW_MODEL` in `.env.local` + restart gateway
+
 ## Overview
 
 ```mermaid
@@ -20,9 +30,9 @@ graph TB
         D3[RLS policies]
     end
 
-    subgraph "Stage 1.3: Control Plane"
-        C1[Elysia server]
-        C2[WebSocket support]
+    subgraph "Stage 1.3: Next.js App"
+        C1[Next.js API routes]
+        C2[SSE support]
         C3[Health endpoint]
     end
 
@@ -56,11 +66,8 @@ Initialize a Bun workspace monorepo with the project structure.
 1. Initialize the repo with Bun workspace configuration
 2. Create package structure:
    ```
-   packages/
-     control-plane/     ← Elysia server
-     react/             ← React hooks + components (empty for now)
-   apps/
-     web/               ← Next.js app (empty for now)
+   apps/web/              ← Next.js App Router (auth, chat, events — all API routes)
+   lib/ui/                ← read-only shadcn + ai-elements from noboil (ignored by lintmax)
    config/
      SOUL.md            ← default agent personality
      AGENTS.md          ← default operating instructions
@@ -76,13 +83,13 @@ Initialize a Bun workspace monorepo with the project structure.
 
 - [Bun workspace docs](https://bun.sh/docs/install/workspaces)
 - [Bun quickstart](https://bun.sh/docs/quickstart)
-- [Vitest with Bun](https://vitest.dev/guide/)
+- [Bun test runner](https://bun.sh/docs/cli/test)
 
 ### Verification Checklist
 
 - [ ] `bun install` succeeds from repo root
 - [ ] `bun run build` succeeds (even if empty)
-- [ ] `bun run test` runs Vitest (even with zero tests)
+- [ ] `bun run test` runs bun test (even with zero tests)
 - [ ] `bun run lint` runs Oxlint with zero errors
 - [ ] `bun run format` runs Oxfmt
 - [ ] TypeScript strict mode enabled, no errors
@@ -192,11 +199,11 @@ erDiagram
 
 ---
 
-## Stage 1.3: Control Plane Skeleton
+## Stage 1.3: Next.js App Skeleton
 
 ### Goal
 
-Elysia HTTP + WebSocket server with basic routing, health check, and CORS.
+Next.js app with API routes for auth, chat, and events. Single process — `bun dev` starts everything.
 
 ### Dependencies
 
@@ -206,42 +213,34 @@ Elysia HTTP + WebSocket server with basic routing, health check, and CORS.
 
 ```mermaid
 graph LR
-    subgraph "Elysia Control Plane"
-        HEALTH["/health"]
-        WS["WebSocket /ws"]
-        CORS["CORS middleware"]
-        HELMET["Security Headers middleware"]
+    subgraph "Next.js API Routes"
+        AUTH["/api/auth/[...all]"]
+        CHAT["/api/chat"]
+        EVENTS["/api/events (SSE)"]
+        HEALTH["/api/health"]
     end
 
-    CLIENT["Browser / Test"] --> CORS --> HEALTH
-    CLIENT --> CORS --> WS
-    HELMET -.-> HEALTH
-    HELMET -.-> WS
+    CLIENT["Browser"] --> AUTH & CHAT & EVENTS & HEALTH
 ```
 
-1. Create Elysia server in `packages/control-plane/`
-2. Add plugins: CORS, security headers. Set security headers manually in Elysia middleware (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, X-XSS-Protection) or use a community plugin like `elysia-helmet` if available. Elysia does not have an official Helmet plugin
-3. Add `/health` endpoint returning server status
-4. Add WebSocket endpoint `/ws` — accept connections, echo messages (placeholder for gateway proxy)
-5. Export server type for Eden Treaty (frontend type safety)
-6. Write tests: health check returns 200, WebSocket connects, CORS headers present, Helmet headers present
+1. Create Next.js app (App Router) as the main application
+2. Add `/api/health` route returning server status
+3. Add `/api/auth/[...all]` route (placeholder, wired in Stage 1.4)
+4. Add `/api/chat` route (placeholder, wired in Phase 2)
+5. Add `/api/events` SSE route (placeholder, wired in Phase 2)
+6. Configure security headers via `next.config.ts` (CSP, X-Frame-Options, HSTS, etc.)
+7. Write tests: health check returns 200
 
 ### External References
 
-- [Elysia quick start](https://elysiajs.com/quick-start)
-- [Elysia CORS plugin](https://elysiajs.com/plugins/cors)
-- [Elysia WebSocket](https://elysiajs.com/patterns/websocket)
-- [Eden Treaty overview](https://elysiajs.com/eden/treaty/overview)
+- [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
+- [AI SDK TextStreamChatTransport](https://ai-sdk.dev)
 
 ### Verification Checklist
 
-- [ ] `bun run dev` starts Elysia server
-- [ ] `GET /health` returns 200 with status JSON
-- [ ] WebSocket connection to `/ws` succeeds
-- [ ] WebSocket echo: send message, receive same message back
-- [ ] CORS headers present in response (`Access-Control-Allow-Origin`)
+- [ ] `bun dev` starts Next.js dev server
+- [ ] `GET /api/health` returns 200 with status JSON
 - [ ] Security headers present (CSP, X-Frame-Options, HSTS, etc.)
-- [ ] Server type exported for Eden Treaty
 - [ ] All tests pass
 
 ---
@@ -250,12 +249,12 @@ graph LR
 
 ### Goal
 
-Integrate better-auth with Elysia for user signup, login, and session management.
+Integrate better-auth with Next.js for user signup, login, and session management.
 
 ### Dependencies
 
 - Stage 1.2 complete (database schema)
-- Stage 1.3 complete (Elysia server)
+- Stage 1.3 complete (Next.js app)
 
 ### Steps
 
@@ -263,7 +262,7 @@ Integrate better-auth with Elysia for user signup, login, and session management
 sequenceDiagram
     actor User
     participant FE as Frontend (test client)
-    participant CP as Control Plane (Elysia)
+    participant CP as Next.js API Routes
     participant BA as better-auth
     participant DB as TimescaleDB
 
@@ -278,13 +277,13 @@ sequenceDiagram
     BA->>FE: User data
 ```
 
-1. Install better-auth and Elysia adapter
+1. Install better-auth
 2. Configure better-auth with Drizzle adapter pointing to TimescaleDB
-3. Mount better-auth handler on Elysia server
+3. Mount better-auth handler at `/api/auth/[...all]` via `toNextJsHandler` from `better-auth/next-js`
 4. Enable email + password signup (minimal for testing)
-5. Enable at least one OAuth provider (GitHub — easiest for dev)
+5. Enable at least one OAuth provider (Google — matches production provider)
 6. Configure session management (cookie-based)
-7. Add auth middleware to WebSocket — reject unauthenticated connections
+7. Add auth middleware to API routes — reject unauthenticated requests. Use `createAuthClient` from `better-auth/react` with `useSession()` hook on the frontend. Configure Google OAuth via `socialProviders.google` and `trustedOrigins` for same-origin
 8. **Email normalization at signup:** Email normalization (lowercase + strip `+` aliases) MUST be applied by better-auth BEFORE creating the user record. The `email` column in the users table stores the NORMALIZED email. This prevents two accounts (`alice+1@company.com` and `alice@company.com`) from creating separate auth records that map to the same workspace. Add a better-auth `beforeSignup` hook that normalizes email before account creation.
 9. **Enable better-auth CAPTCHA for signup** to prevent bot-driven account creation.
 10. **Admin role assignment:** The first user does NOT auto-become admin. Admin role is assigned explicitly by the deployer via better-auth CLI or database. The admin plugin must be configured with `requireAdminCreation: true` or equivalent. Document this in the template repo README.
@@ -293,7 +292,7 @@ sequenceDiagram
 ### External References
 
 - [better-auth installation](https://www.better-auth.com/docs/installation)
-- [better-auth Elysia integration](https://www.better-auth.com/docs/integrations/elysia)
+- [better-auth Next.js integration](https://www.better-auth.com/docs/integrations/next-js) — use `toNextJsHandler`
 - [better-auth Drizzle adapter](https://www.better-auth.com/docs/storage/drizzle)
 
 ### Verification Checklist
@@ -302,9 +301,9 @@ sequenceDiagram
 - [ ] User login returns session token
 - [ ] Session token validates on subsequent requests
 - [ ] Logout invalidates session
-- [ ] Unauthenticated WebSocket connection is rejected
-- [ ] Authenticated WebSocket connection succeeds
-- [ ] OAuth flow works (GitHub)
+- [ ] Unauthenticated API requests are rejected
+- [ ] Authenticated API requests succeed
+- [ ] OAuth flow works (Google)
 - [ ] better-auth admin plugin accessible (user management)
 - [ ] Two signups with `user+tag@gmail.com` and `user@gmail.com` result in ONE account (not two)
 - [ ] Regular user cannot access /admin/\* endpoints

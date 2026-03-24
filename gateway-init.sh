@@ -4,6 +4,7 @@ set -e
 DB_URL="${DATABASE_URL:-postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw}"
 MOUNT_PATH="${TIGERFS_MOUNT_PATH:-/mnt/tigerfs}"
 GATEWAY_PORT="${GATEWAY_PORT:-18789}"
+MODEL="${OPENCLAW_MODEL:-qwen3.5:4b-q4_K_M}"
 
 apt-get update -qq && apt-get install -y -qq fuse3 curl > /dev/null 2>&1
 curl -fsSL https://install.tigerfs.io | HOME=/root sh > /dev/null 2>&1
@@ -28,7 +29,7 @@ cat > /root/.openclaw/openclaw.json << CONF
     "defaults": {
       "workspace": "$MOUNT_PATH/workspace",
       "model": {
-        "primary": "ollama/qwen3.5:9b-q4_K_M"
+        "primary": "ollama/$MODEL"
       }
     }
   },
@@ -38,7 +39,7 @@ cat > /root/.openclaw/openclaw.json << CONF
         "baseUrl": "${OLLAMA_HOST:-http://host.docker.internal:11434}",
         "api": "ollama",
         "models": [
-          { "id": "qwen3.5:9b-q4_K_M", "name": "qwen3.5:9b-q4_K_M" }
+          { "id": "$MODEL", "name": "$MODEL" }
         ]
       }
     }
@@ -53,6 +54,13 @@ cat > /root/.openclaw/openclaw.json << CONF
     },
     "controlUi": {
       "dangerouslyAllowHostHeaderOriginFallback": true
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": {
+          "enabled": true
+        }
+      }
     }
   }
 }

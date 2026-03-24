@@ -2,15 +2,15 @@
 
 ## Goal
 
-Build the Next.js reference app with 4 surfaces: chat, live feed, notifications, usage. Connect to control plane via Eden Treaty for full type safety.
+Build the Next.js frontend with 4 surfaces: chat, live feed (Terminal), notifications, usage. Auth, chat, and events are all same-origin API routes — no separate control plane server.
 
 ## Overview
 
 ```mermaid
 graph TB
     subgraph "Stage 4.1: Project Setup"
-        S1[Next.js + shadcn + Tailwind v4]
-        S2[Eden Treaty client]
+        S1[Next.js + shadcn/ai-elements + Tailwind v4]
+        S2[AI SDK v6 useChat + SSE events]
     end
 
     subgraph "Stage 4.2: Auth UI"
@@ -39,36 +39,34 @@ graph TB
 
 ### Goal
 
-Initialize Next.js app with shadcn, Tailwind v4, and Eden Treaty connected to the control plane.
+Set up the Next.js frontend with `lib/ui/` components and AI SDK v6 integration.
 
 ### Dependencies
 
-- Phase 1 complete (control plane with auth + Elysia type export)
+- Phase 1 complete (Next.js app with auth API routes)
 
 ### Steps
 
-1. Create Next.js app in `apps/web/`
-2. Install and configure Tailwind v4
-3. Install and configure shadcn
-4. Install Eden Treaty client, configure to point at control plane URL
-5. Verify type inference: Eden Treaty client shows control plane routes with autocomplete
-6. Create basic layout (sidebar/header, main content area)
+1. The Next.js app already exists from Phase 1 — this stage adds the frontend UI
+2. `lib/ui/` is a read-only copy of shadcn + ai-elements from noboil (uses `@a/ui` package name, ignored by lintmax)
+3. `globals.css` imports `@a/ui/globals.css` directly — stock theme, no redefinition
+4. Install AI SDK v6 — note the new API: `useChat` returns `sendMessage`, `status`, `messages` (not `input`, `handleInputChange`, `handleSubmit`, `isLoading`)
+5. Messages use `parts` array: `{ id, role, parts: [{ type: 'text', text: '...' }] }` (not `content` string)
+6. Use `TextStreamChatTransport` for chat (works with `/api/chat` plain text stream)
+7. Create basic layout with chat + Terminal panel
 
 ### External References
 
-- [Next.js getting started](https://nextjs.org/docs/getting-started)
-- [shadcn + Next.js installation](https://ui.shadcn.com/docs/installation/next)
-- [Tailwind CSS installation](https://tailwindcss.com/docs/installation/using-postcss)
-- [Eden Treaty overview](https://elysiajs.com/eden/treaty/overview)
+- [AI SDK v6 useChat](https://ai-sdk.dev)
+- [Next.js App Router](https://nextjs.org/docs/app)
 
 ### Verification Checklist
 
-- [ ] `bun run dev --filter web` starts Next.js dev server
+- [ ] `bun dev` starts Next.js dev server with frontend
 - [ ] Tailwind styles render correctly
-- [ ] shadcn components import and render
-- [ ] Eden Treaty client has full type inference from control plane
-- [ ] API call to `/health` via Eden Treaty returns typed response
-- [ ] Layout renders with placeholder content
+- [ ] `lib/ui/` components import and render (Terminal, Conversation, Message, Card)
+- [ ] AI SDK `useChat` connects to `/api/chat` via TextStreamChatTransport
+- [ ] Layout renders with chat and Terminal panels
 
 ---
 
@@ -94,10 +92,10 @@ stateDiagram-v2
     Dashboard --> LoginPage: Logout
 ```
 
-1. Create signup page (email + password, OAuth buttons)
-2. Create login page
-3. Implement session check — redirect unauthenticated users to login
-4. Create auth context/provider for the app
+1. Create signup/login page using `lib/ui/` Card components
+2. Use `createAuthClient` from `better-auth/react` with `useSession()` hook
+3. Google OAuth via `socialProviders.google` (configured in better-auth server)
+4. Implement session check — redirect unauthenticated users to login
 5. Add logout button
 
 ### External References
@@ -125,7 +123,7 @@ Build the core UX: chat, live feed, notifications, usage.
 ### Dependencies
 
 - Stage 4.2 complete
-- Phase 2 complete (gateway + WebSocket proxy)
+- Phase 2 complete (gateway + chat/events API routes)
 
 ### Steps
 
@@ -138,25 +136,28 @@ graph TB
         USAGE["Usage / History\n(separate page or tab)"]
     end
 
-    WS["WebSocket Connection\n(Eden Treaty)"] --> CHAT & FEED & NOTIF
-    API["REST API\n(Eden Treaty)"] --> USAGE
+    AISDK["AI SDK useChat\n(TextStreamChatTransport)"] --> CHAT
+    SSE["SSE /api/events"] --> FEED & NOTIF
+    API["REST API\n(/api/*)"] --> USAGE
 ```
 
 #### Surface 1: Chat
 
-1. Text input for submitting tasks
-2. Message list showing conversation history
-3. Agent responses rendered as they arrive (streaming from WebSocket events)
-4. File upload button (triggers file gate from Phase 3)
-5. Support for markdown rendering in agent responses
+1. Text input for submitting tasks via AI SDK `sendMessage`
+2. Message list using `lib/ui/` Conversation + Message components
+3. Agent responses use `parts` array: `[{ type: 'text', text: '...' }]`
+4. Chat response rendered with AI SDK `TextStreamChatTransport`
+5. File upload button (triggers file gate from Phase 3)
+6. Support for markdown rendering in agent responses
 
 #### Surface 2: Live Feed
 
-1. Readonly stream of agent progress events
-2. Renders: tool calls (name + status), agent thinking indicators, progress updates
-3. Collapsible — user can peek or hide
-4. Auto-scrolls to latest event
-5. Events sourced from WebSocket `agent` events
+1. Uses `lib/ui/` Terminal component for agent lifecycle logs
+2. Readonly stream of agent progress events via SSE `/api/events`
+3. Renders: tool calls (name + status), agent thinking indicators, progress updates
+4. Collapsible — user can peek or hide
+5. Auto-scrolls to latest event
+6. Real-time lifecycle events stream via SSE `/api/events`
 
 #### Surface 3: Notifications
 

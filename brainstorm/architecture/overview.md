@@ -2,7 +2,7 @@
 
 ## Core Principle
 
-Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw’s [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB.
+Multiple users share each gateway process (10-20 users per gateway). The default `max_agents` per gateway is determined by Phase 5 load testing. Start with 10 as conservative default, increase based on benchmark results. OpenClaw’s [multi-agent](https://docs.openclaw.ai/concepts/multi-agent) architecture provides isolated workspaces, sessions, auth, and tools per user within a single gateway. Gateways are fully stateless — all data lives in TigerFS/TimescaleDB. Gateway config (`.openclaw/`) uses a Docker volume in dev but TigerFS in production.
 
 ## Identity Model
 
@@ -22,9 +22,10 @@ graph TB
         FE[Frontend<br/>Chat + Live Feed + Notifications]
     end
 
-    subgraph "Control Plane (single Bun process, always-on)"
-        AUTH[Auth Service<br/>OAuth / Magic Link]
-        ROUTER[WebSocket Router]
+    subgraph "Next.js App (single process, stateless replicas)"
+        AUTH["/api/auth/[...all]<br/>better-auth via toNextJsHandler"]
+        CHAT["/api/chat<br/>AI SDK TextStreamChatTransport"]
+        EVENTS["/api/events<br/>SSE agent lifecycle logs"]
         PM[Process Manager]
         METER[Billing / Metering]
     end
@@ -46,10 +47,8 @@ graph TB
         CLAM[ClamAV Daemon<br/>shared service]
     end
 
-    FE --> ROUTER
-    ROUTER --> AUTH
-    AUTH --> ROUTER
-    ROUTER --> PM
+    FE --> AUTH & CHAT & EVENTS
+    CHAT --> PM
     PM --> GW1 & GW2
     GW1 & GW2 -->|read/write| TFS
     METER -.->|reads usage from TimescaleDB| TFS
@@ -105,26 +104,28 @@ Starting an agent within an existing gateway is fast (~100-500ms). Gateway proce
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as Web App
-    participant CP as Control Plane
+    participant FE as Web App (React)
+    participant API as Next.js API Routes
     participant GW as User's Gateway Process
 
     User->>FE: "Generate my weekly report"
-    FE->>CP: WebSocket message
-    CP->>CP: Auth: identify user (email)
-    CP->>CP: Lookup: email → host:port
+    FE->>API: POST /api/chat (sendMessage)
+    API->>API: Auth: validate session (better-auth)
+    API->>API: Lookup: user → gateway
 
     alt Gateway stopped
-        CP->>GW: Start process (~1-2s)
+        API->>GW: Start process (~1-2s)
     end
 
-    CP->>GW: Forward task via WebSocket
+    API->>GW: POST /v1/chat/completions (Bearer token auth)
     GW->>GW: Agent works autonomously
-    Note over GW: Events stream back via WebSocket
+    Note over GW: Response arrives as single delta (no per-token streaming)
 
-    GW->>CP: Task complete + result
-    CP->>FE: Deliver result
-    FE->>User: Notification + result
+    GW->>API: Streamed HTTP response
+    API->>FE: TextStreamChatTransport response
+    FE->>User: Text appears (client-side trickle for visual streaming)
+
+    Note over FE,API: Agent lifecycle events via SSE at /api/events
 ```
 
 ## Why Multi-Agent Gateways (Not 1:1)
@@ -209,7 +210,9 @@ graph TB
 
 ## Gateway Device Identity Requirement
 
-OpenClaw gateway requires Ed25519 device identity for WebSocket connections. The control plane generates a persistent device keypair (stored in `.cache/`), signs a challenge-response payload (v3 format: `deviceId|clientId|mode|role|scopes|signedAt|token|nonce|platform|deviceFamily`), and must be paired/approved on the gateway before messages can flow. Password auth mode (`gateway.auth.mode: "password"`) is used for non-local connections.
+OpenClaw gateway requires Ed25519 device identity for WebSocket connections. The Next.js app generates a persistent device keypair (stored in `.cache/`), signs a challenge-response payload (v3 format: `deviceId|clientId|mode|role|scopes|signedAt|token|nonce|platform|deviceFamily`), and must be paired/approved on the gateway before messages can flow. Password auth mode (`gateway.auth.mode: "password"`) is used for non-local connections (Docker, remote).
+
+**Important:** `DEVICE_IDENTITY_PATH` env var is needed since Next.js CWD may differ from repo root. Device re-approval may be needed after gateway restart.
 
 ## No Traditional Backend
 
@@ -223,26 +226,26 @@ TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations, 
 - No API layer for CRUD — agent reads/writes its own workspace
 - No backup complexity — `pg_dump` + TigerFS `.history/`
 
-**What the control plane actually does:**
+**What the Next.js app actually does:**
 
-1. Auth — verify identity (OAuth, magic link)
-2. User → Gateway mapping — route WebSocket traffic
-3. Gateway lifecycle — manage via Nomad
-4. Message relay — frontend ↔ correct gateway ↔ correct agent
+1. Auth — verify identity (Google OAuth via better-auth at `/api/auth/[...all]`)
+2. Chat — relay messages to gateway via `/api/chat` (AI SDK TextStreamChatTransport)
+3. Events — stream agent lifecycle logs via SSE at `/api/events`
+4. Gateway lifecycle — manage via Nomad (future) or direct process management
 5. Billing/metering — read usage data from TimescaleDB continuous aggregates
 
 ## The Complete Stack On One Host
 
 ```
 One Linux VM:
-  ├── Control plane          (1 Bun process)
-  ├── TimescaleDB            (1 system service)
+  ├── Next.js app            (1 Bun process — auth, chat, events, all API routes)
+  ├── TimescaleDB pg18       (1 system service)
   ├── TigerFS mount          (/mnt/tigerfs/ — all data)
-  ├── ClamAV daemon          (1 system service)
+  ├── ClamAV daemon          (clamav/clamav-debian:latest — ARM64 support)
   └── User gateway processes  (N OpenClaw processes, all read/write via TigerFS)
 ```
 
-No per-user directories. No git sync. No separate backup infra. Just processes on a Linux box with [TigerFS](data.md) unifying all storage.
+No per-user directories. No git sync. No separate backup infra. No separate control plane server. Just `bun dev` starts the Next.js app, which handles auth, chat, and events as API routes. Gateway processes are managed separately.
 
 **Deployment note:** Local dev and Phase 0 use Docker (official OpenClaw image + TigerFS in a privileged container). Production deployment may use Nomad with raw_exec or Docker, depending on the host OS and TigerFS requirements (FUSE needs privileged mode in Docker).
 

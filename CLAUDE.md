@@ -24,6 +24,7 @@
 - Explicit imports from exact file paths — no barrel `index.ts` files
 - Prefer existing libraries over new dependencies
 - Scripts: silent on success, verbose on failure. Prefer `q ...` for noisy commands.
+- **Environment variables:** Never use `process.env` directly — import `env` from `~/lib/env`. Never use fallback defaults (`??`) for env vars in code. See `plan/01-foundation.md` for the env setup.
 
 ### Must NOT do
 

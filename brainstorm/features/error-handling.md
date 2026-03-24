@@ -75,7 +75,7 @@ sequenceDiagram
     Note over User: User sees the question
 
     User->>FE: Responds to question
-    FE->>CP: Send response via WebSocket
+    FE->>CP: Send response via HTTP
     CP->>GW: Provide response as tool result
 
     Note over GW: Agent resumes with new context
@@ -105,12 +105,12 @@ stateDiagram-v2
 - Agent calls `request_clarification` tool with question + optional choices
 - Gateway emits an exec approval event (the standard tool approval mechanism)
 - Control plane intercepts this as a special case — recognizes `request_clarification` as requiring user input
-- Control plane forwards the clarification prompt to the frontend via WebSocket
+- Control plane forwards the clarification prompt to the frontend via SSE
 
 **Phase 2 — User responds:**
 
 - Agent is paused waiting for the tool result
-- User’s response is sent back through the WebSocket proxy to the control plane
+- User’s response is sent back via HTTP to the control plane
 - Control plane provides the response as the tool result to the gateway
 - Agent resumes with the response
 

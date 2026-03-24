@@ -12,6 +12,8 @@ Every stage has:
 - **Verification checklist** — binary pass/fail gates (every item must pass)
 - **External references** — verified documentation links
 
+**Before starting any phase**, read [brainstorm/limitations.md](../brainstorm/limitations.md). It contains upstream constraints that affect implementation. Update it whenever a new limitation is discovered.
+
 Refer to [brainstorm/](../brainstorm/) for architectural decisions and rationale. This plan does not repeat those — it references them.
 
 ## Dependency Graph
@@ -69,17 +71,17 @@ gantt
 
 ## Phases
 
-| Phase                       | Name                  | Goal                                                              | Key Risk                                     |
-| --------------------------- | --------------------- | ----------------------------------------------------------------- | -------------------------------------------- |
-| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance  | First integration of TigerFS with OpenClaw   |
-| [1](01-foundation.md)       | Foundation            | Monorepo, control plane skeleton, auth, database schema           | None — proven tools                          |
-| [2](02-gateway.md)          | Gateway Integration   | Connect control plane to OpenClaw, WebSocket proxy, memory plugin | memory-timescaledb plugin is custom code     |
-| [3](03-security.md)         | Security Gate         | 7-layer input validation before OpenClaw                          | Integration between hai-guardrails + AI SDK  |
-| [4](04-frontend.md)         | Frontend              | Next.js app with 4 surfaces, Eden Treaty                          | Real-time WebSocket UX                       |
-| [5](05-multi-agent.md)      | Multi-Agent           | Dynamic agent management, capacity, user lifecycle                | OpenClaw multi-agent at 10-20 users untested |
-| [6](06-operations.md)       | Operations            | Versioning, backup, maintenance, observability                    | Continuous aggregates design                 |
-| [7](07-scale.md)            | Scale                 | Nomad, multi-host, 10K users                                      | Nomad + raw_exec configuration               |
-| [8](08-release.md)          | Release               | Template repo, docs, npm packages                                 | Packaging for deployers                      |
+| Phase                       | Name                  | Goal                                                                 | Key Risk                                     |
+| --------------------------- | --------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
+| [0](00-infra-experiment.md) | Infra Experimentation | Validate TigerFS + OpenClaw compatibility, benchmark performance     | First integration of TigerFS with OpenClaw   |
+| [1](01-foundation.md)       | Foundation            | Monorepo, control plane skeleton, auth, database schema              | None — proven tools                          |
+| [2](02-gateway.md)          | Gateway Integration   | Connect Next.js to OpenClaw, chat + events API routes, memory plugin | memory-timescaledb plugin is custom code     |
+| [3](03-security.md)         | Security Gate         | 7-layer input validation before OpenClaw                             | Integration between hai-guardrails + AI SDK  |
+| [4](04-frontend.md)         | Frontend              | Next.js app with 4 surfaces, AI SDK v6                               | None — proven tools                          |
+| [5](05-multi-agent.md)      | Multi-Agent           | Dynamic agent management, capacity, user lifecycle                   | OpenClaw multi-agent at 10-20 users untested |
+| [6](06-operations.md)       | Operations            | Versioning, backup, maintenance, observability                       | Continuous aggregates design                 |
+| [7](07-scale.md)            | Scale                 | Nomad, multi-host, 10K users                                         | Nomad + raw_exec configuration               |
+| [8](08-release.md)          | Release               | Template repo, docs, npm packages                                    | Packaging for deployers                      |
 
 ## Critical Path
 

@@ -9,14 +9,14 @@ The framework uses the web app as the **single channel**. No WhatsApp, Telegram,
 ```mermaid
 graph LR
     USER[User] --> WEB[Web App]
-    WEB -->|WebSocket via Control Plane| GW[User's Gateway]
+    WEB -->|HTTP + SSE via Control Plane| GW[User's Gateway]
 ```
 
-No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just the deployer’s frontend talking to the gateway’s [WebSocket API](https://docs.openclaw.ai/gateway/protocol).
+No channel configuration, no bot tokens, no QR codes, no multi-channel routing. Just the deployer’s frontend talking to the gateway via HTTP for chat and SSE for events.
 
 ## The Frontend
 
-Four surfaces, all powered by the gateway’s WebSocket event stream:
+Four surfaces, all powered by HTTP for chat and SSE for events:
 
 | Surface             | What It Does                                              |
 | ------------------- | --------------------------------------------------------- |
@@ -67,7 +67,7 @@ Typical SaaS components the deployer does NOT need to build:
 ### Notifications
 
 - **Traditional:** Push notification service, email templates, notification preferences
-- **With OpenClaw:** Results delivered directly through the WebSocket event stream. Frontend shows notification.
+- **With OpenClaw:** Results delivered directly through the SSE event stream. Frontend shows notification.
 
 ### Reporting / Analytics (User-Facing)
 
@@ -125,12 +125,12 @@ graph TB
 
 | Component             | Traditional SaaS                       | This Architecture                                   |
 | --------------------- | -------------------------------------- | --------------------------------------------------- |
-| **Backend framework** | Express/Nest/Django + dozens of routes | Thin control plane (auth + WebSocket proxy + admin) |
+| **Backend framework** | Express/Nest/Django + dozens of routes | Thin control plane (auth + HTTP/SSE routes + admin) |
 | **Database**          | PostgreSQL + Redis + migrations + ORM  | TimescaleDB via TigerFS (workspace files)           |
 | **Task queue**        | Redis + Bull + workers                 | OpenClaw gateway                                    |
 | **File storage**      | S3 + metadata DB                       | Workspace directory                                 |
 | **Search**            | Elasticsearch/Algolia                  | OpenClaw memory search                              |
-| **Notifications**     | FCM/APNS/SendGrid                      | WebSocket events                                    |
+| **Notifications**     | FCM/APNS/SendGrid                      | SSE events                                          |
 | **Scheduler**         | Custom cron service                    | OpenClaw cron                                       |
 | **Audit log**         | Event sourcing / log tables            | Session transcripts                                 |
 | **i18n**              | Translation framework                  | LLM handles it                                      |

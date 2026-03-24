@@ -26,15 +26,15 @@ All environment variables needed across the system. Set these before Phase 1.
 
 | Variable               | Purpose                                                                 | Example                                         |
 | ---------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
-| `DATABASE_URL`         | TimescaleDB connection string (or PgBouncer in production)              | `postgresql://user:pass@localhost:5432/uniclaw` |
+| `DATABASE_URL`         | TimescaleDB connection string (or PgBouncer in production)              | `postgresql://user:pass@localhost:5433/uniclaw` |
 | `OPENCLAW_STATE_DIR`   | Gateway state directory (config, credentials, sessions)                 | `/mnt/tigerfs/state/`                           |
 | `OPENCLAW_CONFIG_PATH` | Path to gateway config file (must be on TigerFS for stateless gateways) | `/mnt/tigerfs/config/openclaw.json`             |
 | `ANTHROPIC_API_KEY`    | Primary LLM API key                                                     | `sk-ant-...`                                    |
 | `OPENAI_API_KEY`       | Fallback LLM API key (optional)                                         | `sk-...`                                        |
 | `GATEWAY_AUTH_TOKEN`   | Token for control plane ↔ gateway auth                                  | (generated)                                     |
 | `BETTER_AUTH_SECRET`   | better-auth session signing secret                                      | (generated)                                     |
-| `GITHUB_CLIENT_ID`     | OAuth provider client ID                                                | (from GitHub)                                   |
-| `GITHUB_CLIENT_SECRET` | OAuth provider client secret                                            | (from GitHub)                                   |
+| `AUTH_GOOGLE_ID`       | Google OAuth client ID                                                  | (from Google Cloud Console)                     |
+| `AUTH_GOOGLE_SECRET`   | Google OAuth client secret                                              | (from Google Cloud Console)                     |
 | `CLAMAV_URL`           | ClamAV REST API endpoint                                                | `http://localhost:3310`                         |
 | `TIGERFS_MOUNT_PATH`   | TigerFS mount point                                                     | `/mnt/tigerfs`                                  |
 | `OPENCLAW_VERSION`     | OpenClaw version to install (pin for stability)                         | `2026.3.22`                                     |
@@ -60,7 +60,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 3. Enable pgvector and pgvectorscale extensions
 4. Create a test table with a vector column
 5. Insert test embeddings, run a similarity query
-6. ~~Verify pgai is available~~ — RESOLVED (Phase 0.1): pgai installs and works on self-hosted TimescaleDB (timescale/timescaledb-ha:pg17). Not Cloud-only.
+6. ~~Verify pgai is available~~ — RESOLVED (Phase 0.1): pgai installs and works on self-hosted TimescaleDB (timescale/timescaledb-ha:pg18). Not Cloud-only.
 
 ### External References
 
@@ -76,7 +76,7 @@ Run TimescaleDB locally with pgvector and pgvectorscale extensions.
 - [x] `CREATE EXTENSION vector` succeeds — vector 0.8.2
 - [x] `CREATE EXTENSION vectorscale` succeeds — vectorscale 0.9.0
 - [x] Insert + KNN query on vector column returns correct results
-- [x] pgai extension available on self-hosted TimescaleDB (timescale/timescaledb-ha:pg17) — not Cloud-only
+- [x] pgai extension available on self-hosted TimescaleDB (timescale/timescaledb-ha:pg18) — not Cloud-only
 - [x] Hypertable creation succeeds on a test table — timescaledb 2.25.2
 - [x] Compression policy can be applied to hypertable
 - [ ] PgBouncer (transaction pooling mode): install, verify `SET LOCAL app.agent_id` persists within a transaction, verify `SET ROLE` works per-transaction, verify RLS policy using `current_setting('app.agent_id')` returns correct rows through PgBouncer. This validates the RLS model before Phase 7 depends on it.

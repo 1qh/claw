@@ -60,7 +60,7 @@ Add keys to one file in the shared config:
 }
 ```
 
-Push to the config repo → all gateways pick it up → done.
+Write to TigerFS config — all gateways pick it up → done.
 
 ## Cost Optimization: Coding Plans
 

@@ -143,7 +143,7 @@ graph TB
 ```
 
 1. **Create continuous aggregates over the existing `usage_events` hypertable (created in Phase 1, populated since Phase 2)** — the control plane extracts token counts, cost, model, and latency from gateway WebSocket events and writes them as rows. Continuous aggregates query this hypertable, NOT the raw JSONL session files on TigerFS.
-2. **Real-time path:** Already built in Phase 2 (WebSocket proxy). Verify live feed shows progress.
+2. **Real-time path:** Already built in Phase 2 (SSE events). Verify live feed shows progress.
 3. **Continuous aggregates:** Create TimescaleDB materialized views over `usage_events`:
    - Per-user daily usage: tokens, cost, task count
    - Per-model usage: which models used, cost breakdown

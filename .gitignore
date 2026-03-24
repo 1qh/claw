@@ -7,5 +7,6 @@ dist/
 .next/
 .turbo/
 .env
+.env.local
 .cache/
 .dev/

@@ -2,7 +2,12 @@
 
 ## Goal
 
-Connect the control plane to an OpenClaw gateway. Proxy WebSocket traffic between the frontend and the gateway. Build the memory-timescaledb plugin.
+Connect the Next.js app to an OpenClaw gateway. Relay chat messages via API routes and stream agent events via SSE. Build the memory-timescaledb plugin.
+
+**Architecture:**
+
+- Chat: HTTP (`/v1/chat/completions` with Bearer token auth)
+- Events/logs: WebSocket (operator connection) for real-time lifecycle events in Terminal panel
 
 ## Overview
 
@@ -94,11 +99,11 @@ stateDiagram-v2
 
 ---
 
-## Stage 2.2: WebSocket Proxy
+## Stage 2.2: Chat + Events API Routes
 
 ### Goal
 
-Proxy WebSocket traffic from the frontend through the control plane to the correct gateway.
+Relay chat messages from the frontend to the gateway via Next.js API routes. Stream agent lifecycle events via SSE.
 
 ### Dependencies
 
@@ -109,67 +114,57 @@ Proxy WebSocket traffic from the frontend through the control plane to the corre
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as Frontend (test client)
-    participant CP as Control Plane
+    participant FE as Frontend (React)
+    participant API as Next.js API Routes
     participant GW as Gateway
 
-    User->>FE: Connect
-    FE->>CP: WebSocket /ws (auth token)
-    CP->>CP: Validate auth, lookup user → gateway
-    CP->>GW: Connect to gateway WebSocket
-    Note over CP: Bidirectional proxy established
+    User->>FE: “Generate my report”
+    FE->>API: POST /api/chat (AI SDK sendMessage)
+    API->>API: Validate auth (better-auth session)
+    API->>API: Lookup user → gateway
+    API->>GW: POST /v1/chat/completions (Bearer token auth)
 
-    User->>FE: "Generate my report"
-    FE->>CP: Forward message
-    CP->>GW: Forward to gateway (chat.send)
+    GW->>API: Streamed HTTP response
+    API->>FE: TextStreamChatTransport response
+    FE->>User: Text appears
 
-    GW->>CP: Agent events (progress, tool calls)
-    CP->>FE: Forward events to frontend
-
-    GW->>CP: Task complete (chat final)
-    CP->>FE: Forward result
-    FE->>User: Show result
+    Note over FE,API: Agent lifecycle events via GET /api/events (SSE)
 ```
 
-1. When user connects to control plane WebSocket:
-   - Authenticate via session token (better-auth)
-   - Look up user’s gateway assignment in TimescaleDB
-   - Open a WebSocket connection to that gateway (using gateway auth token)
-   - Establish bidirectional proxy: frontend ↔ control plane ↔ gateway
-2. Forward all messages from frontend to gateway
-3. Forward all events from gateway to frontend
-4. Handle disconnections: if frontend disconnects, keep gateway connection alive (task continues). If gateway disconnects, notify frontend.
-5. **Implement event buffering:** The control plane maintains a short rolling buffer (last 100 events per user session, ~60s TTL) in memory. On WebSocket reconnect, the frontend sends its last received event sequence number. The control plane replays missed events from the buffer. If the buffer has expired, the frontend shows a “reconnected — some events may be missing” notice.
-6. **WebSocket connection limit:** Enforce maximum 2 concurrent WebSocket connections per user. Additional connections from the same user are rejected. This prevents connection exhaustion attacks. The control plane tracks active connections per user in memory.
-7. **Concurrent sessions per user:** When a user sends a second task while the first is running, the control plane configures OpenClaw’s queue mode. Default: `collect` — new messages are batched and delivered after the current task completes. Deployer can configure to `followup` or `steer` via shared config.
-8. Classify gateway events for the frontend:
-   - `agent` events → live feed
-   - `chat` events with `state: "delta"` → live feed
-   - `chat` events with `state: "final"` → task complete notification
-   - Clarification requests → interactive prompt (see Stage 2.5)
-9. The control plane intercepts `chat` events with `state: 'final'` and extracts token counts, cost, model, and latency. It writes these as rows to the `usage_events` hypertable. This is a side effect of the proxy, not a separate service — the control plane writes to the DB while forwarding events.
-10. Write tests: full message round-trip, event forwarding, disconnect handling
+1. `/api/chat` route handler:
+   - Authenticate via better-auth session
+   - Look up user’s gateway assignment
+   - Forward message to gateway via HTTP `POST /v1/chat/completions` with Bearer token auth
+   - Return response via `createTextStreamResponse` (AI SDK `TextStreamChatTransport`)
+   - Chat response rendered with AI SDK `TextStreamChatTransport`
+2. `/api/events` SSE route handler:
+   - Stream agent lifecycle events (tool calls, progress, errors) in real-time
+   - Events sourced from gateway `agent` events
+3. Classify gateway events:
+   - `agent` events → SSE `/api/events` feed
+   - `chat` events with `state: “delta”` → response stream
+   - `chat` events with `state: “final”` → task complete
+4. The API route intercepts `chat` events with `state: ‘final’` and extracts token counts, cost, model, and latency. Writes to `usage_events` hypertable.
+5. **Concurrent sessions per user:** When a user sends a second task while the first is running, use OpenClaw’s queue mode. Default: `collect` — new messages are batched and delivered after the current task completes.
+6. Write tests: full message round-trip, event streaming, auth rejection
 
 ### External References
 
 - [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol)
-- [Elysia WebSocket](https://elysiajs.com/patterns/websocket)
+- [AI SDK TextStreamChatTransport](https://ai-sdk.dev)
+- [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
 
 ### Verification Checklist
 
-- [ ] Frontend WebSocket connects to control plane with auth
-- [ ] Control plane connects to correct gateway for the authenticated user
+- [ ] POST `/api/chat` relays message to gateway and returns streamed response
+- [ ] GET `/api/events` streams agent lifecycle events via SSE
+- [ ] Unauthenticated requests to `/api/chat` are rejected
 - [ ] Message from frontend reaches gateway (verify in gateway logs)
-- [ ] Agent response events flow back to frontend
-- [ ] Tool call events visible in event stream
-- [ ] Frontend disconnect doesn’t kill the gateway task
-- [ ] Gateway disconnect notifies frontend
-- [ ] Frontend reconnects after brief disconnect and receives missed events
-- [ ] Third WebSocket connection from same user is rejected
-- [ ] Multiple users can connect simultaneously to different gateways
-- [ ] Concurrent task queueing works (second task queued while first runs, default `collect` mode)
+- [ ] Agent response flows back to frontend via TextStreamChatTransport
+- [ ] Tool call events visible in SSE event stream
+- [ ] Bearer token auth is used for HTTP `/v1/chat/completions`
+- [ ] Multiple users can interact simultaneously
 - [ ] `usage_events` table has rows after a task completes
-- [ ] Verify `chat` final events contain token counts (input_tokens, output_tokens), cost, model, and latency fields. If these fields are missing from WebSocket events, the control plane must query the gateway’s `usage.cost` API after each task instead. Document the actual event schema.
 - [ ] All tests pass
 
 ---
@@ -182,7 +177,7 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 
 ### Dependencies
 
-- Stage 2.2 complete (WebSocket proxy)
+- Stage 2.2 complete (chat + events API routes)
 
 ### Steps
 
@@ -190,11 +185,11 @@ Allow the agent to request clarification from the user mid-task, using the exec 
 2. Implement `request_clarification` as a custom tool registered on the gateway:
    - Tool accepts `{ question: string, options?: string[] }` as input
    - When the agent calls this tool, the gateway emits an exec approval event (the same pattern used for tool execution approval)
-   - The control plane intercepts this event and forwards a clarification prompt to the frontend via WebSocket
+   - The API route intercepts this event and forwards a clarification prompt to the frontend via SSE
 3. Frontend displays the clarification prompt to the user (interactive prompt UI implemented in Phase 4)
-4. User’s response is sent back through the WebSocket proxy to the gateway, which provides it as the tool result
-5. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the control plane recognizes `request_clarification` as a special case requiring user input rather than auto-approval. The control plane inspects the tool name in the exec approval event. If the tool name is `request_clarification`, it routes to the frontend as a clarification prompt. All other exec approvals are handled normally (auto-approved or denied based on tool policy)
-6. **Clarification timeout reaper:** The control plane runs a periodic reaper (every 60s) that checks for timed-out clarification requests. If a clarification has been pending longer than the timeout (default 5 min), the control plane sends a timeout response to the gateway, freeing the agent to abort gracefully. This prevents stuck agents from consuming gateway capacity.
+4. User’s response is sent back through the API route to the gateway, which provides it as the tool result
+5. **Important:** The `clarification.requested` event type does NOT exist in OpenClaw. This implementation reuses the existing exec approval flow — the gateway broadcasts a tool approval request, and the Next.js app recognizes `request_clarification` as a special case requiring user input rather than auto-approval. The control plane inspects the tool name in the exec approval event. If the tool name is `request_clarification`, it routes to the frontend as a clarification prompt. All other exec approvals are handled normally (auto-approved or denied based on tool policy)
+6. **Clarification timeout reaper:** The control plane runs a periodic reaper (every 60s) that checks for timed-out clarification requests. If a clarification has been pending longer than the timeout (default 5 min), the Next.js app sends a timeout response to the gateway, freeing the agent to abort gracefully. This prevents stuck agents from consuming gateway capacity.
 7. Write tests: agent requests clarification, user responds, agent continues with the answer
 
 ### External References
@@ -347,27 +342,25 @@ Complete round-trip: user authenticates → sends task → agent works → resul
 sequenceDiagram
     actor User
     participant FE as Test Client
-    participant CP as Control Plane
+    participant API as Next.js API Routes
     participant BA as better-auth
     participant DB as TimescaleDB
     participant GW as Gateway
     participant TFS as TigerFS
 
-    User->>CP: Sign up
-    CP->>BA: Create account
+    User->>API: Sign up
+    API->>BA: Create account
     BA->>DB: User record
-    CP->>DB: Assign to gateway
-    CP->>GW: Create agent (agents.create)
+    API->>DB: Assign to gateway
+    API->>GW: Create agent (agents.create)
 
-    User->>CP: WebSocket connect (auth)
-    CP->>GW: Proxy WebSocket
-
-    User->>CP: "What is 2+2?"
-    CP->>GW: Forward message
+    User->>API: POST /api/chat (sendMessage)
+    API->>API: Validate auth, generate session key + idempotencyKey
+    API->>GW: chat.send
     GW->>GW: Agent processes
     GW->>TFS: Session JSONL written
-    GW->>CP: Response events
-    CP->>FE: Forward events
+    GW->>API: Response
+    API->>FE: TextStreamChatTransport response
     FE->>User: "4"
 
     Note over GW: Agent writes to MEMORY.md via TigerFS

@@ -45,7 +45,7 @@ Set up GitHub Actions for automated quality checks. Should be configured early (
    - **Lint:** `bun run lint` (Oxlint)
    - **Format:** `bun run format --check` (Oxfmt — verify, don’t auto-fix)
    - **Type check:** `bun run typecheck` (TypeScript strict)
-   - **Test:** `bun run test` (Vitest)
+   - **Test:** `bun run test` (bun test)
    - **Build:** `bun run build` (verify production build succeeds)
 2. Run CI on: pull requests to `main`, pushes to `main`
 3. Add branch protection: require CI pass before merge
@@ -134,14 +134,14 @@ Packages to publish:
 ```mermaid
 graph LR
     subgraph "npm packages"
-        CP["@uniclaw/control-plane\nElysia server"]
+        CP["@uniclaw/core\nNext.js API routes"]
         HOOKS["@uniclaw/hooks\nReact hooks"]
         MEM["@uniclaw/memory-timescaledb\nOpenClaw memory plugin"]
         GATE["@uniclaw/gate\nSecurity gate middleware"]
     end
 ```
 
-1. **@uniclaw/control-plane** — the Elysia server with auth, WebSocket proxy, gateway management
+1. **@uniclaw/core** — Next.js API routes for auth, chat, events, and gateway management
 2. **@uniclaw/hooks** — React hooks for chat and task management. Before publishing, extract reusable hooks from `apps/web/` into `packages/hooks/`. Identify hooks that are framework-generic (useChat, useTaskFeed, etc.) vs app-specific. Only publish framework-generic hooks.
 3. **@uniclaw/memory-timescaledb** — the OpenClaw memory plugin
 4. **@uniclaw/gate** — security gate middleware (hai-guardrails + AI SDK integration)
@@ -153,14 +153,14 @@ graph LR
 ### Verification Checklist
 
 - [ ] All packages published to npm
-- [ ] `bun add @uniclaw/control-plane` installs successfully
+- [ ] `bun add @uniclaw/core` installs successfully
 - [ ] `bun add @uniclaw/hooks` installs successfully
 - [ ] `@uniclaw/hooks` contains only framework-generic hooks (no app-specific hooks)
 - [ ] `bun add @uniclaw/memory-timescaledb` installs successfully
 - [ ] `bun add @uniclaw/gate` installs successfully
 - [ ] TypeScript types exported correctly (autocomplete works)
 - [ ] Each package works when installed from npm (not just from monorepo)
-- [ ] Control plane startup rejects if @uniclaw/gate and @uniclaw/control-plane versions don’t match
+- [ ] Control plane startup rejects if @uniclaw/gate and @uniclaw/core versions don’t match
 
 ---
 
@@ -183,7 +183,7 @@ Deployer-facing documentation: getting started, configuration, architecture, and
 5. **Frontend Customization** — how to use hooks, customize the reference app
 6. **Deployment Guide** — local → single VM → multi-host with Nomad
 7. **Security** — what the gate does, how to configure guard thresholds
-8. **API Reference** — auto-generated from Elysia types (OpenAPI)
+8. **API Reference** — documented Next.js API routes (`/api/auth`, `/api/chat`, `/api/events`)
 
 ### Verification Checklist
 

@@ -1,0 +1,25 @@
+{
+  "name": "@uniclaw/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000"
+  },
+  "dependencies": {
+    "@a/ui": "workspace:*",
+    "@ai-sdk/react": "latest",
+    "@t3-oss/env-core": "latest",
+    "@t3-oss/env-nextjs": "latest",
+    "@uniclaw/control-plane": "workspace:*",
+    "ai": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}

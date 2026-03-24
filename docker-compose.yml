@@ -1,6 +1,6 @@
 services:
   timescaledb:
-    image: timescale/timescaledb-ha:pg17
+    image: timescale/timescaledb-ha:pg18
     ports:
       - '5433:5432'
     environment:
@@ -22,12 +22,13 @@ services:
       OLLAMA_HOST: http://host.docker.internal:11434
       TIGERFS_MOUNT_PATH: /mnt/tigerfs
       GATEWAY_PORT: '18789'
+      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-qwen3.5:4b-q4_K_M}
     volumes:
       - gateway_state:/root/.openclaw
       - ./gateway-init.sh:/gateway-init.sh:ro
     entrypoint: ['/bin/bash', '/gateway-init.sh']
   clamav:
-    image: clamav/clamav:stable
+    image: clamav/clamav-debian:latest
     ports:
       - '3310:3310'
 volumes:

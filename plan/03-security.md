@@ -112,7 +112,7 @@ graph LR
 
 #### Integration
 
-1. Wire all 4 layers as Elysia middleware on the WebSocket message handler
+1. Wire all 4 layers as Next.js middleware on the WebSocket message handler
 2. Messages pass through layers sequentially (fast layers first)
 3. On block: return structured reason to frontend, do NOT forward to gateway
 4. On pass: forward to gateway
@@ -203,11 +203,11 @@ sequenceDiagram
 
 #### File Upload Transport
 
-File uploads use multipart form upload (`multipart/form-data`) via a standard HTTP POST endpoint. Max request body size enforced at the Elysia level (default: 100MB). For files larger than 10MB, consider chunked upload (deferred post-MVP).
+File uploads use multipart form upload (`multipart/form-data`) via a standard HTTP POST endpoint. Max request body size enforced at the API route level (default: 100MB). For files larger than 10MB, consider chunked upload (deferred post-MVP).
 
 #### Integration
 
-1. Wire as Elysia route: `POST /upload` with auth middleware
+1. Wire as Next.js API route: `POST /upload` with auth middleware
 2. After all layers pass, write file to user’s workspace on TigerFS: `/mnt/tigerfs/users/{email}/uploads/{filename}`
 3. Return success response with file path (relative to workspace)
 
@@ -246,7 +246,7 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 
 ### Steps
 
-1. Implement per-user rate limits using Elysia middleware:
+1. Implement per-user rate limits using Next.js middleware:
    - **Task submissions:** max concurrent tasks per user (default: 3), max tasks per minute (default: 10)
    - **File uploads:** max uploads per minute (default: 20), max total upload size per hour (default: 100MB)
    - **WebSocket messages:** max messages per second (default: 5) to prevent flooding
@@ -259,7 +259,7 @@ Per-user rate limiting to prevent abuse and resource exhaustion.
 
 ### External References
 
-- [Elysia rate limiting patterns](https://elysiajs.com/plugins/overview)
+- [Next.js Middleware](https://nextjs.org/docs/app/building-your-application/routing/middleware)
 - [better-auth rate limiting](https://www.better-auth.com/docs/concepts/rate-limit)
 
 ### Verification Checklist
@@ -331,7 +331,7 @@ Scan agent responses for PII, secrets, and sensitive data before delivery to the
 
 ### Steps
 
-1. Intercept agent response events in the WebSocket proxy before forwarding to the frontend
+1. Intercept agent response events in the API route before forwarding to the frontend
 2. Run hai-guardrails in heuristic mode on agent output:
    - **PII Guard** — detect if the agent is leaking user PII from other users or from its own training data
    - **Secret Guard** — detect if the agent is outputting API keys, database credentials, or tokens

@@ -295,14 +295,9 @@ See [data layer](../architecture/data.md) for full details.
 
 ---
 
-## [Elysia](https://elysiajs.com/)
+## ~~Elysia~~ (Removed — replaced by Next.js API routes)
 
-| Feature                                           | What We Use It For                                                                        |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Core (HTTP + WebSocket)                           | Control plane server — routing, validation, WebSocket proxy to gateways                   |
-| [Eden Treaty](https://elysiajs.com/eden/overview) | Type-safe frontend client — types inferred from server, no API contracts, no codegen, 2KB |
-| CORS plugin                                       | Frontend-to-control-plane communication                                                   |
-| Helmet plugin                                     | HTTP security headers (CSP, HSTS, X-Frame-Options, etc.)                                  |
+Elysia was eliminated in favor of running everything as Next.js API routes. Auth at `/api/auth/[...all]`, chat at `/api/chat`, events at `/api/events`. Single process, stateless replicas, no WebSocket proxy complexity. Eden Treaty replaced by AI SDK v6 `useChat` with `TextStreamChatTransport`.
 
 ---
 
@@ -456,7 +451,7 @@ See [architecture overview](../architecture/overview.md) for core usage. Below a
 | Data compression                               | TimescaleDB compression                                                     |
 | Version history                                | TigerFS `.history/`                                                         |
 | Backup                                         | `pg_dump`                                                                   |
-| HTTP/WebSocket server                          | Elysia (on Bun)                                                             |
+| HTTP server + API routes                       | Next.js API routes (on Bun)                                                 |
 | Process management                             | `Bun.spawn()` + `Bun.shell()`                                               |
 | Deterministic workflows                        | OpenClaw Lobster                                                            |
 | Scheduled tasks                                | OpenClaw cron                                                               |

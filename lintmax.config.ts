@@ -1,4 +1,4 @@
 import { defineConfig } from 'lintmax'
 export default defineConfig({
-  ignores: ['**/auth-schema.ts']
+  ignores: ['**/auth-schema.ts', 'lib/ui/**']
 })

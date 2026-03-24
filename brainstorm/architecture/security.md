@@ -10,7 +10,7 @@ Block threats BEFORE they reach OpenClaw. Let OpenClaw focus on real work, not n
 flowchart TD
     MSG[Inbound User Message] --> L1
 
-    subgraph "Control Plane Gate (pre-OpenClaw)"
+    subgraph "Next.js API Gate (pre-OpenClaw)"
         L1["Layer 1: Input Sanitizer\n(custom TypeScript, instant, free)"]
         L2["Layer 2: Heuristic Guards\n(hai-guardrails, instant, free, no LLM)"]
         L3["Layer 3: LLM Content Guards\n(hai-guardrails + AI SDK, model-agnostic)"]

@@ -33,11 +33,12 @@ The only tool that schedules bare processes across multiple hosts without requir
 
 ```
 Deployer adds host → registers with Nomad
-User signs up → control plane assigns to existing gateway (or submits new gateway job to Nomad)
+User signs up → Next.js app assigns to existing gateway (or submits new gateway job to Nomad)
 Nomad → places gateway on best host (raw_exec, no containers)
 Gateway crashes → Nomad restarts on any host (fully stateless, all data in TigerFS)
 Host dies → Nomad reschedules gateways to other hosts, zero data loss
 OpenClaw update → Nomad rolling restart across all hosts
+Next.js app → stateless replicas, any instance handles any request (no Elysia, no WebSocket state)
 ```
 
 ### Licensing Note

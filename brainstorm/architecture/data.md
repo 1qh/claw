@@ -161,12 +161,18 @@ graph TB
 
 ```
 One Linux VM:
-  ├── Control plane          (1 Bun process)
-  ├── TimescaleDB            (1 system service)
+  ├── Next.js app            (1 Bun process — auth, chat, events, all API routes)
+  ├── TimescaleDB pg18       (1 system service)
   ├── TigerFS mount          (/mnt/tigerfs/)
-  ├── ClamAV daemon          (1 system service)
+  ├── ClamAV daemon          (clamav/clamav-debian:latest — ARM64 support)
   └── Gateway processes        (N OpenClaw multi-agent gateways, all read/write via TigerFS)
 ```
+
+**Database notes:**
+
+- TimescaleDB upgraded to pg18 (from pg17)
+- Auth tables created manually (`drizzle-kit push` conflicts with TigerFS tables)
+- DB credentials: `uniclaw:uniclaw@localhost:5433/uniclaw`
 
 No local disk dependency. No git sync. No OS users. No separate backup infra. Gateways are fully stateless.
 
@@ -210,10 +216,10 @@ graph TB
 
 ### What TimescaleDB Does NOT Store
 
-| Data                | Where Instead                                                                                         | Why                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Gateway status      | Check process live (`kill -0 <pid>`)                                                                  | Stored status goes stale     |
-| Live usage/progress | [WebSocket stream](https://docs.openclaw.ai/gateway/protocol) from gateway → control plane → frontend | Real-time, no storage needed |
+| Data                | Where Instead                                         | Why                          |
+| ------------------- | ----------------------------------------------------- | ---------------------------- |
+| Gateway status      | Check process live (`kill -0 <pid>`)                  | Stored status goes stale     |
+| Live usage/progress | Events from gateway → control plane → SSE to frontend | Real-time, no storage needed |
 
 Everything else is in TimescaleDB.
 
@@ -259,7 +265,7 @@ Built-in job scheduler inside the database:
 
 Call embedding models from inside the database:
 
-- **Self-hosted confirmed** — Phase 0.1 verified pgai works on self-hosted TimescaleDB (timescale/timescaledb-ha:pg17), not Cloud-only
+- **Self-hosted confirmed** — Phase 0.1 verified pgai works on self-hosted TimescaleDB (timescale/timescaledb-ha:pg18), not Cloud-only
 - **Auto-vectorize** — embeddings generated automatically as data is written
 - **Auto-sync** — embeddings update when source data changes
 - **Batch processing** — handles model failures, rate limits, latency spikes
