@@ -30,39 +30,15 @@ describe('health endpoint', () => {
   })
 })
 describe('websocket', () => {
-  it('connects and receives welcome', async () => {
+  it('rejects unauthenticated connection with error', async () => {
     const ws = new WebSocket(`ws://localhost:${String(port)}/ws`),
-      messages: unknown[] = [],
-      connected = new Promise<void>(resolve => {
+      msg = await new Promise<Record<string, unknown>>(resolve => {
         ws.addEventListener('message', e => {
-          messages.push(JSON.parse(String(e.data)))
-          resolve()
+          resolve(JSON.parse(String(e.data)) as Record<string, unknown>)
         })
       })
-    await connected
-    expect(messages[0]).toEqual({ type: 'connected' })
-    ws.close()
-  })
-  it('echoes messages', async () => {
-    const ws = new WebSocket(`ws://localhost:${String(port)}/ws`)
-    await new Promise<void>(resolve => {
-      ws.addEventListener('open', () => {
-        resolve()
-      })
-    })
-    const echo = new Promise<unknown>(resolve => {
-      let first = true
-      ws.addEventListener('message', e => {
-        if (first) {
-          first = false
-          return
-        }
-        resolve(JSON.parse(String(e.data)))
-      })
-    })
-    ws.send(JSON.stringify({ type: 'ping' }))
-    const response = await echo
-    expect(response).toEqual({ type: 'ping' })
+    expect(msg.type).toBe('error')
+    expect(msg.error).toBe('authentication required')
     ws.close()
   })
 })

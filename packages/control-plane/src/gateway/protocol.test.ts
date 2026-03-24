@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test'
 import { buildAuthPayloadV3, loadOrCreateDeviceIdentity, publicKeyRawBase64Url, signPayload } from './device-identity'
 const GATEWAY_PORT = Number(process.env.GATEWAY_PORT ?? '18789'),
   GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD ?? 'uniclaw-dev',
-  identity = loadOrCreateDeviceIdentity('.cache/uniclaw-cp-device.json'),
+  identity = loadOrCreateDeviceIdentity('.dev/uniclaw-cp-device.json'),
   connectToGateway = async () => {
     const ws = new WebSocket(`ws://localhost:${String(GATEWAY_PORT)}`),
       challenge = await new Promise<Record<string, unknown>>(resolve => {
