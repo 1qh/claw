@@ -45,7 +45,11 @@ cat > /root/.openclaw/openclaw.json << CONF
   },
   "gateway": {
     "port": $GATEWAY_PORT,
-    "mode": "local"
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    }
   }
 }
 CONF
