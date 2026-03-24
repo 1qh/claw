@@ -14,14 +14,19 @@ services:
     image: ghcr.io/openclaw/openclaw:latest
     depends_on:
       - timescaledb
+    privileged: true
+    user: root
     ports:
       - '18789:18789'
     environment:
+      DATABASE_URL: postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw
       OLLAMA_HOST: http://host.docker.internal:11434
+      TIGERFS_MOUNT_PATH: /mnt/tigerfs
+      GATEWAY_PORT: '18789'
     volumes:
       - gateway_state:/root/.openclaw
-    entrypoint: ['openclaw']
-    command: ['gateway', '--port', '18789', '--allow-unconfigured']
+      - ./gateway-init.sh:/gateway-init.sh:ro
+    entrypoint: ['/bin/bash', '/gateway-init.sh']
 
   clamav:
     image: clamav/clamav:stable
