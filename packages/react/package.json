@@ -1,0 +1,14 @@
+{
+  "name": "@uniclaw/react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target browser"
+  },
+  "dependencies": {
+    "react": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest"
+  }
+}

@@ -2,10 +2,17 @@
   "name": "uniclaw",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
+    "build": "bun run --filter '*' build",
     "check": "lintmax check",
-    "clean": "rm -rf node_modules bun.lock dist .cache .next .turbo",
-    "fix": "lintmax fix"
+    "clean": "rm -rf node_modules bun.lock dist .cache .next .turbo packages/*/node_modules apps/*/node_modules packages/*/dist apps/*/dist apps/*/.next",
+    "dev": "bun run --filter '*' dev",
+    "fix": "lintmax fix",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest",
