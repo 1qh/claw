@@ -191,11 +191,16 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         (text: string) => {
           if (!text.trim() || isBusy) return
           setIsBusy(true)
+          globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
           const userMsg: UIMessage = {
-            id: `user-${Date.now()}`,
-            parts: [{ text, type: 'text' }],
-            role: 'user'
-          }
+              id: `user-${Date.now()}`,
+              parts: [{ text, type: 'text' }],
+              role: 'user'
+            },
+            allMessages = [...messages, userMsg].map(m => ({
+              parts: m.parts.filter(p => p.type === 'text').map(p => ({ text: 'text' in p ? p.text : '', type: 'text' })),
+              role: m.role
+            }))
           setMessages(prev => [...prev, userMsg])
           const assistantId = `assistant-${Date.now()}`
           setMessages(prev => [
@@ -204,7 +209,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
           ])
           fetch('/api/chat', {
             body: JSON.stringify({
-              messages: [{ parts: [{ text, type: 'text' }], role: 'user' }],
+              messages: allMessages,
               sessionKey
             }),
             credentials: 'include',
@@ -237,7 +242,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
               setIsBusy(false)
             })
         },
-        [isBusy, sessionKey, loadSessions]
+        [isBusy, sessionKey, loadSessions, messages]
       )
     useEffect(() => {
       loadSessions()

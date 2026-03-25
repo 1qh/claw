@@ -18,16 +18,26 @@ const POST = async (request: Request) => {
       messages?: { parts?: { text?: string; type: string }[]; role: string }[]
       sessionKey?: string
     },
-    lastMessage = body.messages?.at(-1),
-    text =
-      lastMessage?.parts
-        ?.filter(p => p.type === 'text')
-        .map(p => p.text ?? '')
-        .join('') ?? ''
-  if (!text) return new Response('Missing message', { status: 400 })
-  const sessionKey = body.sessionKey ?? `agent:main:${session.user.id}-${Date.now()}`
+    allMessages = (body.messages ?? [])
+      .map(m => ({
+        content:
+          m.parts
+            ?.filter(p => p.type === 'text')
+            .map(p => p.text ?? '')
+            .join('') ?? '',
+        role: m.role
+      }))
+      .filter(m => m.content),
+    lastUserMsg = allMessages.findLast(m => m.role === 'user')
+  if (!lastUserMsg) return new Response('Missing message', { status: 400 })
+  const sessionKey = body.sessionKey ?? `agent:main:${session.user.id}-${Date.now()}`,
+    contextParts: string[] = []
+  for (const m of allMessages.slice(0, -1))
+    contextParts.push(`[${m.role === 'user' ? 'User' : 'Assistant'}]: ${m.content}`)
+  const messageWithContext =
+    contextParts.length > 0 ? `${contextParts.join('\n')}\n\n[User]: ${lastUserMsg.content}` : lastUserMsg.content
   await db.insert(chatMessages).values({
-    content: text,
+    content: lastUserMsg.content,
     role: 'user',
     sessionKey,
     userId: session.user.id
@@ -88,7 +98,7 @@ const POST = async (request: Request) => {
       })
       conn.send('chat.send', {
         idempotencyKey: `${session.user.id}-${Date.now()}`,
-        message: text,
+        message: messageWithContext,
         sessionKey
       })
     }

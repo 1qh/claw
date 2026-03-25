@@ -1,5 +1,4 @@
 /** biome-ignore-all lint/performance/noAwaitInLoops: sequential e2e */
-
 /* oxlint-disable no-await-in-loop */
 import { spawn } from 'bun'
 import { describe, expect, test } from 'bun:test'
