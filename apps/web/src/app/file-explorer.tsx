@@ -6,7 +6,6 @@ import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-t
 import {
   Terminal,
   TerminalActions,
-  TerminalClearButton,
   TerminalContent,
   TerminalCopyButton,
   TerminalHeader,
@@ -66,7 +65,11 @@ const EXT_LANG: Record<string, string> = {
   }) => {
     const [tree, setTree] = useState<TreeNode[]>([]),
       [selectedPath, setSelectedPath] = useState<null | string>(null),
-      [fileContent, setFileContent] = useState<null | string>(null)
+      [fileContent, setFileContent] = useState<null | string>(null),
+      [showTerminal, setShowTerminal] = useState(true)
+    useEffect(() => {
+      if (isBusy) setShowTerminal(true)
+    }, [isBusy])
     useEffect(() => {
       const key = refreshKey
       api
@@ -126,25 +129,30 @@ const EXT_LANG: Record<string, string> = {
                 <ResizableHandle className='opacity-0' />
               </>
             ) : null}
-            <ResizablePanel defaultSize={40} minSize={10}>
-              <Terminal
-                className='rounded-none *:p-1 border-none [&_pre]:!p-0 [&_pre]:!text-xs [&_pre]:!leading-3.5'
-                isStreaming={isBusy}
-                onClear={onClearLogs}
-                output={logOutput}>
-                <TerminalHeader className='!pl-2'>
-                  <TerminalTitle />
-                  <div className='flex items-center gap-1'>
-                    <TerminalStatus />
-                    <TerminalActions>
-                      <TerminalCopyButton />
-                      <TerminalClearButton />
-                    </TerminalActions>
-                  </div>
-                </TerminalHeader>
-                <TerminalContent className='max-h-none flex-1' />
-              </Terminal>
-            </ResizablePanel>
+            {showTerminal ? (
+              <ResizablePanel defaultSize={40} minSize={10}>
+                <Terminal
+                  className='rounded-none *:p-1 border-none [&_pre]:!p-0 [&_pre]:!text-xs [&_pre]:!leading-3.5'
+                  isStreaming={isBusy}
+                  onClear={onClearLogs}
+                  output={logOutput}>
+                  <TerminalHeader className='!pl-2'>
+                    <TerminalTitle />
+                    <div className='flex items-center gap-1'>
+                      <TerminalStatus />
+                      <TerminalActions>
+                        <TerminalCopyButton />
+                        <X
+                          className='cursor-pointer text-muted-foreground hover:text-foreground size-7 p-1.5 hover:bg-background'
+                          onClick={() => setShowTerminal(false)}
+                        />
+                      </TerminalActions>
+                    </div>
+                  </TerminalHeader>
+                  <TerminalContent className='max-h-none flex-1' />
+                </Terminal>
+              </ResizablePanel>
+            ) : null}
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
