@@ -27,6 +27,21 @@ services:
       - ./gateway-init.sh:/gateway-init.sh:ro
       - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
     entrypoint: ['/bin/bash', '/gateway-init.sh']
+  vscode:
+    image: gitpod/openvscode-server:latest
+    depends_on:
+      - timescaledb
+    privileged: true
+    user: root
+    ports:
+      - '3333:3333'
+    environment:
+      DATABASE_URL: postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw
+      TIGERFS_MOUNT_PATH: /mnt/tigerfs
+    volumes:
+      - ./vscode-init.sh:/vscode-init.sh:ro
+      - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
+    entrypoint: ['/bin/bash', '/vscode-init.sh']
   clamav:
     image: clamav/clamav-debian:latest
     ports:

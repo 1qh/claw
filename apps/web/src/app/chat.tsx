@@ -1,3 +1,4 @@
+/* eslint-disable react/iframe-missing-sandbox, @eslint-react/dom/no-unsafe-iframe-sandbox */
 'use client'
 import type { UIMessage } from 'ai'
 import {
@@ -12,6 +13,7 @@ import { Shimmer } from '@a/ui/ai-elements/shimmer'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { SidebarInset, SidebarProvider } from '@a/ui/sidebar'
 import { SparklesIcon } from 'lucide-react'
+import { useState } from 'react'
 import IDEPanel from './file-explorer'
 import { useAgentLogs } from './hooks/use-agent-logs'
 import { useChatSend } from './hooks/use-chat'
@@ -24,7 +26,8 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     return t
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
-    const { logOutput, clearLogs } = useAgentLogs(),
+    const [useVSCode, setUseVSCode] = useState(false),
+      { logOutput, clearLogs } = useAgentLogs(),
       { loadSessions, messages, newChat, sessionKey, sessions, setMessages, switchSession } = useSessions(userId),
       { fileRefreshKey, isBusy, sendChat } = useChatSend({ loadSessions, messages, sessionKey, setMessages }),
       handleNewChat = () => {
@@ -40,7 +43,16 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         <SidebarInset className='h-svh'>
           <ResizablePanelGroup orientation='horizontal'>
             <ResizablePanel defaultSize={50} minSize={20}>
-              <IDEPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={clearLogs} refreshKey={fileRefreshKey} />
+              {useVSCode ? (
+                <iframe
+                  className='h-full w-full border-none'
+                  sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
+                  src='http://localhost:3333'
+                  title='VS Code'
+                />
+              ) : (
+                <IDEPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={clearLogs} refreshKey={fileRefreshKey} />
+              )}
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel className='!overflow-hidden' defaultSize={50} minSize={25}>
@@ -86,7 +98,9 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
           activeSessionKey={sessionKey}
           onNewChat={handleNewChat}
           onSwitchSession={handleSwitchSession}
+          onToggleEditor={() => setUseVSCode(v => !v)}
           sessions={sessions}
+          useMonaco={useVSCode}
           userName={userName}
         />
       </SidebarProvider>

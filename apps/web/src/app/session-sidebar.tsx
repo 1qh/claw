@@ -15,7 +15,7 @@ import {
   SidebarRail,
   useSidebar
 } from '@a/ui/sidebar'
-import { ChevronUpIcon, LogOutIcon, MessageSquarePlusIcon, MoonIcon, SparklesIcon, SunIcon } from 'lucide-react'
+import { ChevronUpIcon, CodeIcon, LogOutIcon, MessageSquarePlusIcon, MoonIcon, SparklesIcon, SunIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { authClient } from '~/lib/auth-client'
 interface SessionEntry {
@@ -56,13 +56,17 @@ const signOut = async () => {
     activeSessionKey,
     onNewChat,
     onSwitchSession,
+    onToggleEditor,
     sessions,
+    useMonaco,
     userName
   }: {
     activeSessionKey: string
     onNewChat: () => void
     onSwitchSession: (entry: SessionEntry) => void
+    onToggleEditor: () => void
     sessions: SessionEntry[]
+    useMonaco: boolean
     userName: string
   }) => {
     const { setTheme, theme } = useTheme()
@@ -102,6 +106,10 @@ const signOut = async () => {
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end' className='w-56' side='top'>
+                    <DropdownMenuItem onClick={onToggleEditor}>
+                      <CodeIcon className='mr-2 size-4' />
+                      {useMonaco ? 'Simple editor' : 'VS Code'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                       {theme === 'dark' ? <SunIcon className='mr-2 size-4' /> : <MoonIcon className='mr-2 size-4' />}
                       {theme === 'dark' ? 'Light mode' : 'Dark mode'}

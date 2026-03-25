@@ -11,6 +11,7 @@
     "@a/env": "workspace:*",
     "@a/ui": "workspace:*",
     "@ai-sdk/react": "latest",
+    "@monaco-editor/react": "latest",
     "ai": "latest",
     "ky": "latest",
     "lucide-react": "latest",
