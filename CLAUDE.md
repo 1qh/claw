@@ -1,3 +1,14 @@
+## Reviewer Loop
+
+When asked to do a “reviewer loop” on docs:
+
+1. **Self rounds**: Read every doc with fresh eyes, find all issues (stale, wrong, missing, inconsistent), fix them, repeat until 0 findings.
+2. **Fresh agent rounds**: Spawn a new agent with NO context to read the entire codebase docs + source code. It finds issues with zero bias. Fix what it finds, spawn another fresh agent. Repeat until it raises 0 concerns.
+
+**Critical: keep the fresh agent UNBIASED.** Give it ONLY the task ("read all docs, read all source code, find inconsistencies"). Do NOT tell it what to look for, what was already fixed, what the expected answers are, or what specific files to check. Any hints bias it toward confirming your work instead of auditing it.
+
+---
+
 ## Philosophy
 
 Nothing is locked in. Every library, pattern, and architecture choice is an experiment. If rebuilding from scratch produces a cleaner, more robust result — do it. Don’t preserve effort for its own sake. Always ask: “if we started fresh today, what’s the best way?” AI SDK, shadcn, even the Next.js structure — all replaceable if something better exists. The goal is the cleanest, most robust solution for the long run.
@@ -37,7 +48,7 @@ Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/opencla
 - Prefer existing libraries over new dependencies
 - Scripts: silent on success, verbose on failure. Prefer `q ...` for noisy commands.
 - **Environment variables:** Never use `process.env` directly — import `env` from `@a/env` (or `~/lib/env` which re-exports it). Never use fallback defaults (`??`) for env vars in code. Single `.env` at project root. Schema in `packages/env/src/env.ts`. See `plan/01-foundation.md` for the env setup.
-- **Database queries:** Always use Drizzle — no raw SQL. This includes TigerFS-backed tables (`_state`, `_workspace`, `_state_history`) which have Drizzle schemas declared as read-only.
+- **Database queries:** Always use Drizzle — no raw SQL. This includes TigerFS-backed tables (`_state`, `_workspace`) which have Drizzle schemas declared as read-only.
 - **Next.js 16 + React 19:** Use server components by default, `'use client'` only when needed (hooks, interactivity). Use server actions for mutations. Leverage `@a/ui` (shadcn + ai-elements) components everywhere applicable — don’t rebuild what’s already available.
 
 ### Must NOT do

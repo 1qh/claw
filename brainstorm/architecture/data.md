@@ -172,7 +172,7 @@ One Linux VM:
 
 - TimescaleDB upgraded to pg18 (from pg17)
 - Auth tables created manually (`drizzle-kit push` conflicts with TigerFS tables)
-- DB credentials: `uniclaw:uniclaw@localhost:5433/uniclaw`
+- DB credentials configured via `DATABASE_URL` env var (see `plan/00-infra-experiment.md`)
 
 No local disk dependency. No git sync. No OS users. No separate backup infra. Gateways are fully stateless.
 

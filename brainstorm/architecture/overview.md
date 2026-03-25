@@ -240,7 +240,7 @@ One Linux VM:
   └── User gateway processes  (N OpenClaw processes, all read/write via TigerFS)
 ```
 
-No per-user directories. No git sync. No separate backup infra. No separate control plane server. Just `bun dev` starts the Next.js app, which handles auth, chat, and events as API routes. Gateway processes are managed separately.
+No git sync. No separate backup infra. No separate control plane server. Just `bun dev` starts the Next.js app, which handles auth, chat, and events as API routes. Gateway processes are managed separately. Per-user directories exist in TigerFS (see [data.md](data.md)) but are managed by OpenClaw, not by our code.
 
 **Deployment note:** Local dev and Phase 0 use Docker (official OpenClaw image + TigerFS in a privileged container). Production deployment may use Nomad with raw_exec or Docker, depending on the host OS and TigerFS requirements (FUSE needs privileged mode in Docker).
 
