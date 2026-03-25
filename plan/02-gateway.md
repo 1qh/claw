@@ -157,21 +157,21 @@ sequenceDiagram
 
 ### Verification Checklist
 
-- [ ] POST `/api/chat` relays message to gateway via WS `chat.send` and returns streamed response
-- [ ] GET `/api/events` streams agent lifecycle events via SSE
+- [ ] POST `/api/chat` relays message to gateway via HTTP `/v1/chat/completions` and returns AI SDK data stream
+- [ ] GET `/api/events` streams agent lifecycle events via SSE (from WS operator connection)
 - [ ] Unauthenticated requests to `/api/chat` and `/api/events` are rejected
 - [ ] Message from frontend reaches gateway (verify in gateway logs / terminal panel)
-- [ ] Agent response streams back to frontend in real-time
+- [ ] Agent response streams back to frontend in real-time (AI SDK data stream protocol)
 - [ ] Tool call events visible in SSE event stream (verbose JSON in terminal panel)
-- [ ] WS connection uses operator+password auth (no device identity, no pairing)
+- [ ] `/api/events` WS connection uses operator+password auth (no device identity, no pairing)
 - [ ] Multiple users can interact simultaneously
-- [ ] `usage_events` table has rows after a task completes
-- [ ] JSONL transcripts on TigerFS contain BOTH user and assistant messages
-- [ ] Session list API returns sessions with first user message as label
-- [ ] Session messages API returns full conversation (user + assistant)
+- [ ] Both user and assistant messages stored in `chat_messages` table (user messages not in JSONL)
+- [ ] Session list API (`/api/sessions`) returns sessions with first user message as label
+- [ ] Session messages API (`/api/sessions/[id]/messages`) returns full conversation (user + assistant)
 - [ ] Clicking a session in sidebar loads its messages and updates URL
 - [ ] New chat creates a fresh session, clears messages, updates URL
-- [ ] Multi-turn context preserved within a session
+- [ ] Multi-turn context preserved within a session (full history sent in each request)
+- [ ] Chat never returns empty response (gateway HTTP fallback guarantees non-empty)
 - [ ] All e2e tests pass (with real auth cookies against dev server)
 
 ---

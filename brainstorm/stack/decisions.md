@@ -100,15 +100,14 @@ Eliminated the Elysia control plane server entirely. Everything runs as Next.js 
 
 ---
 
-## AI SDK v6 API Changes (2026-03-24)
+## AI SDK v6 API Changes (2026-03-24, updated 2026-03-26)
 
-| v5 (old)                                                                    | v6 (current)                                                                      |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `useChat` returns `input`, `handleInputChange`, `handleSubmit`, `isLoading` | `useChat` returns `sendMessage`, `status`, `messages`                             |
-| `messages[].content` (string)                                               | `messages[].parts` array: `[{ type: 'text', text: '...' }]`                       |
-| `DefaultChatTransport`                                                      | Strict schema validation — can’t hand-craft SSE events                            |
-| N/A                                                                         | `TextStreamChatTransport` (superseded — we use WS `chat.send` instead, see below) |
-| `createUIMessageStream`                                                     | Writer format doesn’t match `DefaultChatTransport` wire format in v6              |
+| v5 (old)                                                                    | v6 (current)                                                                                        |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `useChat` returns `input`, `handleInputChange`, `handleSubmit`, `isLoading` | `useChat` returns `append`, `setMessages`, `status`, `messages`                                     |
+| `messages[].content` (string)                                               | `messages[].parts` array: `[{ type: ‘text’, text: ‘...’ }]`                                         |
+| `DefaultChatTransport`                                                      | Standard `streamText` + `toDataStreamResponse()` on server, `useChat` on client                     |
+| N/A                                                                         | `@ai-sdk/openai` provider — used to point at gateway’s OpenAI-compatible `/v1/chat/completions` API |
 
 ---
 
