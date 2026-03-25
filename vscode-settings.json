@@ -21,5 +21,7 @@
   "update.mode": "none",
   "github.copilot.enable": { "*": false },
   "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {},
+  "terminal.integrated.automationProfile.linux": null,
   "security.workspace.trust.enabled": false
 }
