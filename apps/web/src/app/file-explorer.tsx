@@ -1,6 +1,15 @@
 /* oxlint-disable promise/prefer-await-to-then */
 'use client'
+import {
+  CodeBlock,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockHeader
+} from '@a/ui/ai-elements/code-block'
 import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
+import { Terminal, TerminalContent } from '@a/ui/ai-elements/terminal'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { ScrollArea } from '@a/ui/scroll-area'
 import { useEffect, useState } from 'react'
 interface TreeNode {
@@ -9,7 +18,19 @@ interface TreeNode {
   path: string
   type: 'directory' | 'file'
 }
-const renderNode = (node: TreeNode): React.ReactNode => {
+const EXT_LANG: Record<string, string> = {
+    css: 'css',
+    html: 'html',
+    js: 'javascript',
+    json: 'json',
+    md: 'markdown',
+    ts: 'typescript',
+    tsx: 'tsx',
+    yaml: 'yaml',
+    yml: 'yaml'
+  },
+  langOf = (path: string) => EXT_LANG[path.split('.').pop() ?? ''] ?? 'text',
+  renderNode = (node: TreeNode): React.ReactNode => {
     if (node.type === 'directory')
       return (
         <FileTreeFolder key={node.path} name={node.name} path={node.path}>
@@ -18,7 +39,26 @@ const renderNode = (node: TreeNode): React.ReactNode => {
       )
     return <FileTreeFile key={node.path} name={node.name} path={node.path} />
   },
-  FileExplorer = ({ refreshKey }: { refreshKey: number }) => {
+  findNode = (nodes: TreeNode[], path: string): TreeNode | undefined => {
+    for (const node of nodes) {
+      if (node.path === path) return node
+      if (node.children) {
+        const found = findNode(node.children, path)
+        if (found) return found
+      }
+    }
+  },
+  IDEPanel = ({
+    isBusy,
+    logOutput,
+    onClearLogs,
+    refreshKey
+  }: {
+    isBusy: boolean
+    logOutput: string
+    onClearLogs: () => void
+    refreshKey: number
+  }) => {
     const [tree, setTree] = useState<TreeNode[]>([]),
       [selectedPath, setSelectedPath] = useState<null | string>(null),
       [fileContent, setFileContent] = useState('')
@@ -36,31 +76,56 @@ const renderNode = (node: TreeNode): React.ReactNode => {
         .then(setFileContent)
         .catch(() => setFileContent(''))
     }, [selectedPath])
+    const handleSelect = (p: string) => {
+      const node = findNode(tree, p)
+      if (node?.type === 'file') setSelectedPath(p)
+    }
     return (
-      <div className='flex h-full flex-col'>
-        {selectedPath ? (
-          <>
-            <div className='flex items-center gap-2 border-b px-3 py-1.5'>
-              <button
-                className='text-xs text-muted-foreground hover:text-foreground'
-                onClick={() => setSelectedPath(null)}
-                type='button'>
-                ←
-              </button>
-              <span className='truncate text-xs text-muted-foreground'>{selectedPath}</span>
-            </div>
-            <ScrollArea className='flex-1'>
-              <pre className='p-3 text-xs'>{fileContent}</pre>
-            </ScrollArea>
-          </>
-        ) : (
-          <ScrollArea className='flex-1 p-2'>
-            <FileTree className='border-0' onSelect={setSelectedPath} selectedPath={selectedPath ?? undefined}>
+      <ResizablePanelGroup className='h-full' direction='horizontal'>
+        <ResizablePanel defaultSize={30} minSize={15}>
+          <ScrollArea className='h-full'>
+            <FileTree
+              className='rounded-none border-0 bg-transparent'
+              defaultExpanded={new Set(['state', 'workspace'])}
+              onSelect={handleSelect}
+              selectedPath={selectedPath ?? undefined}>
               {tree.map(renderNode)}
             </FileTree>
           </ScrollArea>
-        )}
-      </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={70} minSize={20}>
+          <ResizablePanelGroup className='h-full' direction='vertical'>
+            <ResizablePanel defaultSize={70} minSize={20}>
+              {selectedPath ? (
+                <CodeBlock code={fileContent} language={langOf(selectedPath)}>
+                  <CodeBlockHeader>
+                    <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
+                    <CodeBlockCopyButton />
+                  </CodeBlockHeader>
+                  <ScrollArea className='h-[calc(100%-2.5rem)]'>
+                    <CodeBlockContent />
+                  </ScrollArea>
+                </CodeBlock>
+              ) : (
+                <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
+                  Select a file to view
+                </div>
+              )}
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={30} minSize={10}>
+              <Terminal
+                className='flex h-full flex-col rounded-none border-0'
+                isStreaming={isBusy}
+                onClear={onClearLogs}
+                output={logOutput}>
+                <TerminalContent className='max-h-none flex-1' />
+              </Terminal>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     )
   }
-export default FileExplorer
+export default IDEPanel

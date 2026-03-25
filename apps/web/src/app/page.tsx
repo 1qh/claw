@@ -24,14 +24,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger
+  SidebarProvider
 } from '@a/ui/sidebar'
-import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
+import { ChevronUpIcon, LogOutIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
 import AuthForm from './auth-form'
-import RightPanel from './right-panel'
+import IDEPanel from './file-explorer'
 interface SessionEntry {
   firstMessage: string
   sessionKey: string
@@ -55,7 +54,6 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
-      [showPanel, setShowPanel] = useState(true),
       [sessions, setSessions] = useState<SessionEntry[]>([]),
       [sessionKey, setSessionKey] = useState(() => {
         const params = new URLSearchParams(globalThis.location.search)
@@ -165,60 +163,20 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     }, [])
     return (
       <SidebarProvider>
-        <Sidebar collapsible='icon' side='left'>
-          <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={newChat}>
-                  <MessageSquarePlusIcon className='size-4' />
-                  <span>New Chat</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarHeader>
-          <SidebarContent className='overflow-y-auto px-2'>
-            <SidebarMenu>
-              {sessions.map(s => (
-                <SidebarMenuItem key={s.sessionKey}>
-                  <SidebarMenuButton isActive={s.sessionKey === sessionKey} onClick={() => switchSession(s)}>
-                    <span className='truncate text-xs'>{s.firstMessage}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton>
-                      <SparklesIcon className='size-4' />
-                      <span className='truncate'>{userName}</span>
-                      <ChevronUpIcon className='ml-auto size-4' />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='start' className='w-56' side='top'>
-                    <DropdownMenuItem onClick={() => setShowPanel(p => !p)}>
-                      <LogsIcon className='mr-2 size-4' />
-                      {showPanel ? 'Hide' : 'Show'} Side Panel
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={signOut}>
-                      <LogOutIcon className='mr-2 size-4' />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
         <SidebarInset className='h-screen'>
           <ResizablePanelGroup direction='horizontal'>
-            <ResizablePanel defaultSize={showPanel ? 65 : 100} minSize={30}>
+            <ResizablePanel defaultSize={50} minSize={20}>
+              <IDEPanel
+                isBusy={isBusy}
+                logOutput={logOutput}
+                onClearLogs={() => setLogOutput('')}
+                refreshKey={fileRefreshKey}
+              />
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={50} minSize={25}>
               <div className='flex h-full flex-col'>
                 <Conversation className='flex-1'>
-                  <SidebarTrigger className='absolute left-2 top-2 z-10' />
                   <ConversationContent>
                     {messages.length === 0 ? (
                       <ConversationEmptyState
@@ -253,21 +211,52 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                 </PromptInput>
               </div>
             </ResizablePanel>
-            {showPanel ? (
-              <>
-                <ResizableHandle />
-                <ResizablePanel defaultSize={35} minSize={20}>
-                  <RightPanel
-                    isBusy={isBusy}
-                    logOutput={logOutput}
-                    onClearLogs={() => setLogOutput('')}
-                    refreshKey={fileRefreshKey}
-                  />
-                </ResizablePanel>
-              </>
-            ) : null}
           </ResizablePanelGroup>
         </SidebarInset>
+        <Sidebar collapsible='icon' side='right'>
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={newChat}>
+                  <MessageSquarePlusIcon className='size-4' />
+                  <span>New Chat</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent className='overflow-y-auto px-2 group-data-[collapsible=icon]:hidden'>
+            <SidebarMenu>
+              {sessions.map(s => (
+                <SidebarMenuItem key={s.sessionKey}>
+                  <SidebarMenuButton isActive={s.sessionKey === sessionKey} onClick={() => switchSession(s)}>
+                    <span className='truncate text-xs'>{s.firstMessage}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton>
+                      <SparklesIcon className='size-4' />
+                      <span className='truncate'>{userName}</span>
+                      <ChevronUpIcon className='ml-auto size-4' />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-56' side='top'>
+                    <DropdownMenuItem onClick={signOut}>
+                      <LogOutIcon className='mr-2 size-4' />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
       </SidebarProvider>
     )
   },
