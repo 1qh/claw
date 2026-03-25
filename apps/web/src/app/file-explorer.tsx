@@ -1,13 +1,7 @@
 /* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
 /* oxlint-disable promise/prefer-await-to-then */
 'use client'
-import {
-  CodeBlock,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockFilename,
-  CodeBlockHeader
-} from '@a/ui/ai-elements/code-block'
+import { CodeBlock, CodeBlockCopyButton, CodeBlockFilename, CodeBlockHeader } from '@a/ui/ai-elements/code-block'
 import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
 import { Terminal, TerminalContent } from '@a/ui/ai-elements/terminal'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
@@ -103,15 +97,14 @@ const EXT_LANG: Record<string, string> = {
             <ResizableHandle />
             <ResizablePanel defaultSize={70} minSize={20}>
               {selectedPath && fileContent !== null ? (
-                <CodeBlock code={fileContent} language={langOf(selectedPath)}>
-                  <CodeBlockHeader>
-                    <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
-                    <CodeBlockCopyButton />
-                  </CodeBlockHeader>
-                  <ScrollArea className='h-[calc(100%-2.5rem)]'>
-                    <CodeBlockContent />
-                  </ScrollArea>
-                </CodeBlock>
+                <ScrollArea className='h-full'>
+                  <CodeBlock code={fileContent} language={langOf(selectedPath)} showLineNumbers>
+                    <CodeBlockHeader>
+                      <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
+                      <CodeBlockCopyButton />
+                    </CodeBlockHeader>
+                  </CodeBlock>
+                </ScrollArea>
               ) : (
                 <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
                   {selectedPath ? 'Loading...' : 'Select a file to view'}

@@ -128,18 +128,15 @@ describe('webapp e2e', () => {
     expect(tree.some(n => n.name === 'workspace')).toBe(true)
     expect(tree.some(n => n.name === 'state')).toBe(true)
   })
-
   test('file content readable', async () => {
     const content = await curlFetch('/api/files/workspace/SOUL.md')
     expect(content.length).toBeGreaterThan(0)
     expect(content).toContain('SOUL')
   })
-
   test('file content returns 404 for nonexistent file', async () => {
     const status = await curlStatus('/api/files/workspace/nonexistent.txt')
     expect(status).toBe(404)
   })
-
   test('unauthenticated requests rejected', async () => {
     const sessionsStatus = await curlStatus('/api/sessions', { noCookies: true }),
       filesStatus = await curlStatus('/api/files', { noCookies: true })
