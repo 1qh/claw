@@ -1,3 +1,4 @@
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
 /* oxlint-disable promise/prefer-await-to-then */
 'use client'
 import {
@@ -61,7 +62,7 @@ const EXT_LANG: Record<string, string> = {
   }) => {
     const [tree, setTree] = useState<TreeNode[]>([]),
       [selectedPath, setSelectedPath] = useState<null | string>(null),
-      [fileContent, setFileContent] = useState('')
+      [fileContent, setFileContent] = useState<null | string>(null)
     useEffect(() => {
       const key = refreshKey
       fetch(`/api/files?v=${String(key)}`, { credentials: 'include' })
@@ -70,7 +71,11 @@ const EXT_LANG: Record<string, string> = {
         .catch(() => undefined)
     }, [refreshKey])
     useEffect(() => {
-      if (!selectedPath) return
+      if (!selectedPath) {
+        setFileContent(null)
+        return
+      }
+      setFileContent(null)
       fetch(`/api/files/${selectedPath}`, { credentials: 'include' })
         .then(async res => (res.ok ? res.text() : ''))
         .then(setFileContent)
@@ -81,23 +86,23 @@ const EXT_LANG: Record<string, string> = {
       if (node?.type === 'file') setSelectedPath(p)
     }
     return (
-      <ResizablePanelGroup className='h-full' direction='horizontal'>
-        <ResizablePanel defaultSize={30} minSize={15}>
-          <ScrollArea className='h-full'>
-            <FileTree
-              className='rounded-none border-0 bg-transparent'
-              defaultExpanded={new Set(['state', 'workspace'])}
-              onSelect={handleSelect}
-              selectedPath={selectedPath ?? undefined}>
-              {tree.map(renderNode)}
-            </FileTree>
-          </ScrollArea>
-        </ResizablePanel>
-        <ResizableHandle />
+      <ResizablePanelGroup className='h-full' direction='vertical'>
         <ResizablePanel defaultSize={70} minSize={20}>
-          <ResizablePanelGroup className='h-full' direction='vertical'>
+          <ResizablePanelGroup className='h-full' direction='horizontal'>
+            <ResizablePanel defaultSize={30} minSize={15}>
+              <ScrollArea className='h-full'>
+                <FileTree
+                  className='rounded-none border-0 bg-transparent'
+                  defaultExpanded={new Set(['state', 'workspace'])}
+                  onSelect={handleSelect}
+                  selectedPath={selectedPath ?? undefined}>
+                  {tree.map(renderNode)}
+                </FileTree>
+              </ScrollArea>
+            </ResizablePanel>
+            <ResizableHandle />
             <ResizablePanel defaultSize={70} minSize={20}>
-              {selectedPath ? (
+              {selectedPath && fileContent !== null ? (
                 <CodeBlock code={fileContent} language={langOf(selectedPath)}>
                   <CodeBlockHeader>
                     <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
@@ -109,21 +114,21 @@ const EXT_LANG: Record<string, string> = {
                 </CodeBlock>
               ) : (
                 <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
-                  Select a file to view
+                  {selectedPath ? 'Loading...' : 'Select a file to view'}
                 </div>
               )}
             </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={30} minSize={10}>
-              <Terminal
-                className='flex h-full flex-col rounded-none border-0'
-                isStreaming={isBusy}
-                onClear={onClearLogs}
-                output={logOutput}>
-                <TerminalContent className='max-h-none flex-1' />
-              </Terminal>
-            </ResizablePanel>
           </ResizablePanelGroup>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={30} minSize={10}>
+          <Terminal
+            className='flex h-full flex-col rounded-none border-0'
+            isStreaming={isBusy}
+            onClear={onClearLogs}
+            output={logOutput}>
+            <TerminalContent className='max-h-none flex-1' />
+          </Terminal>
         </ResizablePanel>
       </ResizablePanelGroup>
     )
