@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/useAwait: lintmax adds async to then callbacks */
 /** biome-ignore-all lint/nursery/noNestedPromises: streaming pump pattern */
-/* eslint-disable @typescript-eslint/no-deprecated, @typescript-eslint/strict-void-return, @eslint-react/web-api/no-leaked-event-listener, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable @eslint-react/web-api/no-leaked-event-listener, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
 /* oxlint-disable promise/prefer-await-to-then, promise/always-return, promise/no-nesting */
 'use client'
 import type { UIMessage } from 'ai'
@@ -10,19 +10,11 @@ import {
   ConversationEmptyState,
   ConversationScrollButton
 } from '@a/ui/ai-elements/conversation'
-import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
 import { Message, MessageContent, MessageResponse } from '@a/ui/ai-elements/message'
 import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from '@a/ui/ai-elements/prompt-input'
 import { Shimmer } from '@a/ui/ai-elements/shimmer'
-import { Terminal, TerminalContent, TerminalHeader, TerminalTitle } from '@a/ui/ai-elements/terminal'
-import { Button } from '@a/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@a/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@a/ui/dropdown-menu'
-import { Input } from '@a/ui/input'
-import { Label } from '@a/ui/label'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import { ScrollArea } from '@a/ui/scroll-area'
-import { Separator } from '@a/ui/separator'
 import {
   Sidebar,
   SidebarContent,
@@ -35,20 +27,15 @@ import {
   SidebarProvider,
   SidebarTrigger
 } from '@a/ui/sidebar'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@a/ui/tabs'
 import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
-import { useCallback, useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
+import AuthForm from './auth-form'
+import RightPanel from './right-panel'
 interface SessionEntry {
   firstMessage: string
   sessionKey: string
   updatedAt: string
-}
-interface TreeNode {
-  children?: TreeNode[]
-  name: string
-  path: string
-  type: 'directory' | 'file'
 }
 const emptyStateIcon = <SparklesIcon className='size-8' />,
   toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
@@ -62,191 +49,10 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     for (const p of m.parts) if (p.type === 'text') t += p.text
     return t
   },
-  signInGoogle = async () => {
-    await authClient.signIn.social({ callbackURL: '/', provider: 'google' })
-  },
   signOut = async () => {
     await authClient.signOut()
     globalThis.location.reload()
   },
-  AuthForm = () => {
-    const [mode, setMode] = useState<'login' | 'signup'>('signup'),
-      [email, setEmail] = useState(''),
-      [password, setPassword] = useState(''),
-      [name, setName] = useState(''),
-      [authError, setAuthError] = useState(''),
-      [loading, setLoading] = useState(false),
-      formId = useId(),
-      submit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setAuthError('')
-        setLoading(true)
-        if (mode === 'signup') {
-          const { error } = await authClient.signUp.email({ email, name, password })
-          if (error) {
-            setAuthError(error.message ?? 'Sign up failed')
-            setLoading(false)
-          }
-        } else {
-          const { error } = await authClient.signIn.email({ email, password })
-          if (error) {
-            setAuthError(error.message ?? 'Sign in failed')
-            setLoading(false)
-          }
-        }
-      }
-    return (
-      <div className='flex min-h-screen items-center justify-center'>
-        <Card className='w-96'>
-          <CardHeader>
-            <CardTitle className='text-2xl'>Uniclaw</CardTitle>
-            <CardDescription>
-              {mode === 'signup' ? 'Create an account to get started' : 'Sign in to your account'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className='flex flex-col gap-4' onSubmit={submit}>
-              {mode === 'signup' && (
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor={`${formId}-name`}>Name</Label>
-                  <Input
-                    id={`${formId}-name`}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                    placeholder='Your name'
-                    required
-                    value={name}
-                  />
-                </div>
-              )}
-              <div className='flex flex-col gap-2'>
-                <Label htmlFor={`${formId}-email`}>Email</Label>
-                <Input
-                  id={`${formId}-email`}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  placeholder='you@example.com'
-                  required
-                  type='email'
-                  value={email}
-                />
-              </div>
-              <div className='flex flex-col gap-2'>
-                <Label htmlFor={`${formId}-password`}>Password</Label>
-                <Input
-                  id={`${formId}-password`}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  placeholder='Password'
-                  required
-                  type='password'
-                  value={password}
-                />
-              </div>
-              {authError ? <p className='text-sm text-destructive'>{authError}</p> : null}
-              <Button disabled={loading} type='submit'>
-                {loading ? 'Loading...' : mode === 'signup' ? 'Sign Up' : 'Sign In'}
-              </Button>
-              <Separator />
-              <Button className='gap-2' disabled={loading} onClick={signInGoogle} type='button' variant='outline'>
-                Continue with Google
-              </Button>
-              <button
-                className='text-sm text-muted-foreground hover:text-foreground'
-                onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}
-                type='button'>
-                {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-              </button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  },
-  renderNode = (node: TreeNode): React.ReactNode => {
-    if (node.type === 'directory')
-      return (
-        <FileTreeFolder key={node.path} name={node.name} path={node.path}>
-          {node.children?.map(renderNode)}
-        </FileTreeFolder>
-      )
-    return <FileTreeFile key={node.path} name={node.name} path={node.path} />
-  },
-  FileExplorer = ({ refreshKey }: { refreshKey: number }) => {
-    const [tree, setTree] = useState<TreeNode[]>([]),
-      [selectedPath, setSelectedPath] = useState<null | string>(null),
-      [fileContent, setFileContent] = useState('')
-    useEffect(() => {
-      const key = refreshKey
-      fetch(`/api/files?v=${String(key)}`, { credentials: 'include' })
-        .then(async res => res.json() as Promise<TreeNode[]>)
-        .then(setTree)
-        .catch(() => undefined)
-    }, [refreshKey])
-    useEffect(() => {
-      if (!selectedPath) return
-      fetch(`/api/files/${selectedPath}`, { credentials: 'include' })
-        .then(async res => (res.ok ? res.text() : ''))
-        .then(setFileContent)
-        .catch(() => setFileContent(''))
-    }, [selectedPath])
-    return (
-      <div className='flex h-full flex-col'>
-        {selectedPath ? (
-          <>
-            <div className='flex items-center gap-2 border-b px-3 py-1.5'>
-              <button
-                className='text-xs text-muted-foreground hover:text-foreground'
-                onClick={() => setSelectedPath(null)}
-                type='button'>
-                ←
-              </button>
-              <span className='truncate text-xs text-muted-foreground'>{selectedPath}</span>
-            </div>
-            <ScrollArea className='flex-1'>
-              <pre className='p-3 text-xs'>{fileContent}</pre>
-            </ScrollArea>
-          </>
-        ) : (
-          <ScrollArea className='flex-1 p-2'>
-            <FileTree className='border-0' onSelect={setSelectedPath} selectedPath={selectedPath ?? undefined}>
-              {tree.map(renderNode)}
-            </FileTree>
-          </ScrollArea>
-        )}
-      </div>
-    )
-  },
-  RightPanel = ({
-    isBusy,
-    logOutput,
-    onClearLogs,
-    refreshKey
-  }: {
-    isBusy: boolean
-    logOutput: string
-    onClearLogs: () => void
-    refreshKey: number
-  }) => (
-    <Tabs className='flex h-full flex-col' defaultValue='files'>
-      <TabsList className='w-full justify-start rounded-none border-b bg-transparent px-2'>
-        <TabsTrigger value='files'>Files</TabsTrigger>
-        <TabsTrigger value='logs'>Logs</TabsTrigger>
-      </TabsList>
-      <TabsContent className='flex-1 overflow-hidden' value='files'>
-        <FileExplorer refreshKey={refreshKey} />
-      </TabsContent>
-      <TabsContent className='flex-1 overflow-hidden' value='logs'>
-        <Terminal
-          className='flex h-full flex-col rounded-none border-0'
-          isStreaming={isBusy}
-          onClear={onClearLogs}
-          output={logOutput}>
-          <TerminalHeader>
-            <TerminalTitle>Agent Logs</TerminalTitle>
-          </TerminalHeader>
-          <TerminalContent className='max-h-none flex-1' />
-        </Terminal>
-      </TabsContent>
-    </Tabs>
-  ),
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
       [showPanel, setShowPanel] = useState(true),
@@ -307,10 +113,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
             { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
           ])
           fetch('/api/chat', {
-            body: JSON.stringify({
-              messages: allMessages,
-              sessionKey
-            }),
+            body: JSON.stringify({ messages: allMessages, sessionKey }),
             credentials: 'include',
             headers: { 'content-type': 'application/json' },
             method: 'POST'
