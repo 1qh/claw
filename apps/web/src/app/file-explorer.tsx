@@ -94,8 +94,8 @@ const EXT_LANG: Record<string, string> = {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={70} minSize={20}>
-          <ResizablePanelGroup className='h-full' direction='vertical'>
-            <ResizablePanel defaultSize={70} minSize={20}>
+          <div className='flex h-full flex-col'>
+            <div className='flex-1 overflow-hidden'>
               {selectedPath && fileContent !== null ? (
                 <ScrollArea className='h-full'>
                   <CodeBlock code={fileContent} language={langOf(selectedPath)} showLineNumbers>
@@ -110,9 +110,8 @@ const EXT_LANG: Record<string, string> = {
                   {selectedPath ? 'Loading...' : 'Select a file to view'}
                 </div>
               )}
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={30} minSize={10}>
+            </div>
+            <div className='h-48 shrink-0 border-t'>
               <Terminal
                 className='flex h-full flex-col rounded-none border-0'
                 isStreaming={isBusy}
@@ -120,8 +119,8 @@ const EXT_LANG: Record<string, string> = {
                 output={logOutput}>
                 <TerminalContent className='max-h-none flex-1' />
               </Terminal>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            </div>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     )
