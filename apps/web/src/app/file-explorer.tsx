@@ -84,7 +84,7 @@ const EXT_LANG: Record<string, string> = {
         <ResizablePanel defaultSize={30} minSize={15}>
           <ScrollArea className='h-full'>
             <FileTree
-              className='rounded-none border-0 bg-transparent'
+              className='rounded-none border-0 bg-transparent text-xs [&_button]:py-0.5'
               defaultExpanded={new Set(['state', 'workspace'])}
               onSelect={handleSelect}
               selectedPath={selectedPath ?? undefined}>
@@ -97,9 +97,9 @@ const EXT_LANG: Record<string, string> = {
           <ResizablePanelGroup orientation='vertical'>
             <ResizablePanel defaultSize={70} minSize={20}>
               {selectedPath && fileContent !== null ? (
-                <ScrollArea className='h-full'>
+                <ScrollArea className='h-full [&_pre]:!p-2 [&_pre]:!text-xs [&_pre]:!leading-4'>
                   <CodeBlock code={fileContent} language={langOf(selectedPath)} showLineNumbers>
-                    <CodeBlockHeader>
+                    <CodeBlockHeader className='px-2 py-1'>
                       <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
                       <CodeBlockCopyButton />
                     </CodeBlockHeader>
@@ -114,7 +114,7 @@ const EXT_LANG: Record<string, string> = {
             <ResizableHandle />
             <ResizablePanel defaultSize={30} minSize={10}>
               <Terminal
-                className='flex h-full flex-col rounded-none border-0'
+                className='flex h-full flex-col rounded-none border-0 [&_pre]:!p-2 [&_pre]:!text-xs [&_pre]:!leading-4'
                 isStreaming={isBusy}
                 onClear={onClearLogs}
                 output={logOutput}>
