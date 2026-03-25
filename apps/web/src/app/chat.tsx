@@ -37,15 +37,15 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       }
     return (
       <SidebarProvider>
-        <SidebarInset className='h-screen'>
+        <SidebarInset className='h-svh'>
           <ResizablePanelGroup orientation='horizontal'>
             <ResizablePanel defaultSize={50} minSize={20}>
               <IDEPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={clearLogs} refreshKey={fileRefreshKey} />
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel defaultSize={50} minSize={25}>
-              <div className='grid h-full grid-rows-[1fr_auto]'>
-                <Conversation className='min-h-0'>
+            <ResizablePanel className='!overflow-hidden' defaultSize={50} minSize={25}>
+              <div className='grid h-full grid-rows-[1fr_auto] overflow-hidden'>
+                <Conversation className='min-h-0 overflow-hidden'>
                   <ConversationContent>
                     {messages.length === 0 ? (
                       <ConversationEmptyState
