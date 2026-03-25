@@ -385,13 +385,12 @@ sequenceDiagram
     API->>DB: Assign to gateway
     API->>GW: Create agent (agents.create)
 
-    User->>API: POST /api/chat (sendMessage)
-    API->>API: Validate auth, generate session key + idempotencyKey
-    API->>GW: chat.send
-    GW->>GW: Agent processes
-    GW->>TFS: Session JSONL written
-    GW->>API: Response
-    API->>FE: Streaming text response
+    User->>API: POST /api/chat (useChat append)
+    API->>API: Validate auth, store user msg in chat_messages
+    API->>GW: HTTP POST /v1/chat/completions (streamText)
+    GW->>GW: Agent processes (full agent runtime)
+    GW->>API: SSE streaming chunks
+    API->>FE: AI SDK data stream response
     FE->>User: "4"
 
     Note over GW: Agent writes to MEMORY.md via TigerFS

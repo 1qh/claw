@@ -298,7 +298,7 @@ See [data layer](../architecture/data.md) for full details.
 
 ## ~~Elysia~~ (Removed — replaced by Next.js API routes)
 
-Elysia was eliminated in favor of running everything as Next.js API routes. Auth at `/api/auth/[...all]`, chat at `/api/chat` (via WS `chat.send`), events at `/api/events` (SSE from WS). Single process, stateless replicas.
+Elysia was eliminated in favor of running everything as Next.js API routes. Auth at `/api/auth/[...all]`, chat at `/api/chat` (via HTTP `/v1/chat/completions` with AI SDK `streamText`), events at `/api/events` (SSE from WS operator connection). Single process, stateless replicas.
 
 ---
 

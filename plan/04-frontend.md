@@ -136,7 +136,7 @@ graph TB
         USAGE["Usage / History\n(separate page or tab)"]
     end
 
-    WS["WS chat.send\n(via /api/chat)"] --> CHAT
+    HTTP["HTTP /v1/chat/completions\n(via /api/chat + AI SDK)"] --> CHAT
     SSE["SSE /api/events\n(from gateway WS)"] --> FEED & NOTIF
     API["REST API\n(/api/*)"] --> USAGE
 ```
