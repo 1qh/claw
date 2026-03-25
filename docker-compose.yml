@@ -40,6 +40,9 @@ services:
       TIGERFS_MOUNT_PATH: /mnt/tigerfs
     volumes:
       - ./vscode-init.sh:/vscode-init.sh:ro
+      - ./vscode-settings.json:/vscode-settings.json:ro
+      - ./vscode-settings.json:/home/workspace/.openvscode-server/data/User/settings.json:ro
+      - ./vscode-settings.json:/home/workspace/.openvscode-server/data/Machine/settings.json:ro
       - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
     entrypoint: ['/bin/bash', '/vscode-init.sh']
   clamav:
