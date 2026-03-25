@@ -50,6 +50,16 @@ const gateways = pgTable('gateways', {
       .notNull()
       .references(() => user.id)
   }),
+  tigerfsWorkspace = pgTable('_workspace', {
+    body: text(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    encoding: text().notNull().default('utf8'),
+    filename: text().notNull(),
+    filetype: text().notNull().default('file'),
+    headers: jsonb().default({}),
+    id: uuid().primaryKey().defaultRandom(),
+    modifiedAt: timestamp('modified_at', { withTimezone: true }).notNull().defaultNow()
+  }),
   tigerfsState = pgTable('_state', {
     body: text(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -60,5 +70,5 @@ const gateways = pgTable('gateways', {
     id: uuid().primaryKey().defaultRandom(),
     modifiedAt: timestamp('modified_at', { withTimezone: true }).notNull().defaultNow()
   })
-export { cache, chatMessages, gateways, tigerfsState, usageEvents, userGateway }
+export { cache, chatMessages, gateways, tigerfsState, tigerfsWorkspace, usageEvents, userGateway }
 export { account, session, user, verification } from './auth-schema'

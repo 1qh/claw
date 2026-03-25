@@ -1,9 +1,8 @@
 /** biome-ignore-all lint/style/useExportsLast: Next.js route segment config requires inline export */
 /* oxlint-disable use-exports-last */
-import { like, or } from 'drizzle-orm'
 import { auth } from '~/lib/auth'
 import { db } from '~/lib/db'
-import { tigerfsState } from '~/lib/db-schema'
+import { tigerfsState, tigerfsWorkspace } from '~/lib/db-schema'
 export const runtime = 'nodejs'
 interface TreeNode {
   children?: TreeNode[]
@@ -35,11 +34,20 @@ const buildTree = (files: { filename: string; filetype: string }[]): TreeNode[] 
   GET = async (request: Request) => {
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session) return new Response('Unauthorized', { status: 401 })
-    const rows = await db
-        .select({ filename: tigerfsState.filename, filetype: tigerfsState.filetype })
-        .from(tigerfsState)
-        .where(or(like(tigerfsState.filename, 'workspace/%'), like(tigerfsState.filename, 'state/agents/%'))),
-      filtered = rows.filter(r => !(r.filename.includes('/.history/') || r.filename.endsWith('/.history')))
-    return Response.json(buildTree(filtered))
+    const workspaceRows = await db
+        .select({ filename: tigerfsWorkspace.filename, filetype: tigerfsWorkspace.filetype })
+        .from(tigerfsWorkspace),
+      stateRows = await db.select({ filename: tigerfsState.filename, filetype: tigerfsState.filetype }).from(tigerfsState),
+      allFiles = [
+        ...workspaceRows
+          .filter(r => !(r.filename.startsWith('.') || r.filename.includes('/.history')))
+          .map(r => ({ filename: `workspace/${r.filename}`, filetype: r.filetype })),
+        ...stateRows
+          .filter(
+            r => !(r.filename.startsWith('.') || r.filename.includes('/.history')) && r.filename.startsWith('agents/')
+          )
+          .map(r => ({ filename: `state/${r.filename}`, filetype: r.filetype }))
+      ]
+    return Response.json(buildTree(allFiles))
   }
 export { GET }
