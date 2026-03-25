@@ -1,7 +1,3 @@
-/** biome-ignore-all lint/suspicious/useAwait: lintmax adds async to then callbacks */
-/** biome-ignore-all lint/nursery/noNestedPromises: streaming pump pattern */
-/* eslint-disable @eslint-react/web-api/no-leaked-event-listener, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* oxlint-disable promise/prefer-await-to-then, promise/always-return, promise/no-nesting */
 'use client'
 import type { UIMessage } from 'ai'
 import {
@@ -16,142 +12,35 @@ import { Shimmer } from '@a/ui/ai-elements/shimmer'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { SidebarInset, SidebarProvider } from '@a/ui/sidebar'
 import { SparklesIcon } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
-import type { SessionEntry } from './session-sidebar'
 import IDEPanel from './file-explorer'
+import { useAgentLogs } from './hooks/use-agent-logs'
+import { useChatSend } from './hooks/use-chat'
+import { useSessions } from './hooks/use-sessions'
 import SessionSidebar from './session-sidebar'
 const emptyStateIcon = <SparklesIcon className='size-8' />,
-  toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
-    data.map((m, i) => ({
-      id: `${prefix}-${String(i)}`,
-      parts: [{ text: m.content, type: 'text' as const }],
-      role: m.role as 'assistant' | 'user'
-    })),
   textOf = (m: UIMessage) => {
     let t = ''
     for (const p of m.parts) if (p.type === 'text') t += p.text
     return t
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
-    const [logOutput, setLogOutput] = useState(''),
-      [sessions, setSessions] = useState<SessionEntry[]>([]),
-      [sessionKey, setSessionKey] = useState(() => {
-        const params = new URLSearchParams(globalThis.location.search)
-        return params.get('s') ?? `agent:main:${userId}-${Date.now()}`
-      }),
-      [messages, setMessages] = useState<UIMessage[]>([]),
-      [isBusy, setIsBusy] = useState(false),
-      [fileRefreshKey, setFileRefreshKey] = useState(0),
-      loadSessions = useCallback(() => {
-        fetch('/api/sessions', { credentials: 'include' })
-          .then(async res => res.json() as Promise<SessionEntry[]>)
-          .then(setSessions)
-          .catch(() => undefined)
-      }, []),
-      loadMessages = useCallback((key: string) => {
-        fetch(`/api/sessions/${encodeURIComponent(key)}/messages`, { credentials: 'include' })
-          .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
-          .then(data => setMessages(toUiMessages(data, key)))
-          .catch(() => setMessages([]))
-      }, []),
-      switchSession = useCallback(
-        (entry: SessionEntry) => {
-          setSessionKey(entry.sessionKey)
-          setLogOutput('')
-          globalThis.history.pushState(null, '', `/?s=${encodeURIComponent(entry.sessionKey)}`)
-          loadMessages(entry.sessionKey)
-        },
-        [loadMessages]
-      ),
-      newChat = useCallback(() => {
-        const key = `agent:main:${userId}-${Date.now()}`
-        setSessionKey(key)
-        setMessages([])
-        setLogOutput('')
-        globalThis.history.pushState(null, '', '/')
-      }, [userId]),
-      sendChat = useCallback(
-        (text: string) => {
-          if (!text.trim() || isBusy) return
-          setIsBusy(true)
-          globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
-          const userMsg: UIMessage = {
-              id: `user-${Date.now()}`,
-              parts: [{ text, type: 'text' }],
-              role: 'user'
-            },
-            allMessages = [...messages, userMsg].map(m => ({
-              parts: m.parts.filter(p => p.type === 'text').map(p => ({ text: 'text' in p ? p.text : '', type: 'text' })),
-              role: m.role
-            }))
-          setMessages(prev => [...prev, userMsg])
-          const assistantId = `assistant-${Date.now()}`
-          setMessages(prev => [
-            ...prev,
-            { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
-          ])
-          fetch('/api/chat', {
-            body: JSON.stringify({ messages: allMessages, sessionKey }),
-            credentials: 'include',
-            headers: { 'content-type': 'application/json' },
-            method: 'POST'
-          })
-            .then(async res => {
-              if (!res.body) throw new Error('No response body')
-              const reader = res.body.getReader(),
-                decoder = new TextDecoder()
-              let accumulated = ''
-              const pump = async (): Promise<void> =>
-                reader.read().then(async ({ done, value }) => {
-                  if (done) {
-                    setIsBusy(false)
-                    loadSessions()
-                    setFileRefreshKey(k => k + 1)
-                    return
-                  }
-                  accumulated += decoder.decode(value, { stream: true })
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantId ? { ...m, parts: [{ text: accumulated, type: 'text' as const }] } : m
-                    )
-                  )
-                  return pump()
-                })
-              return pump()
-            })
-            .catch(() => {
-              setIsBusy(false)
-            })
-        },
-        [isBusy, sessionKey, loadSessions, messages]
-      )
-    useEffect(() => {
-      loadSessions()
-      const params = new URLSearchParams(globalThis.location.search),
-        s = params.get('s')
-      if (s) loadMessages(s)
-    }, [loadSessions, loadMessages])
-    useEffect(() => {
-      const es = new EventSource('/api/events')
-      es.addEventListener('message', e => {
-        const data = JSON.parse(String(e.data)) as { formatted: string }
-        setLogOutput(prev => `${prev}${data.formatted}\n`)
-      })
-      return () => {
-        es.close()
+    const { logOutput, clearLogs } = useAgentLogs(),
+      { loadSessions, messages, newChat, sessionKey, sessions, setMessages, switchSession } = useSessions(userId),
+      { fileRefreshKey, isBusy, sendChat } = useChatSend({ loadSessions, messages, sessionKey, setMessages }),
+      handleNewChat = () => {
+        newChat()
+        clearLogs()
+      },
+      handleSwitchSession = (entry: { firstMessage: string; sessionKey: string; updatedAt: string }) => {
+        switchSession(entry)
+        clearLogs()
       }
-    }, [])
     return (
       <SidebarProvider>
         <SidebarInset className='h-screen'>
           <ResizablePanelGroup orientation='horizontal'>
             <ResizablePanel defaultSize={50} minSize={20}>
-              <IDEPanel
-                isBusy={isBusy}
-                logOutput={logOutput}
-                onClearLogs={() => setLogOutput('')}
-                refreshKey={fileRefreshKey}
-              />
+              <IDEPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={clearLogs} refreshKey={fileRefreshKey} />
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={50} minSize={25}>
@@ -195,8 +84,8 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         </SidebarInset>
         <SessionSidebar
           activeSessionKey={sessionKey}
-          onNewChat={newChat}
-          onSwitchSession={switchSession}
+          onNewChat={handleNewChat}
+          onSwitchSession={handleSwitchSession}
           sessions={sessions}
           userName={userName}
         />
