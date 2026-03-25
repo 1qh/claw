@@ -24,20 +24,20 @@ graph TB
 
     subgraph "Next.js App (single process, stateless replicas)"
         AUTH["/api/auth/[...all]<br/>better-auth via toNextJsHandler"]
-        CHAT["/api/chat<br/>WS chat.send"]
-        EVENTS["/api/events<br/>SSE agent lifecycle logs"]
-        PM[Process Manager]
-        METER[Billing / Metering]
+        CHAT["/api/chat<br/>HTTP /v1/chat/completions via AI SDK"]
+        EVENTS["/api/events<br/>SSE agent lifecycle logs (from WS)"]
+        SESSIONS["/api/sessions<br/>Session list + messages"]
+        FILES["/api/files<br/>File tree + content from TigerFS"]
     end
 
     subgraph "Host Machine"
         subgraph "Gateway 1 (10-20 users)"
-            GW1["OpenClaw Gateway :18789<br/>multi-agent mode"]
+            GW1["OpenClaw Gateway :18789<br/>local mode (multi-agent in Phase 5)"]
             A1["Agent: alice@co.com"]
             A2["Agent: bob@gmail.com"]
         end
         subgraph "Gateway 2 (10-20 users)"
-            GW2["OpenClaw Gateway :18809<br/>multi-agent mode"]
+            GW2["OpenClaw Gateway :18809<br/>local mode (multi-agent in Phase 5)"]
             A3["Agent: carol@io.com"]
             A4["Agent: dave@co.com"]
         end
@@ -47,11 +47,10 @@ graph TB
         CLAM[ClamAV Daemon<br/>shared service]
     end
 
-    FE --> AUTH & CHAT & EVENTS
-    CHAT --> PM
-    PM --> GW1 & GW2
+    FE --> AUTH & CHAT & EVENTS & SESSIONS & FILES
+    CHAT --> GW1 & GW2
     GW1 & GW2 -->|read/write| TFS
-    METER -.->|reads usage from TimescaleDB| TFS
+    FILES -.->|reads from TigerFS tables| TFS
     SHARED -.->|read by| GW1 & GW2
 ```
 
@@ -109,23 +108,19 @@ sequenceDiagram
     participant GW as User's Gateway Process
 
     User->>FE: "Generate my weekly report"
-    FE->>API: POST /api/chat (sendMessage)
+    FE->>API: POST /api/chat (useChat append)
     API->>API: Auth: validate session (better-auth)
-    API->>API: Lookup: user → gateway
+    API->>API: Store user message in chat_messages table
 
-    alt Gateway stopped
-        API->>GW: Start process (~1-2s)
-    end
+    API->>GW: HTTP POST /v1/chat/completions (Bearer token, AI SDK streamText)
+    GW->>GW: Agent works autonomously (full agent runtime with tools)
+    Note over GW: Streaming with 150ms throttle, fallback for empty responses
 
-    API->>GW: WS chat.send (operator+password auth, session key)
-    GW->>GW: Agent works autonomously
-    Note over GW: Response arrives as single delta (no per-token streaming)
+    GW->>API: SSE streaming chunks
+    API->>FE: AI SDK data stream response
+    FE->>User: Text streams in
 
-    GW->>API: WS chat delta + agent events
-    API->>FE: Streaming response + SSE events
-    FE->>User: Text appears
-
-    Note over FE,API: Chat and agent events both flow via WebSocket (no HTTP chat endpoint)
+    Note over FE,API: Chat uses HTTP. Agent lifecycle events use separate SSE via WS (/api/events)
 ```
 
 ## Why Multi-Agent Gateways (Not 1:1)
@@ -208,9 +203,9 @@ graph TB
     SC -->|"read by all gateways"| UM
 ```
 
-## Gateway WebSocket Auth
+## Gateway Auth
 
-WebSocket connections use operator+password auth. Device identity is NOT needed — OpenClaw’s `roleCanSkipDeviceIdentity` returns true for operators with shared secret auth. See [decisions.md](../stack/decisions.md) for details.
+Chat uses HTTP Bearer token auth (gateway password). Agent events SSE (`/api/events`) uses WebSocket with operator+password auth. Device identity is NOT needed in either case — OpenClaw’s `roleCanSkipDeviceIdentity` returns true for operators with shared secret auth. See [decisions.md](../stack/decisions.md) for details.
 
 ## No Traditional Backend
 
@@ -227,10 +222,12 @@ TigerFS + TimescaleDB is the entire data layer. No Redis, no S3, no migrations f
 **What the Next.js app actually does:**
 
 1. Auth — verify identity (Google OAuth via better-auth at `/api/auth/[...all]`)
-2. Chat — relay messages to gateway via `/api/chat` (WebSocket `chat.send`)
-3. Events — stream agent lifecycle logs via SSE at `/api/events`
-4. Gateway lifecycle — manage via Nomad (future) or direct process management
-5. Billing/metering — read usage data from TimescaleDB continuous aggregates
+2. Chat — relay messages to gateway via `/api/chat` (HTTP `/v1/chat/completions` with AI SDK `streamText`)
+3. Events — stream agent lifecycle logs via SSE at `/api/events` (from WS operator connection)
+4. Sessions — list and load chat sessions from `chat_messages` table at `/api/sessions`
+5. Files — serve file tree and content from TigerFS tables at `/api/files`
+
+See [decisions.md](../stack/decisions.md) for why HTTP over WS for chat, and the full route table.
 
 ## The Complete Stack On One Host
 

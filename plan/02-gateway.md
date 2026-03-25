@@ -21,7 +21,7 @@ graph TB
     end
 
     subgraph "Stage 2.2"
-        W1["Chat + Events\nAPI Routes (WS)"]
+        W1["Chat (HTTP) + Events (WS)\nAPI Routes"]
     end
 
     subgraph "Stage 2.3"

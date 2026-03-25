@@ -22,24 +22,28 @@ graph TB
 
 ## Environment Variables Inventory
 
-All environment variables needed across the system. Set these before Phase 1.
+All environment variables needed across the system. Variables marked ✅ are implemented in `packages/env/src/env.ts`; others are planned for future phases or used only inside Docker containers.
 
-| Variable               | Purpose                                                                 | Example                                         |
-| ---------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
-| `DATABASE_URL`         | TimescaleDB connection string (or PgBouncer in production)              | `postgresql://user:pass@localhost:5433/uniclaw` |
-| `OPENCLAW_STATE_DIR`   | Gateway state directory (config, credentials, sessions)                 | `/mnt/tigerfs/state/`                           |
-| `OPENCLAW_CONFIG_PATH` | Path to gateway config file (must be on TigerFS for stateless gateways) | `/mnt/tigerfs/config/openclaw.json`             |
-| `ANTHROPIC_API_KEY`    | Primary LLM API key                                                     | `sk-ant-...`                                    |
-| `OPENAI_API_KEY`       | Fallback LLM API key (optional)                                         | `sk-...`                                        |
-| `GATEWAY_AUTH_TOKEN`   | Token for control plane ↔ gateway auth                                  | (generated)                                     |
-| `BETTER_AUTH_SECRET`   | better-auth session signing secret                                      | (generated)                                     |
-| `AUTH_GOOGLE_ID`       | Google OAuth client ID                                                  | (from Google Cloud Console)                     |
-| `AUTH_GOOGLE_SECRET`   | Google OAuth client secret                                              | (from Google Cloud Console)                     |
-| `CLAMAV_URL`           | ClamAV REST API endpoint                                                | `http://localhost:3310`                         |
-| `TIGERFS_MOUNT_PATH`   | TigerFS mount point                                                     | `/mnt/tigerfs`                                  |
-| `OPENCLAW_VERSION`     | OpenClaw version to install (pin for stability)                         | `2026.3.22`                                     |
-| `EMBEDDING_MODEL`      | Embedding model for memory-timescaledb plugin                           | `text-embedding-3-small`                        |
-| `EMBEDDING_API_KEY`    | API key for embedding provider                                          | `sk-...`                                        |
+| Variable                | Purpose                                                           | Example                                         | Status |
+| ----------------------- | ----------------------------------------------------------------- | ----------------------------------------------- | ------ |
+| `DATABASE_URL`          | TimescaleDB connection string (or PgBouncer in production)        | `postgresql://user:pass@localhost:5433/uniclaw` | ✅     |
+| `OPENCLAW_MODEL`        | Ollama model ID for the gateway agent                             | `qwen3.5:9b-q4_K_M`                             | ✅     |
+| `GATEWAY_PASSWORD`      | Gateway auth (Bearer token for HTTP, password for WS operator)    | `uniclaw-dev`                                   | ✅     |
+| `GATEWAY_HOST`          | Gateway hostname (default: `localhost`)                           | `localhost`                                     | ✅     |
+| `GATEWAY_PORT`          | Gateway port (default: `18789`)                                   | `18789`                                         | ✅     |
+| `GATEWAY_CONTAINER`     | Docker container name for gateway                                 | `claw-gateway-1`                                | ✅     |
+| `TIMESCALEDB_CONTAINER` | Docker container name for TimescaleDB                             | `claw-timescaledb-1`                            | ✅     |
+| `AUTH_GOOGLE_ID`        | Google OAuth client ID                                            | (from Google Cloud Console)                     | ✅     |
+| `AUTH_GOOGLE_SECRET`    | Google OAuth client secret                                        | (from Google Cloud Console)                     | ✅     |
+| `VERBOSE_LOGS`          | Enable verbose logging for events SSE (default: `false`)          | `true`                                          | ✅     |
+| `BETTER_AUTH_SECRET`    | better-auth session signing secret (read by better-auth directly) | (generated)                                     | env    |
+| `OPENCLAW_STATE_DIR`    | Gateway state directory (Docker only, set in gateway-init.sh)     | `/mnt/tigerfs/state/`                           | Docker |
+| `TIGERFS_MOUNT_PATH`    | TigerFS mount point (Docker only)                                 | `/mnt/tigerfs`                                  | Docker |
+| `CLAMAV_URL`            | ClamAV REST API endpoint                                          | `http://localhost:3310`                         | Future |
+| `ANTHROPIC_API_KEY`     | LLM API key (when using Anthropic instead of Ollama)              | `sk-ant-...`                                    | Future |
+| `OPENAI_API_KEY`        | LLM API key (when using OpenAI instead of Ollama)                 | `sk-...`                                        | Future |
+| `EMBEDDING_MODEL`       | Embedding model for memory-timescaledb plugin                     | `text-embedding-3-small`                        | Future |
+| `EMBEDDING_API_KEY`     | API key for embedding provider                                    | `sk-...`                                        | Future |
 
 ---
 

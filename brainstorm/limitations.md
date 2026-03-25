@@ -18,7 +18,7 @@ Depends on OpenClaw upstream making the throttle configurable.
 
 ### `idempotencyKey` required for WebSocket `chat.send`
 
-Newer gateway versions reject `chat.send` without `idempotencyKey`. Not needed for HTTP `/v1/chat/completions`.
+Newer gateway versions reject `chat.send` without `idempotencyKey`. Not needed for HTTP `/v1/chat/completions`. **Note:** Our chat now uses HTTP, so this only applies to `/api/events` WS connections (which don’t use `chat.send`).
 
 ### Reasoning stream not yet populated
 

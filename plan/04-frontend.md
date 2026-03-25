@@ -130,8 +130,8 @@ Build the core UX: chat, live feed, notifications, usage.
 ```mermaid
 graph TB
     subgraph "Dashboard Layout"
-        CHAT["Chat Panel\n(left or main)"]
-        FEED["Live Feed\n(collapsible side panel)"]
+        IDE["IDE Panel (left)\nFile tree + Monaco + Terminal"]
+        CHAT["Chat Panel (right)"]
         NOTIF["Notifications\n(top bar or toast)"]
         USAGE["Usage / History\n(separate page or tab)"]
     end

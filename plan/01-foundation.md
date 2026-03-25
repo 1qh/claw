@@ -228,7 +228,7 @@ graph LR
 ### External References
 
 - [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
-- [AI SDK TextStreamChatTransport](https://ai-sdk.dev)
+- [AI SDK streamText + @ai-sdk/openai](https://ai-sdk.dev)
 
 ### Verification Checklist
 

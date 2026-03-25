@@ -52,6 +52,7 @@ const rgb = (r: number, g: number, b: number) => `\u001B[38;2;${String(r)};${Str
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session) return new Response('Unauthorized', { status: 401 })
     const gateway = await connectToGateway({
+        host: env.GATEWAY_HOST,
         password: env.GATEWAY_PASSWORD,
         port: Number(env.GATEWAY_PORT)
       }),
