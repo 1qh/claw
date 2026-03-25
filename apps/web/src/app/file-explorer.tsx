@@ -12,8 +12,9 @@ import {
   TerminalStatus,
   TerminalTitle
 } from '@a/ui/ai-elements/terminal'
+import { Button } from '@a/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import { X } from 'lucide-react'
+import { TerminalSquareIcon, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from './hooks/api'
 interface TreeNode {
@@ -106,7 +107,7 @@ const EXT_LANG: Record<string, string> = {
           </FileTree>
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={70} minSize={20}>
+        <ResizablePanel className='relative' defaultSize={70} minSize={20}>
           <ResizablePanelGroup orientation='vertical'>
             {selectedPath && fileContent !== null ? (
               <>
@@ -142,25 +143,30 @@ const EXT_LANG: Record<string, string> = {
                       <TerminalStatus />
                       <TerminalActions>
                         <TerminalCopyButton />
-                        <X
-                          className='cursor-pointer text-muted-foreground hover:text-foreground size-7 p-1.5 hover:bg-background'
+                        <Button
+                          className='size-7 shrink-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                           onClick={() => setShowTerminal(false)}
-                        />
+                          size='icon'
+                          variant='ghost'>
+                          <X />
+                        </Button>
                       </TerminalActions>
                     </div>
                   </TerminalHeader>
                   <TerminalContent className='max-h-none flex-1' />
                 </Terminal>
               </ResizablePanel>
-            ) : (
-              <button
-                className='flex w-full items-center gap-1 border-t px-2 py-1 text-xs text-muted-foreground hover:text-foreground'
-                onClick={() => setShowTerminal(true)}
-                type='button'>
-                Terminal
-              </button>
-            )}
+            ) : null}
           </ResizablePanelGroup>
+          {showTerminal ? null : (
+            <Button
+              className='absolute bottom-1 right-1 size-7'
+              onClick={() => setShowTerminal(true)}
+              size='icon'
+              variant='ghost'>
+              <TerminalSquareIcon className='size-4' />
+            </Button>
+          )}
         </ResizablePanel>
       </ResizablePanelGroup>
     )
