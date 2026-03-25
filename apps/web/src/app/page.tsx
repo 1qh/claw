@@ -10,6 +10,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton
 } from '@a/ui/ai-elements/conversation'
+import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
 import { Message, MessageContent, MessageResponse } from '@a/ui/ai-elements/message'
 import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from '@a/ui/ai-elements/prompt-input'
 import { Shimmer } from '@a/ui/ai-elements/shimmer'
@@ -20,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@a/ui/input'
 import { Label } from '@a/ui/label'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
+import { ScrollArea } from '@a/ui/scroll-area'
 import { Separator } from '@a/ui/separator'
 import {
   Sidebar,
@@ -33,6 +35,7 @@ import {
   SidebarProvider,
   SidebarTrigger
 } from '@a/ui/sidebar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@a/ui/tabs'
 import { ChevronUpIcon, LogOutIcon, LogsIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
@@ -40,6 +43,12 @@ interface SessionEntry {
   firstMessage: string
   sessionKey: string
   updatedAt: string
+}
+interface TreeNode {
+  children?: TreeNode[]
+  name: string
+  path: string
+  type: 'directory' | 'file'
 }
 const emptyStateIcon = <SparklesIcon className='size-8' />,
   toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
@@ -151,9 +160,90 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       </div>
     )
   },
+  renderNode = (node: TreeNode): React.ReactNode => {
+    if (node.type === 'directory')
+      return (
+        <FileTreeFolder key={node.path} name={node.name} path={node.path}>
+          {node.children?.map(renderNode)}
+        </FileTreeFolder>
+      )
+    return <FileTreeFile key={node.path} name={node.name} path={node.path} />
+  },
+  FileExplorer = () => {
+    const [tree, setTree] = useState<TreeNode[]>([]),
+      [selectedPath, setSelectedPath] = useState<null | string>(null),
+      [fileContent, setFileContent] = useState('')
+    useEffect(() => {
+      const load = () => {
+        fetch('/api/files', { credentials: 'include' })
+          .then(async res => res.json() as Promise<TreeNode[]>)
+          .then(setTree)
+          .catch(() => undefined)
+      }
+      load()
+      const interval = setInterval(load, 5000)
+      return () => clearInterval(interval)
+    }, [])
+    useEffect(() => {
+      if (!selectedPath) return
+      fetch(`/api/files/${selectedPath}`, { credentials: 'include' })
+        .then(async res => (res.ok ? res.text() : ''))
+        .then(setFileContent)
+        .catch(() => setFileContent(''))
+    }, [selectedPath])
+    return (
+      <div className='flex h-full flex-col'>
+        {selectedPath ? (
+          <>
+            <div className='flex items-center gap-2 border-b px-3 py-1.5'>
+              <button
+                className='text-xs text-muted-foreground hover:text-foreground'
+                onClick={() => setSelectedPath(null)}
+                type='button'>
+                ←
+              </button>
+              <span className='truncate text-xs text-muted-foreground'>{selectedPath}</span>
+            </div>
+            <ScrollArea className='flex-1'>
+              <pre className='p-3 text-xs'>{fileContent}</pre>
+            </ScrollArea>
+          </>
+        ) : (
+          <ScrollArea className='flex-1 p-2'>
+            <FileTree className='border-0' onSelect={setSelectedPath} selectedPath={selectedPath ?? undefined}>
+              {tree.map(renderNode)}
+            </FileTree>
+          </ScrollArea>
+        )}
+      </div>
+    )
+  },
+  RightPanel = ({ isBusy, logOutput, onClearLogs }: { isBusy: boolean; logOutput: string; onClearLogs: () => void }) => (
+    <Tabs className='flex h-full flex-col' defaultValue='files'>
+      <TabsList className='w-full justify-start rounded-none border-b bg-transparent px-2'>
+        <TabsTrigger value='files'>Files</TabsTrigger>
+        <TabsTrigger value='logs'>Logs</TabsTrigger>
+      </TabsList>
+      <TabsContent className='flex-1 overflow-hidden' value='files'>
+        <FileExplorer />
+      </TabsContent>
+      <TabsContent className='flex-1 overflow-hidden' value='logs'>
+        <Terminal
+          className='flex h-full flex-col rounded-none border-0'
+          isStreaming={isBusy}
+          onClear={onClearLogs}
+          output={logOutput}>
+          <TerminalHeader>
+            <TerminalTitle>Agent Logs</TerminalTitle>
+          </TerminalHeader>
+          <TerminalContent className='max-h-none flex-1' />
+        </Terminal>
+      </TabsContent>
+    </Tabs>
+  ),
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
-      [showLogs, setShowLogs] = useState(true),
+      [showPanel, setShowPanel] = useState(true),
       [sessions, setSessions] = useState<SessionEntry[]>([]),
       [sessionKey, setSessionKey] = useState(() => {
         const params = new URLSearchParams(globalThis.location.search)
@@ -298,9 +388,9 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='start' className='w-56' side='top'>
-                    <DropdownMenuItem onClick={() => setShowLogs(p => !p)}>
+                    <DropdownMenuItem onClick={() => setShowPanel(p => !p)}>
                       <LogsIcon className='mr-2 size-4' />
-                      {showLogs ? 'Hide' : 'Show'} Agent Logs
+                      {showPanel ? 'Hide' : 'Show'} Side Panel
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={signOut}>
                       <LogOutIcon className='mr-2 size-4' />
@@ -314,7 +404,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         </Sidebar>
         <SidebarInset className='h-screen'>
           <ResizablePanelGroup direction='horizontal'>
-            <ResizablePanel defaultSize={showLogs ? 65 : 100} minSize={30}>
+            <ResizablePanel defaultSize={showPanel ? 65 : 100} minSize={30}>
               <div className='flex h-full flex-col'>
                 <Conversation className='flex-1'>
                   <SidebarTrigger className='absolute left-2 top-2 z-10' />
@@ -352,20 +442,11 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                 </PromptInput>
               </div>
             </ResizablePanel>
-            {showLogs ? (
+            {showPanel ? (
               <>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={35} minSize={20}>
-                  <Terminal
-                    className='flex h-full flex-col rounded-none border-0'
-                    isStreaming={isBusy}
-                    onClear={() => setLogOutput('')}
-                    output={logOutput}>
-                    <TerminalHeader>
-                      <TerminalTitle>Agent Logs</TerminalTitle>
-                    </TerminalHeader>
-                    <TerminalContent className='max-h-none flex-1' />
-                  </Terminal>
+                  <RightPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={() => setLogOutput('')} />
                 </ResizablePanel>
               </>
             ) : null}

@@ -36,21 +36,25 @@ const POST = async (request: Request) => {
     contextParts.push(`[${m.role === 'user' ? 'User' : 'Assistant'}]: ${m.content}`)
   const messageWithContext =
     contextParts.length > 0 ? `${contextParts.join('\n')}\n\n[User]: ${lastUserMsg.content}` : lastUserMsg.content
-  await db.insert(chatMessages).values({
-    content: lastUserMsg.content,
-    role: 'user',
-    sessionKey,
-    userId: session.user.id
-  })
+  await db.insert(chatMessages).values({ content: lastUserMsg.content, role: 'user', sessionKey, userId: session.user.id })
   const conn = await connectToGateway({
-    host: env.GATEWAY_HOST,
-    password: env.GATEWAY_PASSWORD,
-    port: Number(env.GATEWAY_PORT)
-  })
-  let fullText = ''
-  const textStream = new ReadableStream<string>({
-    start: controller => {
+      host: env.GATEWAY_HOST,
+      password: env.GATEWAY_PASSWORD,
+      port: Number(env.GATEWAY_PORT)
+    }),
+    responseText = await new Promise<string>((resolve, reject) => {
+      let fullText = ''
+      const timeout = setTimeout(() => {
+        conn.close()
+        resolve(fullText || 'No response')
+      }, 60_000)
       conn.onEvent(e => {
+        if (e.type === 'res' && !e.ok) {
+          clearTimeout(timeout)
+          conn.close()
+          reject(new Error(`WS error: ${JSON.stringify(e.error)}`))
+          return
+        }
         if (e.type === 'event' && e.event === 'chat') {
           const payload = e.payload as ChatPayload
           if (payload.state === 'delta' && payload.message?.content) {
@@ -58,41 +62,22 @@ const POST = async (request: Request) => {
               .filter(c => c.type === 'text')
               .map(c => c.text ?? '')
               .join('')
-            if (delta) {
-              fullText += delta
-              controller.enqueue(delta)
-            }
+            if (delta) fullText += delta
           }
           if (payload.state === 'final') {
-            if (payload.message?.content) {
-              const finalText = payload.message.content
+            clearTimeout(timeout)
+            if (!fullText && payload.message?.content)
+              fullText = payload.message.content
                 .filter(c => c.type === 'text')
                 .map(c => c.text ?? '')
                 .join('')
-              if (finalText && !fullText) {
-                fullText = finalText
-                controller.enqueue(finalText)
-              }
-            }
-            db.insert(chatMessages)
-              .values({
-                content: fullText,
-                role: 'assistant',
-                sessionKey,
-                userId: session.user.id
-              })
-              .then(() => {
-                controller.close()
-                conn.close()
-              })
-              .catch(() => {
-                controller.close()
-                conn.close()
-              })
+            conn.close()
+            resolve(fullText)
           }
           if (payload.state === 'error') {
-            controller.close()
+            clearTimeout(timeout)
             conn.close()
+            reject(new Error(`Chat error: ${JSON.stringify(payload)}`))
           }
         }
       })
@@ -101,10 +86,8 @@ const POST = async (request: Request) => {
         message: messageWithContext,
         sessionKey
       })
-    }
-  })
-  return new Response(textStream, {
-    headers: { 'content-type': 'text/plain; charset=utf-8', 'transfer-encoding': 'chunked' }
-  })
+    })
+  await db.insert(chatMessages).values({ content: responseText, role: 'assistant', sessionKey, userId: session.user.id })
+  return new Response(responseText, { headers: { 'content-type': 'text/plain; charset=utf-8' } })
 }
 export { POST }

@@ -1,8 +1,8 @@
+import { WebSocket } from 'ws'
 interface GatewayConnection {
   close: () => void
   onEvent: (handler: (event: Record<string, unknown>) => void) => () => void
   send: (method: string, params: Record<string, unknown>) => string
-  ws: WebSocket
 }
 const connectToGateway = async ({
   host = 'localhost',
@@ -13,9 +13,11 @@ const connectToGateway = async ({
   password: string
   port?: number
 }): Promise<GatewayConnection> => {
-  const ws = new WebSocket(`ws://${host}:${String(port)}`, { headers: { origin: `http://${host}:${String(port)}` } })
-  await new Promise<void>(resolve => {
-    ws.addEventListener('message', () => resolve(), { once: true })
+  const url = `ws://${host}:${String(port)}`,
+    ws = new WebSocket(url, { headers: { origin: `http://${host}:${String(port)}` } })
+  await new Promise<void>((resolve, reject) => {
+    ws.once('message', () => resolve())
+    ws.once('error', reject)
   })
   ws.send(
     JSON.stringify({
@@ -37,20 +39,17 @@ const connectToGateway = async ({
       type: 'req'
     })
   )
-  const connectResponse = await new Promise<Record<string, unknown>>(resolve => {
-    ws.addEventListener(
-      'message',
-      e => {
-        resolve(JSON.parse(String(e.data)) as Record<string, unknown>)
-      },
-      { once: true }
-    )
+  const connectResponse = await new Promise<Record<string, unknown>>((resolve, reject) => {
+    ws.once('message', (data: Buffer) => {
+      resolve(JSON.parse(data.toString('utf8')) as Record<string, unknown>)
+    })
+    ws.once('error', reject)
   })
   if (!connectResponse.ok) throw new Error(`Gateway connect failed: ${JSON.stringify(connectResponse.error)}`)
   const listeners = new Set<(event: Record<string, unknown>) => void>()
-  ws.addEventListener('message', e => {
-    const data = JSON.parse(String(e.data)) as Record<string, unknown>
-    for (const listener of listeners) listener(data)
+  ws.on('message', (data: Buffer) => {
+    const parsed = JSON.parse(data.toString('utf8')) as Record<string, unknown>
+    for (const listener of listeners) listener(parsed)
   })
   let reqCounter = 0
   return {
@@ -68,8 +67,7 @@ const connectToGateway = async ({
       const id = `req-${String(reqCounter)}-${Date.now()}`
       ws.send(JSON.stringify({ id, method, params, type: 'req' }))
       return id
-    },
-    ws
+    }
   }
 }
 export type { GatewayConnection }

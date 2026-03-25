@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noProcessEnv: env config */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { describe, expect, it } from 'bun:test'
 import { connectWithApproval } from './connect-with-approval'
 const GATEWAY_PORT = Number(process.env.GATEWAY_PORT ?? '18789'),

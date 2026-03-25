@@ -7,6 +7,10 @@
     "./connect-with-approval": "./src/connect-with-approval.ts"
   },
   "dependencies": {
-    "@a/env": "workspace:*"
+    "@a/env": "workspace:*",
+    "ws": "latest"
+  },
+  "devDependencies": {
+    "@types/ws": "latest"
   }
 }
