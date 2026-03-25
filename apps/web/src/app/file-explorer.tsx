@@ -80,21 +80,21 @@ const EXT_LANG: Record<string, string> = {
       if (node?.type === 'file') setSelectedPath(p)
     }
     return (
-      <ResizablePanelGroup className='h-full' direction='vertical'>
+      <ResizablePanelGroup className='h-full' direction='horizontal'>
+        <ResizablePanel defaultSize={30} minSize={15}>
+          <ScrollArea className='h-full'>
+            <FileTree
+              className='rounded-none border-0 bg-transparent'
+              defaultExpanded={new Set(['state', 'workspace'])}
+              onSelect={handleSelect}
+              selectedPath={selectedPath ?? undefined}>
+              {tree.map(renderNode)}
+            </FileTree>
+          </ScrollArea>
+        </ResizablePanel>
+        <ResizableHandle />
         <ResizablePanel defaultSize={70} minSize={20}>
-          <ResizablePanelGroup className='h-full' direction='horizontal'>
-            <ResizablePanel defaultSize={30} minSize={15}>
-              <ScrollArea className='h-full'>
-                <FileTree
-                  className='rounded-none border-0 bg-transparent'
-                  defaultExpanded={new Set(['state', 'workspace'])}
-                  onSelect={handleSelect}
-                  selectedPath={selectedPath ?? undefined}>
-                  {tree.map(renderNode)}
-                </FileTree>
-              </ScrollArea>
-            </ResizablePanel>
-            <ResizableHandle />
+          <ResizablePanelGroup className='h-full' direction='vertical'>
             <ResizablePanel defaultSize={70} minSize={20}>
               {selectedPath && fileContent !== null ? (
                 <ScrollArea className='h-full'>
@@ -111,17 +111,17 @@ const EXT_LANG: Record<string, string> = {
                 </div>
               )}
             </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={30} minSize={10}>
+              <Terminal
+                className='flex h-full flex-col rounded-none border-0'
+                isStreaming={isBusy}
+                onClear={onClearLogs}
+                output={logOutput}>
+                <TerminalContent className='max-h-none flex-1' />
+              </Terminal>
+            </ResizablePanel>
           </ResizablePanelGroup>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={30} minSize={10}>
-          <Terminal
-            className='flex h-full flex-col rounded-none border-0'
-            isStreaming={isBusy}
-            onClear={onClearLogs}
-            output={logOutput}>
-            <TerminalContent className='max-h-none flex-1' />
-          </Terminal>
         </ResizablePanel>
       </ResizablePanelGroup>
     )
