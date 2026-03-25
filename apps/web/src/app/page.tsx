@@ -13,29 +13,15 @@ import {
 import { Message, MessageContent, MessageResponse } from '@a/ui/ai-elements/message'
 import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from '@a/ui/ai-elements/prompt-input'
 import { Shimmer } from '@a/ui/ai-elements/shimmer'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@a/ui/dropdown-menu'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider
-} from '@a/ui/sidebar'
-import { ChevronUpIcon, LogOutIcon, MessageSquarePlusIcon, SparklesIcon } from 'lucide-react'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@a/ui/sidebar'
+import { SparklesIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { authClient } from '~/lib/auth-client'
+import type { SessionEntry } from './session-sidebar'
 import AuthForm from './auth-form'
 import IDEPanel from './file-explorer'
-interface SessionEntry {
-  firstMessage: string
-  sessionKey: string
-  updatedAt: string
-}
+import SessionSidebar from './session-sidebar'
 const emptyStateIcon = <SparklesIcon className='size-8' />,
   toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
     data.map((m, i) => ({
@@ -47,10 +33,6 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     let t = ''
     for (const p of m.parts) if (p.type === 'text') t += p.text
     return t
-  },
-  signOut = async () => {
-    await authClient.signOut()
-    globalThis.location.reload()
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const [logOutput, setLogOutput] = useState(''),
@@ -175,8 +157,9 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={50} minSize={25}>
-              <div className='flex h-full flex-col'>
-                <Conversation className='flex-1'>
+              <div className='grid h-full grid-rows-[1fr_auto]'>
+                <Conversation className='min-h-0'>
+                  <SidebarTrigger className='absolute right-2 top-2 z-10' />
                   <ConversationContent>
                     {messages.length === 0 ? (
                       <ConversationEmptyState
@@ -202,7 +185,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                   </ConversationContent>
                   <ConversationScrollButton />
                 </Conversation>
-                <PromptInput className='mx-auto max-w-3xl p-4' onSubmit={({ text }) => sendChat(text)}>
+                <PromptInput className='p-2' onSubmit={({ text }) => sendChat(text)}>
                   <PromptInputTextarea disabled={isBusy} placeholder='Ask anything...' />
                   <PromptInputFooter>
                     <div />
@@ -213,50 +196,13 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
             </ResizablePanel>
           </ResizablePanelGroup>
         </SidebarInset>
-        <Sidebar collapsible='icon' side='right'>
-          <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={newChat}>
-                  <MessageSquarePlusIcon className='size-4' />
-                  <span>New Chat</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarHeader>
-          <SidebarContent className='overflow-y-auto px-2 group-data-[collapsible=icon]:hidden'>
-            <SidebarMenu>
-              {sessions.map(s => (
-                <SidebarMenuItem key={s.sessionKey}>
-                  <SidebarMenuButton isActive={s.sessionKey === sessionKey} onClick={() => switchSession(s)}>
-                    <span className='truncate text-xs'>{s.firstMessage}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton>
-                      <SparklesIcon className='size-4' />
-                      <span className='truncate'>{userName}</span>
-                      <ChevronUpIcon className='ml-auto size-4' />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='w-56' side='top'>
-                    <DropdownMenuItem onClick={signOut}>
-                      <LogOutIcon className='mr-2 size-4' />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+        <SessionSidebar
+          activeSessionKey={sessionKey}
+          onNewChat={newChat}
+          onSwitchSession={switchSession}
+          sessions={sessions}
+          userName={userName}
+        />
       </SidebarProvider>
     )
   },
