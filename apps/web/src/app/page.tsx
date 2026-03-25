@@ -164,7 +164,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     return (
       <SidebarProvider>
         <SidebarInset className='h-screen'>
-          <ResizablePanelGroup direction='horizontal'>
+          <ResizablePanelGroup orientation='horizontal'>
             <ResizablePanel defaultSize={50} minSize={20}>
               <IDEPanel
                 isBusy={isBusy}

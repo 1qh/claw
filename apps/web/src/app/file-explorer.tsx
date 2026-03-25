@@ -80,7 +80,7 @@ const EXT_LANG: Record<string, string> = {
       if (node?.type === 'file') setSelectedPath(p)
     }
     return (
-      <ResizablePanelGroup className='h-full' direction='horizontal'>
+      <ResizablePanelGroup orientation='horizontal'>
         <ResizablePanel defaultSize={30} minSize={15}>
           <ScrollArea className='h-full'>
             <FileTree
@@ -94,8 +94,8 @@ const EXT_LANG: Record<string, string> = {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={70} minSize={20}>
-          <div className='flex h-full flex-col'>
-            <div className='flex-1 overflow-hidden'>
+          <ResizablePanelGroup orientation='vertical'>
+            <ResizablePanel defaultSize={70} minSize={20}>
               {selectedPath && fileContent !== null ? (
                 <ScrollArea className='h-full'>
                   <CodeBlock code={fileContent} language={langOf(selectedPath)} showLineNumbers>
@@ -110,8 +110,9 @@ const EXT_LANG: Record<string, string> = {
                   {selectedPath ? 'Loading...' : 'Select a file to view'}
                 </div>
               )}
-            </div>
-            <div className='h-48 shrink-0 border-t'>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={30} minSize={10}>
               <Terminal
                 className='flex h-full flex-col rounded-none border-0'
                 isStreaming={isBusy}
@@ -119,8 +120,8 @@ const EXT_LANG: Record<string, string> = {
                 output={logOutput}>
                 <TerminalContent className='max-h-none flex-1' />
               </Terminal>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
     )
