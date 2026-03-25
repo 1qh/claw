@@ -15,8 +15,33 @@ mkdir -p "$MOUNT_PATH"
 tigerfs mount "$DB_URL" "$MOUNT_PATH" &
 sleep 3
 
+mkdir -p /root/.openvscode-server/data/Machine
+cat > /root/.openvscode-server/data/Machine/settings.json << 'SETTINGS'
+{
+  "workbench.colorTheme": "Default Dark Modern",
+  "editor.readOnly": true,
+  "editor.domReadOnly": true,
+  "editor.fontSize": 13,
+  "editor.minimap.enabled": false,
+  "editor.wordWrap": "on",
+  "editor.scrollBeyondLastLine": false,
+  "files.readonlyInclude": { "**": true },
+  "files.watcherExclude": { "**/.history/**": true },
+  "explorer.excludeGitIgnore": false,
+  "workbench.startupEditor": "none",
+  "workbench.tips.enabled": false,
+  "workbench.enableExperiments": false,
+  "telemetry.telemetryLevel": "off",
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+  "update.mode": "none",
+  "github.copilot.enable": { "*": false },
+  "terminal.integrated.defaultProfile.linux": "bash"
+}
+SETTINGS
+
 exec /home/.openvscode-server/bin/openvscode-server \
   --host 0.0.0.0 \
   --port 3333 \
   --without-connection-token \
-  --default-folder "$MOUNT_PATH/workspace"
+  --default-folder "$MOUNT_PATH"
