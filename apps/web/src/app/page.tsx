@@ -169,21 +169,17 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       )
     return <FileTreeFile key={node.path} name={node.name} path={node.path} />
   },
-  FileExplorer = () => {
+  FileExplorer = ({ refreshKey }: { refreshKey: number }) => {
     const [tree, setTree] = useState<TreeNode[]>([]),
       [selectedPath, setSelectedPath] = useState<null | string>(null),
       [fileContent, setFileContent] = useState('')
     useEffect(() => {
-      const load = () => {
-        fetch('/api/files', { credentials: 'include' })
-          .then(async res => res.json() as Promise<TreeNode[]>)
-          .then(setTree)
-          .catch(() => undefined)
-      }
-      load()
-      const interval = setInterval(load, 5000)
-      return () => clearInterval(interval)
-    }, [])
+      const key = refreshKey
+      fetch(`/api/files?v=${String(key)}`, { credentials: 'include' })
+        .then(async res => res.json() as Promise<TreeNode[]>)
+        .then(setTree)
+        .catch(() => undefined)
+    }, [refreshKey])
     useEffect(() => {
       if (!selectedPath) return
       fetch(`/api/files/${selectedPath}`, { credentials: 'include' })
@@ -218,14 +214,24 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       </div>
     )
   },
-  RightPanel = ({ isBusy, logOutput, onClearLogs }: { isBusy: boolean; logOutput: string; onClearLogs: () => void }) => (
+  RightPanel = ({
+    isBusy,
+    logOutput,
+    onClearLogs,
+    refreshKey
+  }: {
+    isBusy: boolean
+    logOutput: string
+    onClearLogs: () => void
+    refreshKey: number
+  }) => (
     <Tabs className='flex h-full flex-col' defaultValue='files'>
       <TabsList className='w-full justify-start rounded-none border-b bg-transparent px-2'>
         <TabsTrigger value='files'>Files</TabsTrigger>
         <TabsTrigger value='logs'>Logs</TabsTrigger>
       </TabsList>
       <TabsContent className='flex-1 overflow-hidden' value='files'>
-        <FileExplorer />
+        <FileExplorer refreshKey={refreshKey} />
       </TabsContent>
       <TabsContent className='flex-1 overflow-hidden' value='logs'>
         <Terminal
@@ -251,6 +257,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       }),
       [messages, setMessages] = useState<UIMessage[]>([]),
       [isBusy, setIsBusy] = useState(false),
+      [fileRefreshKey, setFileRefreshKey] = useState(0),
       loadSessions = useCallback(() => {
         fetch('/api/sessions', { credentials: 'include' })
           .then(async res => res.json() as Promise<SessionEntry[]>)
@@ -318,6 +325,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                   if (done) {
                     setIsBusy(false)
                     loadSessions()
+                    setFileRefreshKey(k => k + 1)
                     return
                   }
                   accumulated += decoder.decode(value, { stream: true })
@@ -446,7 +454,12 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
               <>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={35} minSize={20}>
-                  <RightPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={() => setLogOutput('')} />
+                  <RightPanel
+                    isBusy={isBusy}
+                    logOutput={logOutput}
+                    onClearLogs={() => setLogOutput('')}
+                    refreshKey={fileRefreshKey}
+                  />
                 </ResizablePanel>
               </>
             ) : null}
