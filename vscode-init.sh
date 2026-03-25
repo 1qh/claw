@@ -3,6 +3,7 @@ set -e
 
 DB_URL="${DATABASE_URL:-postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw}"
 MOUNT_PATH="${TIGERFS_MOUNT_PATH:-/mnt/tigerfs}"
+DATA_DIR="/root/vscode-data"
 
 apt-get update -qq && apt-get install -y -qq fuse3 curl gcc > /dev/null 2>&1
 curl -fsSL https://install.tigerfs.io | HOME=/root sh > /dev/null 2>&1
@@ -15,8 +16,8 @@ mkdir -p "$MOUNT_PATH"
 tigerfs mount "$DB_URL" "$MOUNT_PATH" &
 sleep 3
 
-mkdir -p /root/.openvscode-server/data/Machine
-cat > /root/.openvscode-server/data/Machine/settings.json << 'SETTINGS'
+mkdir -p "$DATA_DIR/Machine" "$DATA_DIR/User"
+cat > "$DATA_DIR/Machine/settings.json" << 'SETTINGS'
 {
   "workbench.colorTheme": "Default Dark Modern",
   "editor.readOnly": true,
@@ -39,9 +40,11 @@ cat > /root/.openvscode-server/data/Machine/settings.json << 'SETTINGS'
   "terminal.integrated.defaultProfile.linux": "bash"
 }
 SETTINGS
+cp "$DATA_DIR/Machine/settings.json" "$DATA_DIR/User/settings.json"
 
 exec /home/.openvscode-server/bin/openvscode-server \
   --host 0.0.0.0 \
   --port 3333 \
   --without-connection-token \
+  --server-data-dir "$DATA_DIR" \
   --default-folder "$MOUNT_PATH"
