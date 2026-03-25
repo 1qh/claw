@@ -13,7 +13,6 @@ import { Shimmer } from '@a/ui/ai-elements/shimmer'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { SidebarInset, SidebarProvider } from '@a/ui/sidebar'
 import { SparklesIcon } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { useState } from 'react'
 import IDEPanel from './file-explorer'
 import { useAgentLogs } from './hooks/use-agent-logs'
@@ -27,9 +26,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     return t
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
-    const { theme } = useTheme(),
-      [useVSCode, setUseVSCode] = useState(false),
-      vsCodeTheme = theme === 'dark' ? 'Default+Dark+Modern' : 'Default+Light+Modern',
+    const [useVSCode, setUseVSCode] = useState(false),
       { logOutput, clearLogs } = useAgentLogs(),
       { loadSessions, messages, newChat, sessionKey, sessions, setMessages, switchSession } = useSessions(userId),
       { fileRefreshKey, isBusy, sendChat } = useChatSend({ loadSessions, messages, sessionKey, setMessages }),
@@ -49,9 +46,8 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
               {useVSCode ? (
                 <iframe
                   className='h-full w-full border-none'
-                  key={vsCodeTheme}
                   sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
-                  src={`http://localhost:3333/?vscode-color-theme=${vsCodeTheme}`}
+                  src='http://localhost:3333'
                   title='VS Code'
                 />
               ) : (

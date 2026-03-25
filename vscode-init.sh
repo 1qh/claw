@@ -11,7 +11,7 @@ fi
 
 echo "Mounting TigerFS..."
 mkdir -p "$MOUNT_PATH"
-tigerfs mount "$DB_URL" "$MOUNT_PATH" &
+tigerfs mount --read-only "$DB_URL" "$MOUNT_PATH" &
 sleep 3
 
 echo "Setting up VS Code..."
