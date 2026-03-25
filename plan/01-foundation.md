@@ -68,9 +68,9 @@ Initialize a Bun workspace monorepo with the project structure.
    docker-compose.yml   ← TimescaleDB + TigerFS + ClamAV (from Phase 0)
    ```
 3. Configure TypeScript (strict, ESM, path aliases)
-4. Set up Oxlint + Oxfmt (matching OpenClaw’s tooling)
+4. Set up lintmax (Oxlint + Biome + Prettier) — see CLAUDE.md for lint rules and ignore strategy
 5. Set up `bun test` for testing (Jest-compatible, built into Bun — not Vitest)
-6. Create `bun run` scripts: `dev`, `build`, `test`, `lint`, `format`
+6. Create `bun run` scripts: `dev`, `build`, `test`, `fix` (lintmax fix), `check` (lintmax check)
 7. Use `bun-types` (not `@types/bun`) for proper eslint type resolution
 
 ### External References
@@ -84,8 +84,8 @@ Initialize a Bun workspace monorepo with the project structure.
 - [ ] `bun install` succeeds from repo root
 - [ ] `bun run build` succeeds (even if empty)
 - [ ] `bun run test` runs bun test (even with zero tests)
-- [ ] `bun run lint` runs Oxlint with zero errors
-- [ ] `bun run format` runs Oxfmt
+- [ ] `bun fix` runs lintmax (Oxlint + Biome + Prettier) with zero errors
+- [ ] `bun check` runs lintmax in check mode
 - [ ] TypeScript strict mode enabled, no errors
 - [ ] Workspace packages can import from each other
 

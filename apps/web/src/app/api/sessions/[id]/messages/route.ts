@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/useExportsLast: Next.js route segment config requires inline export */
 /* oxlint-disable use-exports-last */
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { auth } from '~/lib/auth'
 import { db } from '~/lib/db'
 import { chatMessages } from '~/lib/db-schema'
@@ -13,7 +13,7 @@ const GET = async (request: Request, { params }: { params: Promise<{ id: string 
     rows = await db
       .select({ content: chatMessages.content, role: chatMessages.role })
       .from(chatMessages)
-      .where(eq(chatMessages.sessionKey, sessionKey))
+      .where(and(eq(chatMessages.sessionKey, sessionKey), eq(chatMessages.userId, session.user.id)))
       .orderBy(asc(chatMessages.createdAt))
   return Response.json(rows)
 }
