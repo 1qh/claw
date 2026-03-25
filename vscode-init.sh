@@ -1,22 +1,13 @@
 #!/bin/bash
 
-DB_URL="${DATABASE_URL:-postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw}"
+DB_URL="${DATABASE_URL_READONLY:-postgresql://vscode_readonly:vscode_readonly@timescaledb:5432/uniclaw}"
 MOUNT_PATH="${TIGERFS_MOUNT_PATH:-/mnt/tigerfs}"
 
-echo "Waiting for apt locks..."
-sleep 10
-
-echo "Installing dependencies..."
-apt-get update -qq 2>&1 || true
-apt-get install -y -qq fuse3 curl gcc 2>&1 || true
-
-echo "Installing TigerFS..."
-curl -fsSL https://install.tigerfs.io | HOME=/root sh 2>&1 || true
-export PATH="/root/bin:$PATH"
-
 echo "Building rename shim..."
-gcc -shared -fPIC -o /usr/local/lib/tigerfs-rename-shim.so /tigerfs-rename-shim.c -ldl 2>&1 || true
-export LD_PRELOAD=/usr/local/lib/tigerfs-rename-shim.so
+if command -v gcc > /dev/null 2>&1 && [ -f /tigerfs-rename-shim.c ]; then
+  gcc -shared -fPIC -o /usr/local/lib/tigerfs-rename-shim.so /tigerfs-rename-shim.c -ldl 2>&1
+  export LD_PRELOAD=/usr/local/lib/tigerfs-rename-shim.so
+fi
 
 echo "Mounting TigerFS..."
 mkdir -p "$MOUNT_PATH"

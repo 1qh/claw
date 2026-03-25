@@ -36,7 +36,7 @@ services:
     ports:
       - '3333:3333'
     environment:
-      DATABASE_URL: postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw
+      DATABASE_URL_READONLY: postgresql://vscode_readonly:vscode_readonly@timescaledb:5432/uniclaw
       TIGERFS_MOUNT_PATH: /mnt/tigerfs
     volumes:
       - ./vscode-init.sh:/vscode-init.sh:ro
@@ -44,6 +44,7 @@ services:
       - ./vscode-settings.json:/home/workspace/.openvscode-server/data/User/settings.json:ro
       - ./vscode-settings.json:/home/workspace/.openvscode-server/data/Machine/settings.json:ro
       - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
+      - ./tigerfs-bin:/usr/local/bin/tigerfs:ro
     entrypoint: ['/bin/bash', '/vscode-init.sh']
   clamav:
     image: clamav/clamav-debian:latest
