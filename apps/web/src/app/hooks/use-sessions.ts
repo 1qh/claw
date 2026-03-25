@@ -3,6 +3,7 @@
 import type { UIMessage } from 'ai'
 import { useCallback, useEffect, useState } from 'react'
 import type { SessionEntry } from '../session-sidebar'
+import { api } from './api'
 const toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
     data.map((m, i) => ({
       id: `${prefix}-${String(i)}`,
@@ -17,14 +18,16 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
       }),
       [messages, setMessages] = useState<UIMessage[]>([]),
       loadSessions = useCallback(() => {
-        fetch('/api/sessions', { credentials: 'include' })
-          .then(async res => res.json() as Promise<SessionEntry[]>)
+        api
+          .get('api/sessions')
+          .json<SessionEntry[]>()
           .then(setSessions)
           .catch(() => undefined)
       }, []),
       loadMessages = useCallback((key: string) => {
-        fetch(`/api/sessions/${encodeURIComponent(key)}/messages`, { credentials: 'include' })
-          .then(async res => res.json() as Promise<{ content: string; role: string }[]>)
+        api
+          .get(`api/sessions/${encodeURIComponent(key)}/messages`)
+          .json<{ content: string; role: string }[]>()
           .then(data => setMessages(toUiMessages(data, key)))
           .catch(() => setMessages([]))
       }, []),

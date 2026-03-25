@@ -12,6 +12,7 @@
     "@a/ui": "workspace:*",
     "@ai-sdk/react": "latest",
     "ai": "latest",
+    "ky": "latest",
     "lucide-react": "latest",
     "next": "latest",
     "next-themes": "latest",

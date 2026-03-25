@@ -3,6 +3,7 @@
 /* oxlint-disable promise/prefer-await-to-then, promise/always-return, promise/no-nesting */
 import type { UIMessage } from 'ai'
 import { useCallback, useState } from 'react'
+import { api } from './api'
 const useChatSend = ({
   loadSessions,
   messages,
@@ -36,12 +37,8 @@ const useChatSend = ({
           ...prev,
           { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
         ])
-        fetch('/api/chat', {
-          body: JSON.stringify({ messages: allMessages, sessionKey }),
-          credentials: 'include',
-          headers: { 'content-type': 'application/json' },
-          method: 'POST'
-        })
+        api
+          .post('api/chat', { json: { messages: allMessages, sessionKey } })
           .then(async res => {
             if (!res.body) throw new Error('No response body')
             const reader = res.body.getReader(),

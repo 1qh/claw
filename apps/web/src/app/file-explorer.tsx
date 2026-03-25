@@ -7,6 +7,7 @@ import { Terminal, TerminalContent } from '@a/ui/ai-elements/terminal'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { ScrollArea } from '@a/ui/scroll-area'
 import { useEffect, useState } from 'react'
+import { api } from './hooks/api'
 interface TreeNode {
   children?: TreeNode[]
   name: string
@@ -59,8 +60,9 @@ const EXT_LANG: Record<string, string> = {
       [fileContent, setFileContent] = useState<null | string>(null)
     useEffect(() => {
       const key = refreshKey
-      fetch(`/api/files?v=${String(key)}`, { credentials: 'include' })
-        .then(async res => res.json() as Promise<TreeNode[]>)
+      api
+        .get(`api/files?v=${String(key)}`)
+        .json<TreeNode[]>()
         .then(setTree)
         .catch(() => undefined)
     }, [refreshKey])
@@ -70,8 +72,9 @@ const EXT_LANG: Record<string, string> = {
         return
       }
       setFileContent(null)
-      fetch(`/api/files/${selectedPath}`, { credentials: 'include' })
-        .then(async res => (res.ok ? res.text() : ''))
+      api
+        .get(`api/files/${selectedPath}`)
+        .text()
         .then(setFileContent)
         .catch(() => setFileContent(''))
     }, [selectedPath])
