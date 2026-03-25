@@ -3,9 +3,18 @@
 'use client'
 import { CodeBlock, CodeBlockCopyButton, CodeBlockFilename, CodeBlockHeader } from '@a/ui/ai-elements/code-block'
 import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
-import { Terminal, TerminalContent } from '@a/ui/ai-elements/terminal'
+import {
+  Terminal,
+  TerminalActions,
+  TerminalClearButton,
+  TerminalContent,
+  TerminalCopyButton,
+  TerminalHeader,
+  TerminalStatus,
+  TerminalTitle
+} from '@a/ui/ai-elements/terminal'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import { ScrollArea } from '@a/ui/scroll-area'
+import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from './hooks/api'
 interface TreeNode {
@@ -85,42 +94,54 @@ const EXT_LANG: Record<string, string> = {
     return (
       <ResizablePanelGroup orientation='horizontal'>
         <ResizablePanel defaultSize={30} minSize={15}>
-          <ScrollArea className='h-full'>
-            <FileTree
-              className='rounded-none border-0 bg-transparent text-xs [&_button]:py-0.5'
-              defaultExpanded={new Set(['state', 'workspace'])}
-              onSelect={handleSelect}
-              selectedPath={selectedPath ?? undefined}>
-              {tree.map(renderNode)}
-            </FileTree>
-          </ScrollArea>
+          <FileTree
+            className='rounded-none *:p-0 border-none'
+            defaultExpanded={new Set(['state', 'workspace'])}
+            onSelect={handleSelect}
+            selectedPath={selectedPath ?? undefined}>
+            {tree.map(renderNode)}
+          </FileTree>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={70} minSize={20}>
           <ResizablePanelGroup orientation='vertical'>
-            <ResizablePanel defaultSize={70} minSize={20}>
-              {selectedPath && fileContent !== null ? (
-                <ScrollArea className='h-full [&_pre]:!p-2 [&_pre]:!text-xs [&_pre]:!leading-4'>
-                  <CodeBlock code={fileContent} language={langOf(selectedPath)} showLineNumbers>
-                    <CodeBlockHeader className='px-2 py-1'>
-                      <CodeBlockFilename>{selectedPath}</CodeBlockFilename>
-                      <CodeBlockCopyButton />
+            {selectedPath && fileContent !== null ? (
+              <>
+                <ResizablePanel defaultSize={60} minSize={20}>
+                  <CodeBlock
+                    className='border-none rounded-none'
+                    code={fileContent}
+                    language={langOf(selectedPath)}
+                    showLineNumbers>
+                    <CodeBlockHeader className='py-0 pr-0 border-none'>
+                      <CodeBlockFilename className='grow'>{selectedPath}</CodeBlockFilename>
+                      <CodeBlockCopyButton className='hover:bg-background size-7 p-1.5 rounded-none' />
+                      <X
+                        className='cursor-pointer text-muted-foreground hover:text-foreground size-7 p-1.5 hover:bg-background'
+                        onClick={() => setSelectedPath(null)}
+                      />
                     </CodeBlockHeader>
                   </CodeBlock>
-                </ScrollArea>
-              ) : (
-                <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
-                  {selectedPath ? 'Loading...' : 'Select a file to view'}
-                </div>
-              )}
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={30} minSize={10}>
+                </ResizablePanel>
+                <ResizableHandle className='opacity-0' />
+              </>
+            ) : null}
+            <ResizablePanel defaultSize={40} minSize={10}>
               <Terminal
-                className='flex h-full flex-col rounded-none border-0 [&_pre]:!p-2 [&_pre]:!text-xs [&_pre]:!leading-4'
+                className='rounded-none *:p-1 border-none [&_pre]:!p-0 [&_pre]:!text-xs [&_pre]:!leading-3.5'
                 isStreaming={isBusy}
                 onClear={onClearLogs}
                 output={logOutput}>
+                <TerminalHeader className='!pl-2'>
+                  <TerminalTitle />
+                  <div className='flex items-center gap-1'>
+                    <TerminalStatus />
+                    <TerminalActions>
+                      <TerminalCopyButton />
+                      <TerminalClearButton />
+                    </TerminalActions>
+                  </div>
+                </TerminalHeader>
                 <TerminalContent className='max-h-none flex-1' />
               </Terminal>
             </ResizablePanel>

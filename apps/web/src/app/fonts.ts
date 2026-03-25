@@ -1,3 +1,3 @@
-import { Geist } from 'next/font/google'
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
-export { geist }
+import { Inter, JetBrains_Mono } from 'next/font/google'
+export const sans = Inter({ subsets: ['vietnamese'], variable: '--font-sans' })
+export const mono = JetBrains_Mono({ variable: '--font-mono' })
