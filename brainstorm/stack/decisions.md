@@ -159,11 +159,11 @@ This built-in fallback is why HTTP is 100% reliable while WS drops ~15-25% of re
 ### AI SDK integration (2026-03-26)
 
 ```
-Browser → useChat (@ai-sdk/react) → POST /api/chat → streamText(@ai-sdk/openai → gateway /v1/chat/completions) → data stream
+Browser → useChat (@ai-sdk/react + TextStreamChatTransport) → POST /api/chat → streamText(gateway.chat()) → text stream
 Browser → GET /api/events (SSE) → Next.js route → WS operator connection → forward agent events as SSE
 ```
 
-Server route uses `createOpenAI({ baseURL: gateway, apiKey: password })` + `streamText()` + `toDataStreamResponse()`. Client uses `useChat({ api: ‘/api/chat’, body: { sessionKey } })` with `append()` for sending messages and `setMessages()` for session switching. `onFinish` callback refreshes sessions and file tree.
+Server route uses `createOpenAI({ baseURL: gateway, apiKey: password })` + `streamText({ model: gateway.chat(modelId) })` + `toTextStreamResponse()`. **Important:** `@ai-sdk/openai` v3+ defaults to the Responses API (`/v1/responses`). Must use `gateway.chat()` (not `gateway()`) to force chat completions endpoint. Client uses `useChat` with `TextStreamChatTransport({ api: ‘/api/chat’ })` and `body: { sessionKey }`. `append()` for sending, `setMessages()` for session switching, `onFinish` for post-response actions.
 
 **Note:** `packages/control-plane/connect.ts` is still used by `/api/events` for the WS operator connection. It’s no longer used by `/api/chat`.
 

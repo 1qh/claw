@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs, @typescript-eslint/no-unsafe-call */
 /* oxlint-disable promise/prefer-await-to-then */
 import { useChat } from '@ai-sdk/react'
+import { TextStreamChatTransport } from 'ai'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SessionEntry } from '../session-sidebar'
 import { api } from './api'
@@ -19,9 +20,9 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
       [fileRefreshKey, setFileRefreshKey] = useState(0),
       onFinishRef = useRef<() => void>(() => undefined),
       { append, messages, setMessages, status } = useChat({
-        api: '/api/chat',
         body: { sessionKey },
-        onFinish: () => onFinishRef.current()
+        onFinish: () => onFinishRef.current(),
+        transport: new TextStreamChatTransport({ api: '/api/chat' })
       }),
       isBusy = status === 'streaming' || status === 'submitted',
       loadSessions = useCallback(() => {
