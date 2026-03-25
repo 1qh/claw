@@ -152,7 +152,14 @@ const EXT_LANG: Record<string, string> = {
                   <TerminalContent className='max-h-none flex-1' />
                 </Terminal>
               </ResizablePanel>
-            ) : null}
+            ) : (
+              <button
+                className='flex w-full items-center gap-1 border-t px-2 py-1 text-xs text-muted-foreground hover:text-foreground'
+                onClick={() => setShowTerminal(true)}
+                type='button'>
+                Terminal
+              </button>
+            )}
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
