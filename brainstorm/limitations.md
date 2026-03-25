@@ -88,6 +88,24 @@ chokidar misses ~20% of file change events in benchmarks on TigerFS FUSE mounts.
 
 Each `/api/events` SSE request opens a new WebSocket operator connection to the gateway. Multiple browser tabs = multiple connections. Connection pooling is a future optimization.
 
+### WS `chat.send` drops ~15-25% of responses with small models
+
+When using WS `chat.send`, the OpenClaw agent sometimes calls tools (reading workspace files like SOUL.md, IDENTITY.md, AGENTS.md) and ends the turn without producing any text response. The `chat` `final` event arrives with no `message` field. This is not a network issue — the model (tested with qwen3.5:4b and 9b) decides to use tools and produces no text output.
+
+The HTTP `/v1/chat/completions` endpoint runs the **same agent** but has a built-in fallback: if no assistant text was emitted after the agent completes, [`resolveAgentResponseText()`](https://github.com/openclaw/openclaw/blob/main/src/gateway/openai-http.ts#L399) extracts text from result payloads and falls back to `"No response from OpenClaw."`. The WS protocol has no such fallback.
+
+**Decision:** Use HTTP `/v1/chat/completions` for chat. See [decisions.md](stack/decisions.md) for full analysis.
+
+### OpenVSCode Server iframe limitations
+
+Attempted embedding OpenVSCode Server (`gitpod/openvscode-server`) as an iframe in the Next.js app for a full IDE experience. Blocked by:
+
+- **Settings sync**: VS Code caches settings in IndexedDB, overriding server-side `settings.json`. No reliable way to force settings from the host page.
+- **Theme sync**: Cross-origin iframe prevents `postMessage`. No URL parameter for theme. The VS Code instance has its own theme toggle that doesn’t sync with the host app’s `next-themes`.
+- **Read-only enforcement**: `editor.readOnly` shows a “Toggle Read-Only” button that users can click to bypass. `files.readonlyInclude` is better but VS Code still allows toggling. Enforced at DB level via read-only PostgreSQL role (`vscode_readonly`).
+
+**Decision:** Dropped VS Code iframe from the app. Kept OpenVSCode Server as an admin-only service on port 3333 for direct filesystem browsing. Built a custom IDE panel with Monaco Editor (`@monaco-editor/react`) for the app’s code viewer, with file tree from TigerFS tables via Drizzle.
+
 ## ClamAV
 
 ### No ARM64 on Alpine image

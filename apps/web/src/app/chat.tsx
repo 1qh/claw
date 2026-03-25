@@ -14,8 +14,7 @@ import { SidebarInset, SidebarProvider } from '@a/ui/sidebar'
 import { SparklesIcon } from 'lucide-react'
 import IDEPanel from './file-explorer-monaco'
 import { useAgentLogs } from './hooks/use-agent-logs'
-import { useChatSend } from './hooks/use-chat'
-import { useSessions } from './hooks/use-sessions'
+import { useChatSession } from './hooks/use-chat'
 import SessionSidebar from './session-sidebar'
 const emptyStateIcon = <SparklesIcon className='size-8' />,
   textOf = (m: UIMessage) => {
@@ -25,8 +24,8 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
     const { logOutput, clearLogs } = useAgentLogs(),
-      { loadSessions, messages, newChat, sessionKey, sessions, setMessages, switchSession } = useSessions(userId),
-      { fileRefreshKey, isBusy, sendChat } = useChatSend({ loadSessions, messages, sessionKey, setMessages }),
+      { fileRefreshKey, isBusy, messages, newChat, sendChat, sessionKey, sessions, switchSession } =
+        useChatSession(userId),
       handleNewChat = () => {
         newChat()
         clearLogs()

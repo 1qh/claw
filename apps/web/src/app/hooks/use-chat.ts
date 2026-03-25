@@ -1,73 +1,78 @@
-/** biome-ignore-all lint/suspicious/useAwait: lintmax adds async to then callbacks */
-/** biome-ignore-all lint/nursery/noNestedPromises: streaming pump pattern */
-/* oxlint-disable promise/prefer-await-to-then, promise/always-return, promise/no-nesting */
-import type { UIMessage } from 'ai'
-import { useCallback, useState } from 'react'
+/* eslint-disable react-hooks/refs, @typescript-eslint/no-unsafe-call */
+/* oxlint-disable promise/prefer-await-to-then */
+import { useChat } from '@ai-sdk/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SessionEntry } from '../session-sidebar'
 import { api } from './api'
-const useChatSend = ({
-  loadSessions,
-  messages,
-  sessionKey,
-  setMessages
-}: {
-  loadSessions: () => void
-  messages: UIMessage[]
-  sessionKey: string
-  setMessages: React.Dispatch<React.SetStateAction<UIMessage[]>>
-}) => {
-  const [isBusy, setIsBusy] = useState(false),
-    [fileRefreshKey, setFileRefreshKey] = useState(0),
-    sendChat = useCallback(
-      (text: string) => {
-        if (!text.trim() || isBusy) return
-        setIsBusy(true)
-        globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
-        const userMsg: UIMessage = {
-            id: `user-${Date.now()}`,
-            parts: [{ text, type: 'text' }],
-            role: 'user'
-          },
-          allMessages = [...messages, userMsg].map(m => ({
-            parts: m.parts.filter(p => p.type === 'text').map(p => ({ text: 'text' in p ? p.text : '', type: 'text' })),
-            role: m.role
-          }))
-        setMessages(prev => [...prev, userMsg])
-        const assistantId = `assistant-${Date.now()}`
-        setMessages(prev => [
-          ...prev,
-          { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
-        ])
+const toUiMessages = (data: { content: string; role: string }[], prefix: string) =>
+    data.map((m, i) => ({
+      id: `${prefix}-${String(i)}`,
+      parts: [{ text: m.content, type: 'text' as const }],
+      role: m.role as 'assistant' | 'user'
+    })),
+  useChatSession = (userId: string) => {
+    const [sessionKey, setSessionKey] = useState(() => {
+        const params = new URLSearchParams(globalThis.location.search)
+        return params.get('s') ?? `agent:main:${userId}-${Date.now()}`
+      }),
+      [sessions, setSessions] = useState<SessionEntry[]>([]),
+      [fileRefreshKey, setFileRefreshKey] = useState(0),
+      onFinishRef = useRef<() => void>(() => undefined),
+      { append, messages, setMessages, status } = useChat({
+        api: '/api/chat',
+        body: { sessionKey },
+        onFinish: () => onFinishRef.current()
+      }),
+      isBusy = status === 'streaming' || status === 'submitted',
+      loadSessions = useCallback(() => {
         api
-          .post('api/chat', { json: { messages: allMessages, sessionKey } })
-          .then(async res => {
-            if (!res.body) throw new Error('No response body')
-            const reader = res.body.getReader(),
-              decoder = new TextDecoder()
-            let accumulated = ''
-            const pump = async (): Promise<void> =>
-              reader.read().then(async ({ done, value }) => {
-                if (done) {
-                  setIsBusy(false)
-                  loadSessions()
-                  setFileRefreshKey(k => k + 1)
-                  return
-                }
-                accumulated += decoder.decode(value, { stream: true })
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === assistantId ? { ...m, parts: [{ text: accumulated, type: 'text' as const }] } : m
-                  )
-                )
-                return pump()
-              })
-            return pump()
-          })
-          .catch(() => {
-            setIsBusy(false)
-          })
-      },
-      [isBusy, sessionKey, loadSessions, messages, setMessages]
-    )
-  return { fileRefreshKey, isBusy, sendChat }
-}
-export { useChatSend }
+          .get('api/sessions')
+          .json<SessionEntry[]>()
+          .then(setSessions)
+          .catch(() => undefined)
+      }, []),
+      loadMessages = useCallback(
+        (key: string) => {
+          api
+            .get(`api/sessions/${encodeURIComponent(key)}/messages`)
+            .json<{ content: string; role: string }[]>()
+            .then(data => setMessages(toUiMessages(data, key)))
+            .catch(() => setMessages([]))
+        },
+        [setMessages]
+      ),
+      sendChat = useCallback(
+        (text: string) => {
+          if (!text.trim() || isBusy) return
+          globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
+          append({ content: text, role: 'user' })
+        },
+        [append, isBusy, sessionKey]
+      ),
+      switchSession = useCallback(
+        (entry: SessionEntry) => {
+          setSessionKey(entry.sessionKey)
+          globalThis.history.pushState(null, '', `/?s=${encodeURIComponent(entry.sessionKey)}`)
+          loadMessages(entry.sessionKey)
+        },
+        [loadMessages]
+      ),
+      newChat = useCallback(() => {
+        const key = `agent:main:${userId}-${Date.now()}`
+        setSessionKey(key)
+        setMessages([])
+        globalThis.history.pushState(null, '', '/')
+      }, [userId, setMessages])
+    onFinishRef.current = () => {
+      loadSessions()
+      setFileRefreshKey(k => k + 1)
+    }
+    useEffect(() => {
+      loadSessions()
+      const params = new URLSearchParams(globalThis.location.search),
+        s = params.get('s')
+      if (s) loadMessages(s)
+    }, [loadSessions, loadMessages])
+    return { fileRefreshKey, isBusy, messages, newChat, sendChat, sessionKey, sessions, switchSession }
+  }
+export { useChatSession }

@@ -6,10 +6,11 @@ Connect the Next.js app to an OpenClaw gateway. Relay chat messages and stream a
 
 **Architecture:**
 
-- Chat + Events: WebSocket (`chat.send` with operator+password auth, no device identity) — single connection carries both chat and lifecycle events. See [decisions.md](../brainstorm/stack/decisions.md) for why WS over HTTP.
-- Session transcripts: JSONL on TigerFS — contains both user and assistant messages (single source of truth)
-- `/api/chat` route: forwards to gateway via WS `chat.send`, returns streaming response
-- `/api/events` route: SSE stream of agent lifecycle events from the same or dedicated WS connection
+- Chat: HTTP POST to gateway `/v1/chat/completions` (OpenAI-compatible, Bearer token auth) via AI SDK `@ai-sdk/openai` provider + `streamText`. See [decisions.md](../brainstorm/stack/decisions.md) for why HTTP over WS.
+- Events: WebSocket operator connection for agent lifecycle events (tool calls, progress), streamed to frontend via SSE `/api/events`
+- Session persistence: Drizzle-managed `chat_messages` table (both user + assistant messages). JSONL transcripts on TigerFS only store assistant responses.
+- `/api/chat` route: AI SDK `streamText` → gateway → `toDataStreamResponse()`. Frontend uses `useChat` from `@ai-sdk/react`.
+- `/api/events` route: SSE stream of agent lifecycle events from WS operator connection
 
 ## Overview
 
@@ -106,7 +107,7 @@ stateDiagram-v2
 
 ### Goal
 
-Relay chat messages from the frontend to the gateway via WebSocket `chat.send`. Stream agent lifecycle events via SSE. Both use operator+password auth (no device identity).
+Relay chat messages from the frontend to the gateway via HTTP `/v1/chat/completions` (OpenAI-compatible, Bearer token auth). Stream agent lifecycle events via SSE from WS operator connection. See [decisions.md](../brainstorm/stack/decisions.md) for why HTTP over WS.
 
 ### Dependencies
 
@@ -117,46 +118,41 @@ Relay chat messages from the frontend to the gateway via WebSocket `chat.send`. 
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as Frontend (React)
-    participant API as Next.js API Routes
-    participant GW as Gateway (WebSocket)
+    participant FE as Frontend (useChat)
+    participant API as Next.js API Route
+    participant GW as Gateway (HTTP + WS)
 
     User->>FE: “Generate my report”
-    FE->>API: POST /api/chat (session key + message)
+    FE->>API: POST /api/chat (AI SDK data stream protocol)
     API->>API: Validate auth (better-auth session)
-    API->>GW: WS chat.send (session key + message + idempotencyKey)
+    API->>GW: HTTP POST /v1/chat/completions (Bearer token)
 
-    GW->>API: chat delta events (streaming)
-    GW->>API: agent events (tool calls, progress)
-    GW->>API: chat final event (task complete)
-    API->>FE: Streaming response
-    FE->>User: Text appears
+    GW->>GW: Runs full agent (tools, workspace, memory)
+    GW->>API: SSE streaming chunks (150ms throttle)
+    API->>FE: AI SDK data stream response
+    FE->>User: Text streams in
 
-    Note over FE,API: Agent lifecycle events via GET /api/events (SSE from same WS)
+    Note over FE,API: Agent lifecycle events via GET /api/events (SSE from WS operator connection)
 ```
 
 1. `/api/chat` route handler:
    - Authenticate via better-auth session
-   - Connect to gateway via WS (operator+password, no device identity)
-   - Send `chat.send` with session key, message, and `idempotencyKey`
-   - Stream `chat` delta events back to the frontend as a text stream
-   - On `chat` final event: extract token counts, cost, model, latency → write to `usage_events`
-   - Gateway stores complete transcripts (user + assistant) in JSONL on TigerFS — single source of truth
+   - Use AI SDK `streamText` with `@ai-sdk/openai` provider pointed at gateway `/v1/chat/completions`
+   - System prompt instructs model to always respond with text (reinforces SOUL.md)
+   - Store user message in `chat_messages` table before sending
+   - `onFinish` callback stores assistant response in `chat_messages` table
+   - Return `toDataStreamResponse()` for AI SDK wire protocol
+   - Gateway runs the full agent (same as WS `chat.send`) but with built-in empty response fallback
 2. `/api/events` SSE route handler:
-   - Connect to gateway via WS (same auth pattern)
+   - Connect to gateway via WS (operator+password auth, no device identity)
    - Stream `agent` lifecycle events (tool calls, progress, errors) as SSE to the frontend
-3. Classify gateway WS events:
-   - `agent` events → SSE `/api/events` feed
-   - `chat` events with `state: “delta”` → response stream
-   - `chat` events with `state: “final”` → task complete + usage extraction
-4. **Concurrent sessions per user:** When a user sends a second task while the first is running, use OpenClaw’s queue mode. Default: `collect` — new messages are batched and delivered after the current task completes.
-5. **Session persistence:** Session list reads `sessions.json` from TigerFS via Drizzle. Session messages read JSONL transcripts — both user and assistant messages are present (WS protocol stores both).
-6. Write e2e tests: full message round-trip with real auth cookies, event streaming, session creation, session switching with message loading, multi-turn context preservation, auth rejection
+3. **Session persistence:** Session list and messages read from Drizzle-managed `chat_messages` table (both user and assistant messages). JSONL transcripts on TigerFS only store assistant responses. Session switching via `/api/sessions` and `/api/sessions/[id]/messages`.
+4. Write e2e tests: full message round-trip with real auth cookies, event streaming, session creation, session switching with message loading, multi-turn context preservation, auth rejection
 
 ### External References
 
-- [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol)
-- [OpenClaw HTTP API](https://docs.openclaw.ai/gateway/openai-http-api) (not used for chat — see [decisions.md](../brainstorm/stack/decisions.md) for why)
+- [OpenClaw HTTP API](https://docs.openclaw.ai/gateway/openai-http-api) (used for chat — see [decisions.md](../brainstorm/stack/decisions.md) for why)
+- [OpenClaw WebSocket protocol](https://docs.openclaw.ai/gateway/protocol) (used for agent events via `/api/events`)
 - [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
 
 ### Verification Checklist

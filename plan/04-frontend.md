@@ -50,10 +50,10 @@ Set up the Next.js frontend with `lib/ui/` components and AI SDK v6 integration.
 1. The Next.js app already exists from Phase 1 — this stage adds the frontend UI
 2. `lib/ui/` is a read-only copy of shadcn + ai-elements from noboil (uses `@a/ui` package name, ignored by lintmax)
 3. `globals.css` imports `@a/ui/globals.css` directly — stock theme, no redefinition
-4. Install AI SDK v6 — note the new API: `useChat` returns `sendMessage`, `status`, `messages` (not `input`, `handleInputChange`, `handleSubmit`, `isLoading`)
-5. Messages use `parts` array: `{ id, role, parts: [{ type: 'text', text: '...' }] }` (not `content` string)
-6. Chat transport: `/api/chat` route connects to gateway via WS `chat.send` and returns a streaming response. Frontend uses a custom chat transport or adapts the AI SDK `useChat` hook. See [decisions.md](../brainstorm/stack/decisions.md) for why WS over HTTP.
-7. Create basic layout with chat + Terminal panel + session sidebar
+4. Install AI SDK v6 (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`) — `useChat` returns `append`, `messages`, `setMessages`, `status` (v6 parts-based messages)
+5. Chat transport: `/api/chat` uses AI SDK `streamText` with `@ai-sdk/openai` provider pointed at the gateway’s `/v1/chat/completions` endpoint. Frontend uses `useChat` from `@ai-sdk/react` — standard AI SDK pattern, no custom transport. See [decisions.md](../brainstorm/stack/decisions.md) for why HTTP over WS.
+6. Create basic layout: IDE panel (file tree + Monaco code viewer + terminal) | chat | session sidebar
+7. IDE panel uses `@monaco-editor/react` with Monokai theme (dark) and light variant, synced via `next-themes`. File tree reads from TigerFS tables via `/api/files`. OpenVSCode Server kept as admin-only service on port 3333 (iframe approach dropped — see [limitations.md](../brainstorm/limitations.md)).
 
 ### External References
 
@@ -65,8 +65,8 @@ Set up the Next.js frontend with `lib/ui/` components and AI SDK v6 integration.
 - [ ] `bun dev` starts Next.js dev server with frontend
 - [ ] Tailwind styles render correctly
 - [ ] `lib/ui/` components import and render (Terminal, Conversation, Message, Card)
-- [ ] Chat connects to `/api/chat` which proxies to gateway via WS `chat.send`
-- [ ] Layout renders with chat and Terminal panels
+- [ ] Chat connects to `/api/chat` which proxies to gateway via HTTP `/v1/chat/completions` (AI SDK `streamText`)
+- [ ] Layout renders with IDE panel (file tree + Monaco + terminal) and chat panels
 
 ---
 
@@ -143,10 +143,10 @@ graph TB
 
 #### Surface 1: Chat
 
-1. Text input for submitting tasks — POST to `/api/chat` which proxies to gateway via WS `chat.send`
+1. Text input for submitting tasks — `useChat` from `@ai-sdk/react` with `append()`, POST to `/api/chat` which uses AI SDK `streamText` → gateway `/v1/chat/completions`
 2. Message list using `lib/ui/` Conversation + Message components
-3. Agent responses stream back as text deltas from gateway WS events
-4. **Session sidebar:** List of past sessions (read from `sessions.json` via Drizzle), each labeled with first user message. Click to switch — loads messages from JSONL transcript. New chat button creates fresh session. URL updates to `/?s={sessionId}` on switch.
+3. Agent responses stream back via AI SDK data stream protocol (SSE with 150ms throttle from gateway)
+4. **Session sidebar:** List of past sessions from `chat_messages` table (via `/api/sessions`), each labeled with first user message. Click to switch — loads messages from `/api/sessions/[id]/messages`. New chat button creates fresh session. URL updates to `/?s={sessionKey}` on switch.
 5. File upload button (triggers file gate from Phase 3)
 6. Support for markdown rendering in agent responses
 
@@ -175,11 +175,11 @@ graph TB
 
 ### Verification Checklist
 
-- [ ] Chat: user sends message, agent response appears (via WS `chat.send`)
-- [ ] Chat: streaming response updates in real-time (not just final)
+- [ ] Chat: user sends message, agent response appears (via HTTP `/v1/chat/completions` through AI SDK)
+- [ ] Chat: streaming response updates in real-time (150ms throttle from gateway)
 - [ ] Chat: file upload works, agent can reference uploaded file
-- [ ] Sessions: sidebar lists past sessions with first user message as label
-- [ ] Sessions: clicking a session loads its messages and updates URL to `/?s={sessionId}`
+- [ ] Sessions: sidebar lists past sessions with first user message as label (from `chat_messages` table)
+- [ ] Sessions: clicking a session loads its messages and updates URL to `/?s={sessionKey}`
 - [ ] Sessions: new chat button creates fresh session, clears messages, resets URL
 - [ ] Sessions: after sending a message, new session appears at top of sidebar
 - [ ] Live Feed: verbose JSON agent logs appear during chat (tool calls, progress)
@@ -188,7 +188,7 @@ graph TB
 - [ ] Usage: token count shows for current session
 - [ ] Usage: past tasks listed with correct status
 - [ ] All surfaces work simultaneously
-- [ ] WS reconnects automatically on disconnect
+- [ ] HTTP chat always returns a response (never empty — gateway fallback guarantees it)
 
 ---
 

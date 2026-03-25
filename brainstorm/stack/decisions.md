@@ -74,11 +74,15 @@ This framework is opinionated. Deployers adopt these choices as-is.
 
 Eliminated the Elysia control plane server entirely. Everything runs as Next.js API routes in a single process:
 
-| Route                | Role                                                               |
-| -------------------- | ------------------------------------------------------------------ |
-| `/api/auth/[...all]` | Auth via `toNextJsHandler` from `better-auth/next-js`              |
-| `/api/chat`          | Chat via WebSocket `chat.send` to gateway (operator+password auth) |
-| `/api/events`        | Agent lifecycle logs via SSE                                       |
+| Route                         | Role                                                                |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `/api/auth/[...all]`          | Auth via `toNextJsHandler` from `better-auth/next-js`               |
+| `/api/chat`                   | Chat via HTTP POST to gateway `/v1/chat/completions` (Bearer token) |
+| `/api/events`                 | Agent lifecycle logs via SSE (from gateway WS operator connection)  |
+| `/api/sessions`               | List sessions from `chat_messages` table (grouped by session key)   |
+| `/api/sessions/[id]/messages` | Load messages for a session from `chat_messages` table              |
+| `/api/files`                  | File tree from TigerFS `_workspace` + `_state` tables via Drizzle   |
+| `/api/files/[...path]`        | File content from TigerFS tables via Drizzle                        |
 
 **Why this is better:**
 
@@ -112,49 +116,64 @@ See [limitations.md](../limitations.md) for all upstream constraints (OpenClaw t
 
 ---
 
-## Chat Transport: WebSocket `chat.send` over HTTP `/v1/chat/completions` (2026-03-25)
+## Chat Transport: HTTP `/v1/chat/completions` over WebSocket `chat.send` (updated 2026-03-26)
 
-**Decision:** Use WebSocket `chat.send` for all chat, not HTTP `/v1/chat/completions`.
+**Decision:** Use HTTP `/v1/chat/completions` for chat, NOT WebSocket `chat.send`.
 
-| Aspect                   | HTTP `/v1/chat/completions`                        | WebSocket `chat.send`                               |
-| ------------------------ | -------------------------------------------------- | --------------------------------------------------- |
-| **Session state**        | Stateless — client sends full history each request | Server-side — gateway maintains session context     |
-| **Transcript storage**   | Assistant responses only in JSONL                  | Assistant responses only in JSONL (same limitation) |
-| **Session persistence**  | Requires separate storage for user messages        | Same — own `chat_messages` table needed             |
-| **Agent logs**           | Separate SSE connection needed                     | Same WS connection carries chat + events            |
-| **Device pairing**       | N/A (Bearer token auth)                            | Not needed — operator+password auth skips pairing   |
-| **AI SDK compatibility** | Works with `TextStreamChatTransport`               | Requires custom transport or direct WS handling     |
+### Critical discovery: both run the full agent
 
-**Why WS wins:**
+Reading the OpenClaw source ([`src/gateway/openai-http.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/openai-http.ts)), the HTTP endpoint calls `agentCommandFromIngress()` — **the exact same agent runtime** as WS `chat.send`. Both have tools, workspace access, memory, and the full agent loop.
 
-- Server-side context: gateway manages session history (multi-turn without sending full history each request)
-- Single connection: chat + agent events on one WS (no separate SSE)
-- No device identity needed: `dangerouslyDisableDeviceAuth` + Control UI client ID bypasses pairing
+The difference is how they handle agent responses that produce no text:
 
-**Note:** JSONL transcripts store only assistant messages regardless of transport. For session persistence (sidebar, switching), a Drizzle-managed `chat_messages` table stores both user and assistant messages. This is NOT duplication — user messages don’t exist anywhere in OpenClaw’s storage. See [limitations.md](../limitations.md).
+- **WS `chat.send`**: relays `chat` events verbatim. If the agent calls tools but produces no text, the `final` event has no `message` field → client gets empty response.
+- **HTTP `/v1/chat/completions`**: after the agent completes, if no assistant text was emitted (`!sawAssistantDelta`), `resolveAgentResponseText()` extracts text from result payloads and falls back to `”No response from OpenClaw.”` ([line 584-598](https://github.com/openclaw/openclaw/blob/main/src/gateway/openai-http.ts#L584)). **The HTTP handler guarantees a non-empty response.**
 
-**Transport architecture:**
+This built-in fallback is why HTTP is 100% reliable while WS drops ~15-25% of responses.
+
+### Comparison
+
+| Aspect                   | HTTP `/v1/chat/completions`                                | WebSocket `chat.send`                                                           |
+| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Agent runtime**        | Full agent (tools, workspace, memory) — same as WS         | Full agent (tools, workspace, memory)                                           |
+| **Reliability**          | 100% — built-in empty response fallback in handler         | ~75-85% — no fallback, empty agent turns = empty response                       |
+| **Session state**        | Stateless — client sends full history each request         | Same — gateway doesn’t inject history (see [limitations.md](../limitations.md)) |
+| **Streaming**            | SSE with 150ms throttle (same as WS)                       | WS events with 150ms throttle                                                   |
+| **Agent logs**           | Not available via HTTP — separate SSE `/api/events` needed | Same WS connection carries chat + agent events                                  |
+| **AI SDK compatibility** | Standard OpenAI-compatible — works with `@ai-sdk/openai`   | Requires custom transport                                                       |
+| **Auth**                 | Bearer token (gateway password)                            | Operator + password in WS handshake                                             |
+
+### Why HTTP wins
+
+1. **Reliability**: The gateway’s HTTP handler has a fallback for empty agent responses. The WS protocol doesn’t. With small models (qwen3.5:4b/9b), the agent sometimes calls tools (reading workspace files like SOUL.md, IDENTITY.md) and ends the turn without producing text. This happens ~15-25% of the time. HTTP catches it; WS doesn’t.
+
+2. **AI SDK integration**: HTTP `/v1/chat/completions` is OpenAI-compatible, so we use `@ai-sdk/openai` pointed at the gateway. This gives us `streamText` + `toDataStreamResponse()` on the server and `useChat` on the client — the standard AI SDK pattern with zero custom code.
+
+3. **Simplicity**: The `/api/chat` route is ~30 lines. The WS version was ~100 lines with event filtering, runId tracking, dual text capture, timeouts, and still wasn’t reliable.
+
+### Previous WS rationale (now invalidated)
+
+- “Server-side context” — the gateway does NOT inject session history into `chat.send`, so both require client-sent history
+- “Single connection for chat + events” — events still need separate SSE anyway
+- “Agent tools enrich responses” — both endpoints run the full agent; the tools are identical
+
+### AI SDK integration (2026-03-26)
 
 ```
-Browser → POST /api/chat (HTTP) → Next.js route handler → WS chat.send to gateway → stream deltas back as HTTP response
-Browser → GET /api/events (SSE)  → Next.js route handler → WS operator connection → forward agent events as SSE
+Browser → useChat (@ai-sdk/react) → POST /api/chat → streamText(@ai-sdk/openai → gateway /v1/chat/completions) → data stream
+Browser → GET /api/events (SSE) → Next.js route → WS operator connection → forward agent events as SSE
 ```
 
-The frontend never opens a WebSocket directly. All WS connections are server-side (Next.js → gateway). The frontend uses standard HTTP POST for chat and SSE for events. Each `/api/chat` request opens a short-lived WS connection to send the message and collect the response. Each `/api/events` SSE holds a long-lived WS connection for the session duration. Connection pooling is a future optimization.
+Server route uses `createOpenAI({ baseURL: gateway, apiKey: password })` + `streamText()` + `toDataStreamResponse()`. Client uses `useChat({ api: ‘/api/chat’, body: { sessionKey } })` with `append()` for sending messages and `setMessages()` for session switching. `onFinish` callback refreshes sessions and file tree.
 
-**What changes:**
+**Note:** `packages/control-plane/connect.ts` is still used by `/api/events` for the WS operator connection. It’s no longer used by `/api/chat`.
 
-- `/api/chat` route: opens WS to gateway, sends `chat.send`, streams `chat` delta events back as HTTP text stream, stores both user and assistant messages in `chat_messages` table, closes WS on completion
-- `/api/events` route: opens WS to gateway, forwards `agent` events as SSE
-- AI SDK’s `TextStreamChatTransport` + `createTextStreamResponse` are no longer used — `/api/chat` returns a plain text stream that the frontend consumes via `useChat` with a custom transport or direct fetch
-- `packages/control-plane/connect.ts`: simplified — no device identity, just operator+password
-
-**What doesn’t change:**
+### What doesn’t change
 
 - Auth: still better-auth via `/api/auth/[...all]`
-- Frontend: still uses `useChat` from AI SDK (with custom transport) or direct WS
 - Session list: reads from `chat_messages` table (grouped by session key, ordered by most recent)
 - Session messages: reads from `chat_messages` table (both user and assistant messages)
+- JSONL transcripts store only assistant responses — user messages don’t exist in OpenClaw’s storage
 
 ---
 

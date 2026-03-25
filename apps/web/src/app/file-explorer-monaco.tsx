@@ -1,5 +1,5 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-/* oxlint-disable promise/prefer-await-to-then */
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-condition */
+/* oxlint-disable promise/prefer-await-to-then, unicorn/prefer-top-level-await, promise/always-return */
 'use client'
 import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
 import {
@@ -13,11 +13,59 @@ import {
 } from '@a/ui/ai-elements/terminal'
 import { Button } from '@a/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import { Editor } from '@monaco-editor/react'
+import { Editor, loader } from '@monaco-editor/react'
 import { TerminalSquareIcon, X } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { api } from './hooks/api'
+if (globalThis.document !== undefined)
+  loader
+    .init()
+    .then(monaco => {
+      monaco.editor.defineTheme('monokai', {
+        base: 'vs-dark',
+        colors: {
+          'editor.background': '#272822',
+          'editor.foreground': '#F8F8F2',
+          'editor.lineHighlightBackground': '#3E3D32',
+          'editor.selectionBackground': '#49483E',
+          'editorCursor.foreground': '#F8F8F0',
+          'editorWhitespace.foreground': '#3B3A32'
+        },
+        inherit: true,
+        rules: [
+          { fontStyle: 'italic', foreground: '75715E', token: 'comment' },
+          { foreground: 'E6DB74', token: 'string' },
+          { foreground: 'AE81FF', token: 'number' },
+          { foreground: 'F92672', token: 'keyword' },
+          { foreground: 'A6E22E', token: 'type' },
+          { foreground: 'A6E22E', token: 'function' },
+          { fontStyle: 'italic', foreground: '66D9EF', token: 'variable' },
+          { foreground: 'FD971F', token: 'tag' },
+          { foreground: 'F92672', token: 'delimiter' },
+          { foreground: 'AE81FF', token: 'constant' }
+        ]
+      })
+      monaco.editor.defineTheme('monokai-light', {
+        base: 'vs',
+        colors: {
+          'editor.background': '#FAFAFA',
+          'editor.foreground': '#272822'
+        },
+        inherit: true,
+        rules: [
+          { fontStyle: 'italic', foreground: '75715E', token: 'comment' },
+          { foreground: '98761A', token: 'string' },
+          { foreground: '6A1B9A', token: 'number' },
+          { foreground: 'D32F2F', token: 'keyword' },
+          { foreground: '558B2F', token: 'type' },
+          { foreground: '558B2F', token: 'function' },
+          { fontStyle: 'italic', foreground: '0277BD', token: 'variable' },
+          { foreground: 'E65100', token: 'tag' }
+        ]
+      })
+    })
+    .catch(() => undefined)
 interface TreeNode {
   children?: TreeNode[]
   name: string
@@ -140,7 +188,7 @@ const EDITOR_OPTIONS = {
                       height='100%'
                       language={langOf(selectedPath)}
                       options={EDITOR_OPTIONS}
-                      theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                      theme={theme === 'dark' ? 'monokai' : 'monokai-light'}
                       value={fileContent}
                     />
                   </div>
