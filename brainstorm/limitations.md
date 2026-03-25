@@ -41,6 +41,7 @@ Session continuity in OpenClaw is designed for the CLI/terminal use case where t
 Additionally, JSONL transcripts store only assistant responses — user messages are never written to disk.
 
 **How we handle this:**
+
 - The frontend sends the full conversation history in each `/api/chat` request
 - `/api/chat` formats all previous messages as context (`[User]: ... [Assistant]: ...`) and includes the new message
 - The agent sees the full conversation in a single `chat.send` message — this is the designed pattern, not a workaround

@@ -176,6 +176,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
       switchSession = useCallback(
         (entry: SessionEntry) => {
           setSessionKey(entry.sessionKey)
+          setLogOutput('')
           globalThis.history.pushState(null, '', `/?s=${encodeURIComponent(entry.sessionKey)}`)
           loadMessages(entry.sessionKey)
         },
@@ -185,6 +186,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         const key = `agent:main:${userId}-${Date.now()}`
         setSessionKey(key)
         setMessages([])
+        setLogOutput('')
         globalThis.history.pushState(null, '', '/')
       }, [userId]),
       sendChat = useCallback(
