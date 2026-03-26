@@ -1,64 +1,17 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-condition */
-/* oxlint-disable promise/prefer-await-to-then, unicorn/prefer-top-level-await, promise/always-return */
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* oxlint-disable promise/prefer-await-to-then, promise/always-return */
 'use client'
-import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
+import type { TreeDataItem } from 'idecn'
 import { Button } from '@a/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
-import { Editor, loader } from '@monaco-editor/react'
+import { Editor } from '@monaco-editor/react'
+import { FileTree } from 'idecn'
 import { TerminalSquareIcon, Trash2Icon, X } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useRef, useState } from 'react'
 import { api } from './hooks/api'
-if (globalThis.document !== undefined)
-  loader
-    .init()
-    .then(monaco => {
-      monaco.editor.defineTheme('monokai', {
-        base: 'vs-dark',
-        colors: {
-          'editor.background': '#272822',
-          'editor.foreground': '#F8F8F2',
-          'editor.lineHighlightBackground': '#3E3D32',
-          'editor.selectionBackground': '#49483E',
-          'editorCursor.foreground': '#F8F8F0',
-          'editorWhitespace.foreground': '#3B3A32'
-        },
-        inherit: true,
-        rules: [
-          { fontStyle: 'italic', foreground: '75715E', token: 'comment' },
-          { foreground: 'E6DB74', token: 'string' },
-          { foreground: 'AE81FF', token: 'number' },
-          { foreground: 'F92672', token: 'keyword' },
-          { foreground: 'A6E22E', token: 'type' },
-          { foreground: 'A6E22E', token: 'function' },
-          { fontStyle: 'italic', foreground: '66D9EF', token: 'variable' },
-          { foreground: 'FD971F', token: 'tag' },
-          { foreground: 'F92672', token: 'delimiter' },
-          { foreground: 'AE81FF', token: 'constant' }
-        ]
-      })
-      monaco.editor.defineTheme('monokai-light', {
-        base: 'vs',
-        colors: {
-          'editor.background': '#FAFAFA',
-          'editor.foreground': '#272822'
-        },
-        inherit: true,
-        rules: [
-          { fontStyle: 'italic', foreground: '75715E', token: 'comment' },
-          { foreground: '98761A', token: 'string' },
-          { foreground: '6A1B9A', token: 'number' },
-          { foreground: 'D32F2F', token: 'keyword' },
-          { foreground: '558B2F', token: 'type' },
-          { foreground: '558B2F', token: 'function' },
-          { fontStyle: 'italic', foreground: '0277BD', token: 'variable' },
-          { foreground: 'E65100', token: 'tag' }
-        ]
-      })
-    })
-    .catch(() => undefined)
-interface TreeNode {
-  children?: TreeNode[]
+interface ApiTreeNode {
+  children?: ApiTreeNode[]
   name: string
   path: string
   type: 'directory' | 'file'
@@ -72,39 +25,16 @@ const EDITOR_OPTIONS = {
     scrollBeyondLastLine: false,
     wordWrap: 'on' as const
   },
-  EXT_LANG: Record<string, string> = {
-    css: 'css',
-    html: 'html',
-    js: 'javascript',
-    json: 'json',
-    jsonl: 'json',
-    md: 'markdown',
-    sql: 'sql',
-    ts: 'typescript',
-    tsx: 'typescriptreact',
-    yaml: 'yaml',
-    yml: 'yaml'
-  },
-  langOf = (path: string) => EXT_LANG[path.split('.').pop() ?? ''] ?? 'plaintext',
-  renderNode = (node: TreeNode): React.ReactNode => {
-    if (node.type === 'directory')
-      return (
-        <FileTreeFolder key={node.path} name={node.name} path={node.path}>
-          {node.children?.map(renderNode)}
-        </FileTreeFolder>
-      )
-    return <FileTreeFile key={node.path} name={node.name} path={node.path} />
-  },
-  findNode = (nodes: TreeNode[], path: string): TreeNode | undefined => {
+  toTreeData = (nodes: ApiTreeNode[]): TreeDataItem[] => {
+    const result: TreeDataItem[] = []
     for (const node of nodes) {
-      if (node.path === path) return node
-      if (node.children) {
-        const found = findNode(node.children, path)
-        if (found) return found
-      }
+      const item: TreeDataItem = { id: node.path, name: node.name, path: node.path }
+      if (node.type === 'directory' && node.children) item.children = toTreeData(node.children)
+      result.push(item)
     }
+    return result
   },
-  LogPanel = ({ logOutput, onClose, onClear }: { logOutput: string; onClear: () => void; onClose: () => void }) => {
+  LogPanel = ({ logOutput, onClear, onClose }: { logOutput: string; onClear: () => void; onClose: () => void }) => {
     const ref = useRef<HTMLPreElement>(null)
     /** biome-ignore lint/correctness/useExhaustiveDependencies: ref is stable */
     useEffect(() => {
@@ -141,20 +71,19 @@ const EDITOR_OPTIONS = {
     onClearLogs: () => void
     refreshKey: number
   }) => {
-    const [tree, setTree] = useState<TreeNode[]>([]),
+    const [tree, setTree] = useState<TreeDataItem[]>([]),
       [selectedPath, setSelectedPath] = useState<null | string>(null),
       [fileContent, setFileContent] = useState<null | string>(null),
       [showTerminal, setShowTerminal] = useState(true),
-      { theme } = useTheme()
+      { resolvedTheme } = useTheme()
     useEffect(() => {
       if (isBusy) setShowTerminal(true)
     }, [isBusy])
     useEffect(() => {
-      const key = refreshKey
       api
-        .get(`api/files?v=${String(key)}`)
-        .json<TreeNode[]>()
-        .then(setTree)
+        .get(`api/files?v=${String(refreshKey)}`)
+        .json<ApiTreeNode[]>()
+        .then(data => setTree(toTreeData(data)))
         .catch(() => undefined)
     }, [refreshKey])
     useEffect(() => {
@@ -169,20 +98,17 @@ const EDITOR_OPTIONS = {
         .then(setFileContent)
         .catch(() => setFileContent(''))
     }, [selectedPath])
-    const handleSelect = (p: string) => {
-      const node = findNode(tree, p)
-      if (node?.type === 'file') setSelectedPath(p)
-    }
     return (
       <ResizablePanelGroup orientation='horizontal'>
         <ResizablePanel defaultSize={25} minSize={12}>
-          <FileTree
-            className='rounded-none border-none *:p-0'
-            defaultExpanded={new Set(['state', 'workspace'])}
-            onSelect={handleSelect}
-            selectedPath={selectedPath ?? undefined}>
-            {tree.map(renderNode)}
-          </FileTree>
+          <div className='h-full overflow-x-auto overflow-y-auto'>
+            <FileTree
+              data={tree}
+              onSelectChange={item => {
+                if (item && !item.children) setSelectedPath(item.path)
+              }}
+            />
+          </div>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel className='relative' defaultSize={75} minSize={20}>
@@ -203,9 +129,9 @@ const EDITOR_OPTIONS = {
                     </div>
                     <Editor
                       height='100%'
-                      language={langOf(selectedPath)}
+                      language={selectedPath.split('.').at(-1) ?? 'plaintext'}
                       options={EDITOR_OPTIONS}
-                      theme={theme === 'dark' ? 'monokai' : 'monokai-light'}
+                      theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'}
                       value={fileContent}
                     />
                   </div>

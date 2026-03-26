@@ -28,7 +28,7 @@
     "@tailwindcss/typography": "latest",
     "bun-types": "latest",
     "drizzle-kit": "latest",
-    "lintmax": "latest",
+    "lintmax": "^0.0.18",
     "tailwindcss": "latest",
     "tw-animate-css": "latest",
     "typescript": "latest"

@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../../components/**/*.{ts,tsx}";
+@source "../../../node_modules/.bun/idecn*/node_modules/idecn/dist/*.{js,mjs}";
 @source "../**/*.{ts,tsx}";
 @theme inline {
     --font-heading: var(--font-sans);

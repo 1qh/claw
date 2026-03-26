@@ -65,7 +65,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                         return (
                           <Message from='assistant' key={m.id}>
                             <MessageContent>
-                              <Shimmer as='p'>{activity || 'Thinking...'}</Shimmer>
+                              <Shimmer as='p'>{activity || 'Thinking'}</Shimmer>
                             </MessageContent>
                           </Message>
                         )

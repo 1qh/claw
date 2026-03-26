@@ -11,13 +11,13 @@ const NOISE = new Set(['health', 'presence', 'tick']),
     const stream = payload.stream as string | undefined,
       d = payload.data as Record<string, unknown> | undefined,
       event = payload.event as string | undefined
-    if (event === 'agent' && stream === 'lifecycle') return d?.phase === 'start' ? 'Agent starting...' : ''
+    if (event === 'agent' && stream === 'lifecycle') return d?.phase === 'start' ? 'Agent starting' : ''
     if (event === 'agent' && stream === 'tool') {
       const name = d?.name as string | undefined
-      if (d?.phase === 'start' && name) return `Running ${name}...`
+      if (d?.phase === 'start' && name) return `Running ${name}`
       if (d?.phase === 'result' && name) return `Finished ${name}`
     }
-    if (event === 'agent' && stream === 'assistant') return 'Writing response...'
+    if (event === 'agent' && stream === 'assistant') return 'Writing response'
     return ''
   },
   GET = async (request: Request) => {

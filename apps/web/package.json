@@ -14,6 +14,7 @@
     "@ai-sdk/react": "latest",
     "@monaco-editor/react": "latest",
     "ai": "latest",
+    "idecn": "^0.0.1",
     "ky": "latest",
     "lucide-react": "latest",
     "next": "latest",
