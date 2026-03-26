@@ -165,6 +165,8 @@ Browser → GET /api/events (SSE) → Next.js route → WS operator connection �
 
 Server route uses `createOpenAI({ baseURL: gateway, apiKey: password })` + `streamText({ model: gateway.chat(modelId) })` + `toTextStreamResponse()`. **Important:** `@ai-sdk/openai` v3+ defaults to the Responses API (`/v1/responses`). Must use `gateway.chat()` (not `gateway()`) to force chat completions endpoint. Client uses `useChat` with `TextStreamChatTransport({ api: ‘/api/chat’ })` and `body: { sessionKey }`. `append()` for sending, `setMessages()` for session switching, `onFinish` for post-response actions.
 
+**Why not Responses API (`/v1/responses`):** OpenClaw supports it (enabled via `gateway.http.endpoints.responses.enabled: true`), and it has the same agent runtime + empty response fallback. However, AI SDK’s `@ai-sdk/openai` sends `input` items without `type: "message"`, while OpenClaw’s Responses API ([open-responses.com](https://open-responses.com) spec) requires `type: "message"` on each item — causing `400 Invalid input`. Until either AI SDK or OpenClaw resolves this format mismatch, we use chat completions. The Responses API also doesn’t solve conversation continuity — `previous_response_id` reuses session keys but the agent still starts fresh each invocation (same limitation as chat completions).
+
 **Note:** `packages/control-plane/connect.ts` is still used by `/api/events` for the WS operator connection. It’s no longer used by `/api/chat`.
 
 ### What doesn’t change

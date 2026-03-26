@@ -88,6 +88,12 @@ chokidar misses ~20% of file change events in benchmarks on TigerFS FUSE mounts.
 
 Each `/api/events` SSE request opens a new WebSocket operator connection to the gateway. Multiple browser tabs = multiple connections. Connection pooling is a future optimization.
 
+### Responses API (`/v1/responses`) incompatible with AI SDK
+
+OpenClaw’s Responses API is enabled (`gateway.http.endpoints.responses.enabled: true`) and works correctly when called directly. However, `@ai-sdk/openai` v3+ sends `input` items without `type: "message"`, while OpenClaw’s implementation (following [open-responses.com](https://open-responses.com) spec) requires `type: "message"` on each item via `z.discriminatedUnion("type", [...])`. This causes `400 Invalid input`. Also, `previous_response_id` maps to session keys but doesn’t restore conversation context (agent starts fresh each invocation — same as chat completions).
+
+**Decision:** Use chat completions (`gateway.chat()`) until the format mismatch is resolved. See [decisions.md](stack/decisions.md) for full analysis.
+
 ### WS `chat.send` drops ~15-25% of responses with small models
 
 When using WS `chat.send`, the OpenClaw agent sometimes calls tools (reading workspace files like SOUL.md, IDENTITY.md, AGENTS.md) and ends the turn without producing any text response. The `chat` `final` event arrives with no `message` field. This is not a network issue — the model (tested with qwen3.5:4b and 9b) decides to use tools and produces no text output.

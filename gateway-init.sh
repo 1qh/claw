@@ -66,6 +66,9 @@ cat > "$STATE_DIR/openclaw.json" << CONF
       "endpoints": {
         "chatCompletions": {
           "enabled": true
+        },
+        "responses": {
+          "enabled": true
         }
       }
     }
