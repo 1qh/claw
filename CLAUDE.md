@@ -19,7 +19,7 @@ Nothing is locked in. Every library, pattern, and architecture choice is an expe
 
 Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/openclaw`). PR branch: `fix/workspace-state-no-dot-dir` (#53326).
 
-**Pinned version:** We develop against a pinned OpenClaw release (`v2026.3.24` in `docker-compose.yml`). The fork checkout matches: `cd ~/openclaw-repo && git checkout v2026.3.24`. This ensures the source code we read matches the Docker image we run. When reading OpenClaw code, always read from the pinned tag, not `main` — upstream `main` may have unreleased changes that don’t exist in our image.
+**Pinned version:** We develop against a pinned OpenClaw release (`2026.3.24` in `docker-compose.yml`). The fork checkout matches: `cd ~/openclaw-repo && git checkout 2026.3.24`. This ensures the source code we read matches the Docker image we run. When reading OpenClaw code, always read from the pinned tag, not `main` — upstream `main` may have unreleased changes that don’t exist in our image.
 
 **Upgrade workflow:** When a new OpenClaw release drops: read the release notes, checkout the new tag in the fork, update `docker-compose.yml`, wipe services (`docker compose down && docker volume rm claw_tsdb_data`), start fresh, test everything, fix breaking changes, update docs.
 
@@ -51,7 +51,8 @@ Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/opencla
 - Explicit imports from exact file paths — no barrel `index.ts` files
 - Prefer existing libraries over new dependencies
 - Scripts: silent on success, verbose on failure. Prefer `q ...` for noisy commands.
-- **Environment variables:** Never use `process.env` directly — import `env` from `@a/env` (or `~/lib/env` which re-exports it). Never use fallback defaults (`??`) for env vars in code. Single `.env` at project root. Schema in `packages/env/src/env.ts`. See `plan/01-foundation.md` for the env setup.
+- **Environment variables:** Never use `process.env` directly — import `env` from `@a/env` (or `~/lib/env` which re-exports it). Never use fallback defaults (`??`, `:-`) for env vars — not in TypeScript, not in bash scripts, not anywhere. Fail fast with a clear error when a required env var is missing. Single `.env` at project root. Schema in `packages/env/src/env.ts` (all fields required, no `.default()`). Bash scripts use `: "${VAR:?VAR is required}"` syntax.
+- **Credentials philosophy:** Use stock defaults for infrastructure (e.g., `postgres/postgres/postgres` for DB) — minimize things to memorize. Only customize real secrets (OAuth keys, auth secrets). The `.env` file is the single source of truth for all values. Docker containers read from `.env` via `${VAR:?}` — never hardcode credentials in compose files or scripts.
 - **Database queries:** Always use Drizzle — no raw SQL. This includes TigerFS-backed tables (`_state`, `_workspace`) which have Drizzle schemas declared as read-only.
 - **Next.js 16 + React 19:** Use server components by default, `'use client'` only when needed (hooks, interactivity). Use server actions for mutations. Leverage `@a/ui` (shadcn + ai-elements) components everywhere applicable — don’t rebuild what’s already available.
 
@@ -63,6 +64,7 @@ Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/opencla
 - NEVER ignore written source code from linters — only auto-generated code (`_generated/`, `generated/`, `module_bindings/`)
 - NEVER reduce lintmax strictness — if upstream removes rules, find replacements
 - NEVER use `git clean` — it deletes `.env` and uncommitted files. Use explicit `rm -rf`.
+- NEVER use fallback/default values for env vars — no `??`, no `:-`, no `.default()`, no hardcoded values. Every env var must be explicitly required and fail fast when missing. This applies to TypeScript (`env.ts`), bash scripts (`${VAR:?}`), drizzle config, docker-compose — EVERYWHERE. `.env` is the ONLY source of truth.
 
 ---
 

@@ -3,7 +3,11 @@ import { defineConfig } from 'drizzle-kit'
 const config = defineConfig({
   casing: 'snake_case',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgresql://uniclaw:uniclaw@localhost:5433/uniclaw'
+    url:
+      process.env.DATABASE_URL ??
+      (() => {
+        throw new Error('DATABASE_URL is required')
+      })()
   },
   dialect: 'postgresql',
   out: './drizzle',

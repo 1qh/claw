@@ -7,13 +7,13 @@ const env = createEnv({
     AUTH_GOOGLE_ID: z.string().min(1),
     AUTH_GOOGLE_SECRET: z.string().min(1),
     DATABASE_URL: z.url(),
-    GATEWAY_CONTAINER: z.string().default('claw-gateway-1'),
-    GATEWAY_HOST: z.string().default('localhost'),
+    GATEWAY_CONTAINER: z.string().min(1),
+    GATEWAY_HOST: z.string().min(1),
     GATEWAY_PASSWORD: z.string().min(1),
-    GATEWAY_PORT: z.string().default('18789'),
+    GATEWAY_PORT: z.string().min(1),
     OPENCLAW_MODEL: z.string().min(1),
-    TIMESCALEDB_CONTAINER: z.string().default('claw-timescaledb-1'),
-    VERBOSE_LOGS: z.enum(['true', 'false']).default('false')
+    TIMESCALEDB_CONTAINER: z.string().min(1),
+    VERBOSE_LOGS: z.enum(['true', 'false'])
   }
 })
 export { env }

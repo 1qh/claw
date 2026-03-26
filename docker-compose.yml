@@ -4,14 +4,12 @@ services:
     ports:
       - '5433:5432'
     environment:
-      POSTGRES_DB: uniclaw
-      POSTGRES_USER: uniclaw
-      POSTGRES_PASSWORD: uniclaw
+      POSTGRES_PASSWORD: postgres
     volumes:
       - tsdb_data:/home/postgres/pgdata/data
       - ./db-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
   gateway:
-    image: ghcr.io/openclaw/openclaw:v2026.3.24
+    image: ghcr.io/openclaw/openclaw:2026.3.24
     depends_on:
       - timescaledb
     privileged: true
@@ -19,11 +17,12 @@ services:
     ports:
       - '18789:18789'
     environment:
-      DATABASE_URL: postgresql://uniclaw:uniclaw@timescaledb:5432/uniclaw
+      DATABASE_URL: postgresql://postgres:postgres@timescaledb:5432/postgres
       OLLAMA_HOST: http://host.docker.internal:11434
       TIGERFS_MOUNT_PATH: /mnt/tigerfs
       GATEWAY_PORT: '18789'
-      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-qwen3.5:4b-q4_K_M}
+      OPENCLAW_MODEL: ${OPENCLAW_MODEL:?OPENCLAW_MODEL is required in .env}
+      GATEWAY_PASSWORD: ${GATEWAY_PASSWORD:?GATEWAY_PASSWORD is required in .env}
     volumes:
       - ./gateway-init.sh:/gateway-init.sh:ro
       - ./tigerfs-rename-shim.c:/tigerfs-rename-shim.c:ro
@@ -37,7 +36,7 @@ services:
     ports:
       - '3333:3333'
     environment:
-      DATABASE_URL_READONLY: postgresql://vscode_readonly:vscode_readonly@timescaledb:5432/uniclaw
+      DATABASE_URL_READONLY: postgresql://vscode_readonly:vscode_readonly@timescaledb:5432/postgres
       TIGERFS_MOUNT_PATH: /mnt/tigerfs
     volumes:
       - ./vscode-init.sh:/vscode-init.sh:ro

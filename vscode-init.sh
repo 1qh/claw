@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DB_URL="${DATABASE_URL_READONLY:-postgresql://vscode_readonly:vscode_readonly@timescaledb:5432/uniclaw}"
-MOUNT_PATH="${TIGERFS_MOUNT_PATH:-/mnt/tigerfs}"
+: "${DATABASE_URL_READONLY:?DATABASE_URL_READONLY is required}"
+: "${TIGERFS_MOUNT_PATH:?TIGERFS_MOUNT_PATH is required}"
 
 echo "Building rename shim..."
 if command -v gcc > /dev/null 2>&1 && [ -f /tigerfs-rename-shim.c ]; then
@@ -10,8 +10,8 @@ if command -v gcc > /dev/null 2>&1 && [ -f /tigerfs-rename-shim.c ]; then
 fi
 
 echo "Mounting TigerFS..."
-mkdir -p "$MOUNT_PATH"
-tigerfs mount --read-only "$DB_URL" "$MOUNT_PATH" &
+mkdir -p "$TIGERFS_MOUNT_PATH"
+tigerfs mount --read-only "$DATABASE_URL_READONLY" "$TIGERFS_MOUNT_PATH" &
 sleep 3
 
 echo "Setting up VS Code..."
@@ -26,4 +26,4 @@ exec /home/.openvscode-server/bin/openvscode-server \
   --port 3333 \
   --without-connection-token \
   --user-data-dir "$USER_DATA" \
-  --default-folder "$MOUNT_PATH"
+  --default-folder "$TIGERFS_MOUNT_PATH"
