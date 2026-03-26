@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/useExportsLast: Next.js route segment config requires inline export */
+/** biome-ignore-all lint/suspicious/useAwait: fetch middleware */
 /* oxlint-disable use-exports-last */
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
@@ -9,7 +10,17 @@ import { env } from '~/lib/env'
 export const runtime = 'nodejs'
 const gateway = createOpenAI({
     apiKey: env.GATEWAY_PASSWORD,
-    baseURL: `http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}/v1`
+    baseURL: `http://${env.GATEWAY_HOST}:${env.GATEWAY_PORT}/v1`,
+    fetch: async (url, init) => {
+      const urlStr = url instanceof URL ? url.href : url instanceof Request ? url.url : url
+      if (urlStr.includes('/v1/responses') && typeof init?.body === 'string') {
+        const parsed = JSON.parse(init.body) as { input?: { role?: string; type?: string }[] }
+        if (Array.isArray(parsed.input))
+          for (const item of parsed.input) if (item.role && !item.type) item.type = 'message'
+        return fetch(url, { ...init, body: JSON.stringify(parsed) })
+      }
+      return fetch(url, init)
+    }
   }),
   POST = async (request: Request) => {
     try {
@@ -23,7 +34,7 @@ const gateway = createOpenAI({
       await db.insert(chatMessages).values({ content: userContent, role: 'user', sessionKey, userId: session.user.id })
       const result = streamText({
         messages: body.messages.map(m => ({ content: m.content, role: m.role as 'assistant' | 'system' | 'user' })),
-        model: gateway.chat(env.OPENCLAW_MODEL),
+        model: gateway('openclaw'),
         onFinish: async ({ text }) => {
           await db
             .insert(chatMessages)

@@ -13,11 +13,10 @@ export PATH="/root/bin:$PATH"
 gcc -shared -fPIC -o /usr/local/lib/tigerfs-rename-shim.so /tigerfs-rename-shim.c -ldl
 export LD_PRELOAD=/usr/local/lib/tigerfs-rename-shim.so
 
-FILE="/app/dist/workspace-D4K6QX9X.js"
-if [ -f "$FILE" ]; then
+for FILE in $(grep -rl 'WORKSPACE_STATE_DIRNAME' /app/dist/*.js 2>/dev/null); do
   sed -i 's|return path.join(dir, WORKSPACE_STATE_DIRNAME, WORKSPACE_STATE_FILENAME);|return path.join(dir, WORKSPACE_STATE_FILENAME);|' "$FILE"
   sed -i 's|await fs\$1.mkdir(path.dirname(statePath), { recursive: true });|/* patched */|' "$FILE"
-fi
+done
 
 mkdir -p "$MOUNT_PATH"
 tigerfs mount "$DB_URL" "$MOUNT_PATH" &
