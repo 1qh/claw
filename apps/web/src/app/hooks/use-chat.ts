@@ -1,11 +1,10 @@
-/* eslint-disable react-hooks/refs, @typescript-eslint/no-unsafe-call */
-/* oxlint-disable promise/prefer-await-to-then */
-import { useChat } from '@ai-sdk/react'
-import { TextStreamChatTransport } from 'ai'
-import { useCallback, useEffect, useRef, useState } from 'react'
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* oxlint-disable promise/prefer-await-to-then, promise/always-return */
+import type { UIMessage } from 'ai'
+import { useCallback, useEffect, useState } from 'react'
 import type { SessionEntry } from '../session-sidebar'
 import { api } from './api'
-const toUiMessages = (data: { content: string; role: string }[], prefix: string) =>
+const toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
     data.map((m, i) => ({
       id: `${prefix}-${String(i)}`,
       parts: [{ text: m.content, type: 'text' as const }],
@@ -17,14 +16,9 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
         return params.get('s') ?? `agent:main:${userId}-${Date.now()}`
       }),
       [sessions, setSessions] = useState<SessionEntry[]>([]),
+      [messages, setMessages] = useState<UIMessage[]>([]),
+      [isBusy, setIsBusy] = useState(false),
       [fileRefreshKey, setFileRefreshKey] = useState(0),
-      onFinishRef = useRef<() => void>(() => undefined),
-      { append, messages, setMessages, status } = useChat({
-        body: { sessionKey },
-        onFinish: () => onFinishRef.current(),
-        transport: new TextStreamChatTransport({ api: '/api/chat' })
-      }),
-      isBusy = status === 'streaming' || status === 'submitted',
       loadSessions = useCallback(() => {
         api
           .get('api/sessions')
@@ -32,23 +26,63 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
           .then(setSessions)
           .catch(() => undefined)
       }, []),
-      loadMessages = useCallback(
-        (key: string) => {
-          api
-            .get(`api/sessions/${encodeURIComponent(key)}/messages`)
-            .json<{ content: string; role: string }[]>()
-            .then(data => setMessages(toUiMessages(data, key)))
-            .catch(() => setMessages([]))
-        },
-        [setMessages]
-      ),
+      loadMessages = useCallback((key: string) => {
+        api
+          .get(`api/sessions/${encodeURIComponent(key)}/messages`)
+          .json<{ content: string; role: string }[]>()
+          .then(data => setMessages(toUiMessages(data, key)))
+          .catch(() => setMessages([]))
+      }, []),
       sendChat = useCallback(
         (text: string) => {
           if (!text.trim() || isBusy) return
+          setIsBusy(true)
           globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
-          append({ content: text, role: 'user' })
+          const userMsg: UIMessage = {
+              id: `user-${Date.now()}`,
+              parts: [{ text, type: 'text' }],
+              role: 'user'
+            },
+            assistantId = `assistant-${Date.now()}`,
+            allMessages = [...messages, userMsg].map(m => ({
+              content: m.parts
+                .filter(p => p.type === 'text')
+                .map(p => ('text' in p ? p.text : ''))
+                .join(''),
+              role: m.role
+            }))
+          setMessages(prev => [
+            ...prev,
+            userMsg,
+            { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
+          ])
+          api
+            .post('api/chat', { json: { messages: allMessages, sessionKey }, timeout: 90_000 })
+            .text()
+            .then(responseText => {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === assistantId
+                    ? { ...m, parts: [{ text: responseText || 'No response from agent', type: 'text' as const }] }
+                    : m
+                )
+              )
+              setIsBusy(false)
+              loadSessions()
+              setFileRefreshKey(k => k + 1)
+            })
+            .catch(() => {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === assistantId
+                    ? { ...m, parts: [{ text: 'Failed to get response. Please try again.', type: 'text' as const }] }
+                    : m
+                )
+              )
+              setIsBusy(false)
+            })
         },
-        [append, isBusy, sessionKey]
+        [isBusy, sessionKey, messages, loadSessions]
       ),
       switchSession = useCallback(
         (entry: SessionEntry) => {
@@ -63,11 +97,7 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
         setSessionKey(key)
         setMessages([])
         globalThis.history.pushState(null, '', '/')
-      }, [userId, setMessages])
-    onFinishRef.current = () => {
-      loadSessions()
-      setFileRefreshKey(k => k + 1)
-    }
+      }, [userId])
     useEffect(() => {
       loadSessions()
       const params = new URLSearchParams(globalThis.location.search),
