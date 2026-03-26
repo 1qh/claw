@@ -2,21 +2,12 @@
 /* oxlint-disable promise/prefer-await-to-then, unicorn/prefer-top-level-await, promise/always-return */
 'use client'
 import { FileTree, FileTreeFile, FileTreeFolder } from '@a/ui/ai-elements/file-tree'
-import {
-  Terminal,
-  TerminalActions,
-  TerminalContent,
-  TerminalCopyButton,
-  TerminalHeader,
-  TerminalStatus,
-  TerminalTitle
-} from '@a/ui/ai-elements/terminal'
 import { Button } from '@a/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@a/ui/resizable'
 import { Editor, loader } from '@monaco-editor/react'
-import { TerminalSquareIcon, X } from 'lucide-react'
+import { TerminalSquareIcon, Trash2Icon, X } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from './hooks/api'
 if (globalThis.document !== undefined)
   loader
@@ -113,6 +104,32 @@ const EDITOR_OPTIONS = {
       }
     }
   },
+  LogPanel = ({ logOutput, onClose, onClear }: { logOutput: string; onClear: () => void; onClose: () => void }) => {
+    const ref = useRef<HTMLPreElement>(null)
+    /** biome-ignore lint/correctness/useExhaustiveDependencies: ref is stable */
+    useEffect(() => {
+      const el = ref.current
+      if (el) el.scrollTop = el.scrollHeight
+    }, [logOutput])
+    return (
+      <div className='flex h-full flex-col bg-zinc-950'>
+        <div className='flex items-center justify-between border-b border-zinc-800 px-2 py-1'>
+          <span className='text-xs text-zinc-500'>Logs</span>
+          <div className='flex gap-1'>
+            <Button className='size-6 text-zinc-500 hover:text-zinc-200' onClick={onClear} size='icon' variant='ghost'>
+              <Trash2Icon className='size-3' />
+            </Button>
+            <Button className='size-6 text-zinc-500 hover:text-zinc-200' onClick={onClose} size='icon' variant='ghost'>
+              <X className='size-3' />
+            </Button>
+          </div>
+        </div>
+        <pre className='flex-1 overflow-auto p-2 font-mono text-xs leading-4 text-zinc-300 whitespace-pre-wrap' ref={ref}>
+          {logOutput}
+        </pre>
+      </div>
+    )
+  },
   MonacoIDEPanel = ({
     isBusy,
     logOutput,
@@ -198,29 +215,7 @@ const EDITOR_OPTIONS = {
             ) : null}
             {showTerminal ? (
               <ResizablePanel defaultSize={40} minSize={10}>
-                <Terminal
-                  className='rounded-none border-none *:p-1 [&_pre]:!p-0 [&_pre]:!text-xs [&_pre]:!leading-3.5'
-                  isStreaming={isBusy}
-                  onClear={onClearLogs}
-                  output={logOutput}>
-                  <TerminalHeader className='!pl-2'>
-                    <TerminalTitle />
-                    <div className='flex items-center gap-1'>
-                      <TerminalStatus />
-                      <TerminalActions>
-                        <TerminalCopyButton />
-                        <Button
-                          className='size-7 shrink-0 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
-                          onClick={() => setShowTerminal(false)}
-                          size='icon'
-                          variant='ghost'>
-                          <X />
-                        </Button>
-                      </TerminalActions>
-                    </div>
-                  </TerminalHeader>
-                  <TerminalContent className='max-h-none flex-1' />
-                </Terminal>
+                <LogPanel logOutput={logOutput} onClear={onClearLogs} onClose={() => setShowTerminal(false)} />
               </ResizablePanel>
             ) : null}
           </ResizablePanelGroup>

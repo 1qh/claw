@@ -23,7 +23,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
     return t
   },
   Chat = ({ userId, userName }: { userId: string; userName: string }) => {
-    const { logOutput, clearLogs } = useAgentLogs(),
+    const { activity, logOutput, clearLogs } = useAgentLogs(),
       { fileRefreshKey, isBusy, messages, newChat, sendChat, sessionKey, sessions, switchSession } =
         useChatSession(userId),
       handleNewChat = () => {
@@ -53,20 +53,30 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                         title='Uniclaw Agent'
                       />
                     ) : null}
-                    {messages.map(m => (
-                      <Message from={m.role} key={m.id}>
-                        <MessageContent>
-                          {m.role === 'user' ? textOf(m) : <MessageResponse>{textOf(m)}</MessageResponse>}
-                        </MessageContent>
-                      </Message>
-                    ))}
-                    {isBusy && messages.at(-1)?.role !== 'assistant' ? (
-                      <Message from='assistant'>
-                        <MessageContent>
-                          <Shimmer as='p'>Thinking...</Shimmer>
-                        </MessageContent>
-                      </Message>
-                    ) : null}
+                    {messages.map(m => {
+                      const text = textOf(m)
+                      if (m.role === 'user')
+                        return (
+                          <Message from='user' key={m.id}>
+                            <MessageContent>{text}</MessageContent>
+                          </Message>
+                        )
+                      if (isBusy && !text)
+                        return (
+                          <Message from='assistant' key={m.id}>
+                            <MessageContent>
+                              <Shimmer as='p'>{activity || 'Thinking...'}</Shimmer>
+                            </MessageContent>
+                          </Message>
+                        )
+                      return (
+                        <Message from='assistant' key={m.id}>
+                          <MessageContent>
+                            <MessageResponse>{text}</MessageResponse>
+                          </MessageContent>
+                        </Message>
+                      )
+                    })}
                   </ConversationContent>
                   <ConversationScrollButton />
                 </Conversation>
