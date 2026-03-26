@@ -17,7 +17,11 @@ Nothing is locked in. Every library, pattern, and architecture choice is an expe
 
 ## OpenClaw Fork
 
-Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/openclaw`). PR branch: `fix/workspace-state-no-dot-dir` (#53326). **Chore:** When reading OpenClaw code, pull upstream and rebase: `cd ~/openclaw-repo && git fetch origin && git merge origin/main --no-edit`. Rebase PR branch if needed.
+Local fork: `~/openclaw-repo` (origin = upstream, fork = `github.com/1qh/openclaw`). PR branch: `fix/workspace-state-no-dot-dir` (#53326).
+
+**Pinned version:** We develop against a pinned OpenClaw release (`v2026.3.24` in `docker-compose.yml`). The fork checkout matches: `cd ~/openclaw-repo && git checkout v2026.3.24`. This ensures the source code we read matches the Docker image we run. When reading OpenClaw code, always read from the pinned tag, not `main` — upstream `main` may have unreleased changes that don’t exist in our image.
+
+**Upgrade workflow:** When a new OpenClaw release drops: read the release notes, checkout the new tag in the fork, update `docker-compose.yml`, wipe services (`docker compose down && docker volume rm claw_tsdb_data`), start fresh, test everything, fix breaking changes, update docs.
 
 ---
 
