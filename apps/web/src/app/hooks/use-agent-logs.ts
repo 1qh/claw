@@ -1,5 +1,6 @@
 /* eslint-disable @eslint-react/web-api/no-leaked-event-listener */
 import { useEffect, useState } from 'react'
+import { stringify } from 'yaml'
 const useAgentLogs = () => {
   const [logOutput, setLogOutput] = useState(''),
     [activity, setActivity] = useState('')
@@ -7,7 +8,7 @@ const useAgentLogs = () => {
     const es = new EventSource('/api/events')
     es.addEventListener('message', e => {
       const data = JSON.parse(String(e.data)) as { event?: string; payload?: unknown; status?: string }
-      setLogOutput(prev => `${prev}[${data.event ?? '?'}] ${JSON.stringify(data.payload, null, 2)}\n\n`)
+      setLogOutput(prev => `${prev}# ${data.event ?? '?'}\n${stringify(data.payload)}---\n`)
       if (data.status) setActivity(data.status)
     })
     return () => {

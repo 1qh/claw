@@ -9,9 +9,9 @@ const metadata: Metadata = {
     title: 'Uniclaw'
   },
   RootLayout = ({ children }: { children: React.ReactNode }) => (
-    <html className={cn('font-sans', sans.variable, mono.variable)} lang='en' suppressHydrationWarning>
+    <html className={cn('font-sans tracking-[-0.02em]', sans.variable, mono.variable)} lang='en' suppressHydrationWarning>
       <body className='min-h-screen antialiased'>
-        <ThemeProvider attribute='class' defaultTheme='dark' enableSystem>
+        <ThemeProvider attribute='class' defaultTheme='dark' disableTransitionOnChange enableSystem={false}>
           {children}
         </ThemeProvider>
       </body>

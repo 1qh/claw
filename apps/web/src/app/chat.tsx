@@ -39,7 +39,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
         <SidebarInset className='h-svh'>
           <ResizablePanelGroup orientation='horizontal'>
             <ResizablePanel defaultSize={50} minSize={20}>
-              <IDEPanel isBusy={isBusy} logOutput={logOutput} onClearLogs={clearLogs} refreshKey={fileRefreshKey} />
+              <IDEPanel logOutput={logOutput} refreshKey={fileRefreshKey} />
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel className='!overflow-hidden' defaultSize={50} minSize={25}>
@@ -80,7 +80,7 @@ const emptyStateIcon = <SparklesIcon className='size-8' />,
                   </ConversationContent>
                   <ConversationScrollButton />
                 </Conversation>
-                <PromptInput className='p-2' onSubmit={({ text }) => sendChat(text)}>
+                <PromptInput className='p-2' onSubmit={async ({ text }) => sendChat(text)}>
                   <PromptInputTextarea disabled={isBusy} placeholder='Ask anything...' />
                   <PromptInputFooter>
                     <div />

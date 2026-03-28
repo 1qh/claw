@@ -1,15 +1,19 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect, no-await-in-loop, @typescript-eslint/no-loop-func */
 /* oxlint-disable promise/prefer-await-to-then, promise/always-return */
-import type { UIMessage } from 'ai'
+/** biome-ignore-all lint/performance/noAwaitInLoops: sequential stream read */
+import type { TextUIPart, UIMessage } from 'ai'
 import { useCallback, useEffect, useState } from 'react'
 import type { SessionEntry } from '../session-sidebar'
 import { api } from './api'
-const toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
+const textPart = (text: string): TextUIPart => ({ text, type: 'text' }),
+  toUiMessages = (data: { content: string; role: string }[], prefix: string): UIMessage[] =>
     data.map((m, i) => ({
       id: `${prefix}-${String(i)}`,
-      parts: [{ text: m.content, type: 'text' as const }],
+      parts: [textPart(m.content)],
       role: m.role as 'assistant' | 'user'
     })),
+  updateAssistantText = (prev: UIMessage[], id: string, text: string): UIMessage[] =>
+    prev.map(m => (m.id === id ? { ...m, parts: [textPart(text)] } : m)),
   useChatSession = (userId: string) => {
     const [sessionKey, setSessionKey] = useState(() => {
         const params = new URLSearchParams(globalThis.location.search)
@@ -34,7 +38,7 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
           .catch(() => setMessages([]))
       }, []),
       sendChat = useCallback(
-        (text: string) => {
+        async (text: string) => {
           if (!text.trim() || isBusy) return
           setIsBusy(true)
           globalThis.history.replaceState(null, '', `/?s=${encodeURIComponent(sessionKey)}`)
@@ -54,33 +58,32 @@ const toUiMessages = (data: { content: string; role: string }[], prefix: string)
           setMessages(prev => [
             ...prev,
             userMsg,
-            { id: assistantId, parts: [{ text: '', type: 'text' as const }], role: 'assistant' as const }
+            { id: assistantId, parts: [textPart('')], role: 'assistant' } satisfies UIMessage
           ])
-          api
-            .post('api/chat', { json: { messages: allMessages, sessionKey }, timeout: 90_000 })
-            .text()
-            .then(responseText => {
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, parts: [{ text: responseText || 'No response from agent', type: 'text' as const }] }
-                    : m
-                )
-              )
-              setIsBusy(false)
-              loadSessions()
-              setFileRefreshKey(k => k + 1)
+          try {
+            const res = await fetch('/api/chat', {
+              body: JSON.stringify({ messages: allMessages, sessionKey }),
+              credentials: 'include',
+              headers: { 'content-type': 'application/json' },
+              method: 'POST',
+              signal: AbortSignal.timeout(90_000)
             })
-            .catch(() => {
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, parts: [{ text: 'Failed to get response. Please try again.', type: 'text' as const }] }
-                    : m
-                )
-              )
-              setIsBusy(false)
-            })
+            if (!res.ok) throw new Error(String(res.status))
+            const reader = res.body?.getReader(),
+              decoder = new TextDecoder()
+            let accumulated = ''
+            if (reader)
+              for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+                accumulated += decoder.decode(chunk.value, { stream: true })
+                setMessages(prev => updateAssistantText(prev, assistantId, accumulated))
+              }
+            if (!accumulated) setMessages(prev => updateAssistantText(prev, assistantId, 'No response from agent'))
+            loadSessions()
+            setFileRefreshKey(k => k + 1)
+          } catch {
+            setMessages(prev => updateAssistantText(prev, assistantId, 'Failed to get response. Please try again.'))
+          }
+          setIsBusy(false)
         },
         [isBusy, sessionKey, messages, loadSessions]
       ),
