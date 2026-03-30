@@ -1,17 +1,42 @@
 {
+  "name": "claw",
+  "private": true,
+  "type": "module",
+  "workspaces": ["lib/*"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "dev:web": "next dev --turbopack -p 3000",
+    "dev:ws": "bun --watch src/server/ws.ts",
+    "build": "next build",
+    "check": "lintmax check",
+    "fix": "lintmax fix",
+    "clean": "rm -rf node_modules bun.lock .next dist .turbo",
+    "test": "bun test",
+    "db:push": "drizzle-kit push"
+  },
   "dependencies": {
-    "@mariozechner/pi-agent-core": "^0.64.0",
-    "@mariozechner/pi-ai": "^0.64.0",
-    "@mariozechner/pi-coding-agent": "^0.64.0",
-    "@sinclair/typebox": "^0.34.49",
-    "@types/react-dom": "^19.2.3",
-    "e2b": "^2.18.0",
-    "next": "^16.2.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@xterm/addon-fit": "latest",
+    "@xterm/xterm": "latest",
+    "better-auth": "latest",
+    "drizzle-orm": "latest",
+    "e2b": "latest",
+    "elysia": "latest",
+    "next": "latest",
+    "postgres": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "ws": "latest"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "typescript": "^6.0.2"
-  }
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/ws": "latest",
+    "drizzle-kit": "latest",
+    "lintmax": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  },
+  "trustedDependencies": ["lintmax"]
 }

@@ -3,4 +3,7 @@ node_modules
 bun.lock
 auth.json
 .pi
+.env
 *.log
+.turbo
+dist
