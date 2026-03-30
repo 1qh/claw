@@ -1,10 +1,9 @@
 import Sandbox from 'e2b'
 import { Elysia, t } from 'elysia'
+import { env } from '../lib/env'
 
-const PORT = Number(process.env.WS_PORT ?? '3001')
-const E2B_KEY = process.env.E2B_API_KEY ?? ''
-
-if (!E2B_KEY) throw new Error('E2B_API_KEY is required')
+const PORT = Number(env.WS_PORT)
+const E2B_KEY = env.E2B_API_KEY
 
 const AGENTS: Record<string, { cmd: string; install: string; setup: (home: string) => string }> = {
   codex: {

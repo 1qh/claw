@@ -15,6 +15,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@t3-oss/env-nextjs": "^0.13.11",
     "@xterm/addon-fit": "latest",
     "@xterm/xterm": "latest",
     "better-auth": "latest",
@@ -25,7 +26,8 @@
     "postgres": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "ws": "latest"
+    "ws": "latest",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
